@@ -39,6 +39,7 @@
     "autostart": "npm-run-all --print-label --parallel watch:compile watch",
     "autotest": "supervisor --watch src,test --extensions ts --no-restart-on exit --quiet --exec npm -- test",
     "build": "npm-run-all lint compile test",
+    "build-no-lint": "npm-run-all compile test",
     "clean": "npm-run-all clean:js clean:build",
     "clean:build": "rimraf *-v8.log profile.txt build",
     "clean:dist": "npm-run-all clean clean:npm",
