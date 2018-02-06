@@ -1,0 +1,6 @@
+query ChatId($userId: String!) {
+    ChatId(userId: $userId) {
+        userId
+        screenName
+    }
+}
