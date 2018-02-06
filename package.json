@@ -1,8 +1,17 @@
 {
-  "name": "mautocule",
+  "name": "quantum-mechanic",
   "version": "0.1.0",
-  "description": "Subatomic automation molecule",
+  "description": "Subatomic automation client",
   "author": "Bison Core",
+  "license": "Apache 2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/absa-subatomic/quantum-mechanic.git"
+  },
+  "homepage": "https://github.com/absa-subatomic/quantum-mechanic",
+  "bugs": {
+    "url": "https://github.com/absa-subatomic/quantum-mechanic/issues"
+  },
   "dependencies": {
     "@atomist/automation-client": "^0.6.6",
     "@atomist/lifecycle-automation": "https://r.atomist.com/Sk45u9GG8M",
