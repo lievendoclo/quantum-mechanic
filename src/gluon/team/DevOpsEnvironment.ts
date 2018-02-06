@@ -7,13 +7,14 @@ import {
     MappedParameter,
     MappedParameters,
     Parameter,
-    Tags
+    Tags,
 } from "@atomist/automation-client";
 import axios from "axios";
-import {memberFromScreenName} from "../member/Members";
+import * as config from "config";
 import * as _ from "lodash";
+import {memberFromScreenName} from "../member/Members";
 
-@CommandHandler("Check whether to create a new OpenShift DevOps environment or use and existing one", "subatomic request devops environment")
+@CommandHandler("Check whether to create a new OpenShift DevOps environment or use and existing one", config.get("subatomic").commandPrefix + " request devops environment")
 @Tags("subatomic", "slack", "team", "openshift", "devops")
 export class NewDevOpsEnvironment implements HandleCommand {
 
@@ -32,7 +33,6 @@ export class NewDevOpsEnvironment implements HandleCommand {
     })
     public teamName: string;
 
-
     public handle(ctx: HandlerContext): Promise<HandlerResult> {
         logger.info(`Creating new DevOps environment for ...`);
 
@@ -50,7 +50,7 @@ export class NewDevOpsEnvironment implements HandleCommand {
                                 {
                                     devOpsEnvironment: {
                                         requestedBy: member.memberId,
-                                    }
+                                    },
                                 });
                         }
                     });
@@ -58,7 +58,7 @@ export class NewDevOpsEnvironment implements HandleCommand {
             .then(() => {
                 return ctx.messageClient.addressChannels({
                     text: "🚀 Your team's DevOps environment is being provisioned...",
-                }, this.teamChannel)
+                }, this.teamChannel);
             });
     }
 }

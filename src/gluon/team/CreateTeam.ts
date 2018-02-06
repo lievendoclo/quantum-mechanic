@@ -1,14 +1,15 @@
 import {
     CommandHandler, failure, HandleCommand, HandlerContext, HandlerResult,
-    logger, MappedParameter, MappedParameters, Parameter, success, Tags
+    logger, MappedParameter, MappedParameters, Parameter, success, Tags,
 } from "@atomist/automation-client";
-import axios from "axios";
 import {buttonForCommand} from "@atomist/automation-client/spi/message/MessageClient";
-import {OnboardMember} from "../member/Onboard";
-import * as _ from "lodash";
 import {SlackMessage, url} from "@atomist/slack-messages";
+import axios from "axios";
+import * as config from "config";
+import * as _ from "lodash";
+import {OnboardMember} from "../member/Onboard";
 
-@CommandHandler("Create a new team", "subatomic create team")
+@CommandHandler("Create a new team", config.get("subatomic").commandPrefix + " create team")
 @Tags("subatomic", "team")
 export class CreateTeam implements HandleCommand<HandlerResult> {
 
@@ -16,12 +17,12 @@ export class CreateTeam implements HandleCommand<HandlerResult> {
     public screenName: string;
 
     @Parameter({
-        description: "team name"
+        description: "team name",
     })
     private name: string;
 
     @Parameter({
-        description: "team description"
+        description: "team description",
     })
     private description: string;
 
@@ -30,14 +31,13 @@ export class CreateTeam implements HandleCommand<HandlerResult> {
         return axios.get(`http://localhost:8080/members?slackScreenName=${this.screenName}`)
             .then(member => {
                 if (!_.isEmpty(member.data._embedded)) {
-                    let memberId: string = member.data._embedded.teamMemberResources[0].memberId;
+                    const memberId: string = member.data._embedded.teamMemberResources[0].memberId;
                     return axios.post("http://localhost:8080/teams", {
                         name: this.name,
                         description: this.description,
                         createdBy: memberId,
-                    })
-                }
-                else {
+                    });
+                } else {
                     const msg: SlackMessage = {
                         text: `There was an error creating your ${this.name} team`,
                         attachments: [{
@@ -52,7 +52,7 @@ To create a team you must first onboard yourself. Click the button below to do t
                             actions: [
                                 buttonForCommand(
                                     {
-                                        text: "Onboard me"
+                                        text: "Onboard me",
                                     },
                                     new OnboardMember()),
                             ],

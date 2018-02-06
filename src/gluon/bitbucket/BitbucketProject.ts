@@ -7,13 +7,14 @@ import {
     MappedParameter,
     MappedParameters,
     Parameter,
-    success
+    success,
 } from "@atomist/automation-client";
+import axios from "axios";
+import * as config from "config";
 import {memberFromScreenName} from "../member/Members";
 import {projectFromProjectName} from "../project/Projects";
-import axios from "axios";
 
-@CommandHandler("Create a new Bitbucket project", "subatomic create bitbucket project")
+@CommandHandler("Create a new Bitbucket project", config.get("subatomic").commandPrefix + " create bitbucket project")
 export class NewBitbucketProject implements HandleCommand<HandlerResult> {
 
     @MappedParameter(MappedParameters.SlackUserName)
@@ -23,7 +24,7 @@ export class NewBitbucketProject implements HandleCommand<HandlerResult> {
     public teamChannel: string;
 
     @Parameter({
-        description: "project name"
+        description: "project name",
     })
     public name: string;
 
@@ -42,17 +43,17 @@ export class NewBitbucketProject implements HandleCommand<HandlerResult> {
                             {
                                 bitbucketProject: {
                                     name: this.name,
-                                    description: `${project.description} [managed by Subatomic]`
+                                    description: `${project.description} [managed by Subatomic]`,
                                 },
                                 createdBy: member.memberId,
                             })
                             .then(success);
-                    })
+                    });
             })
             .then(() => {
                 return ctx.messageClient.addressChannels({
                     text: "🚀 Your new project is being provisioned...",
-                }, this.teamChannel)
+                }, this.teamChannel);
             })
             .catch(err => failure(err));
     }

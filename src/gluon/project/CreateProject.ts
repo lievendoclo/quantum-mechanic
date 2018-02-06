@@ -1,26 +1,27 @@
 import {
     CommandHandler, HandleCommand, HandlerContext, HandlerResult, logger,
-    MappedParameter, MappedParameters, Parameter, success
+    MappedParameter, MappedParameters, Parameter, success,
 } from "@atomist/automation-client";
+import {menuForCommand} from "@atomist/automation-client/spi/message/MessageClient";
 import axios from "axios";
+import * as config from "config";
+import * as _ from "lodash";
 import {memberFromScreenName} from "../member/Members";
 import {teamsWhoScreenNameBelongsToo} from "../team/Teams";
-import {menuForCommand} from "@atomist/automation-client/spi/message/MessageClient";
-import * as _ from "lodash";
 
-@CommandHandler("Create a new project", "subatomic create project")
+@CommandHandler("Create a new project", config.get("subatomic").commandPrefix + " create project")
 export class CreateProject implements HandleCommand<HandlerResult> {
 
     @MappedParameter(MappedParameters.SlackUserName)
     public screenName: string;
 
     @Parameter({
-        description: "project name"
+        description: "project name",
     })
     public name: string;
 
     @Parameter({
-        description: "project description"
+        description: "project description",
     })
     public description: string;
 
@@ -44,11 +45,10 @@ export class CreateProject implements HandleCommand<HandlerResult> {
                         createdBy: member.memberId,
                         teams: [{
                             teamId: this.teamName,
-                        }]
+                        }],
                     }), err => logger.warn(err))
                 .then(success);
-        }
-        else {
+        } else {
             return teamsWhoScreenNameBelongsToo(ctx, this.screenName)
                 .then(teams => {
                     return ctx.messageClient.respond({
@@ -73,8 +73,8 @@ export class CreateProject implements HandleCommand<HandlerResult> {
                                         description: this.description,
                                     }),
                             ],
-                        }]
-                    })
+                        }],
+                    });
                 }, err => logger.warn(err));
         }
     }

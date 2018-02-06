@@ -1,14 +1,15 @@
 import {
     CommandHandler, failure, HandleCommand, HandlerContext, HandlerResult,
-    MappedParameter, MappedParameters, Parameter, Tags
+    MappedParameter, MappedParameters, Parameter, Tags,
 } from "@atomist/automation-client";
-import axios from "axios";
 import {buttonForCommand} from "@atomist/automation-client/spi/message/MessageClient";
 import {SlackMessage, url} from "@atomist/slack-messages";
-import {JoinTeam} from "../team/JoinTeam";
+import axios from "axios";
+import * as config from "config";
 import {CreateTeam} from "../team/CreateTeam";
+import {JoinTeam} from "../team/JoinTeam";
 
-@CommandHandler("Onboard a new team member", "subatomic onboard me")
+@CommandHandler("Onboard a new team member", config.get("subatomic").commandPrefix + " onboard me")
 @Tags("subatomic", "slack", "member")
 export class OnboardMember implements HandleCommand<HandlerResult> {
 
@@ -31,13 +32,13 @@ export class OnboardMember implements HandleCommand<HandlerResult> {
 
     @Parameter({
         description: "your ABSA email address",
-        pattern: /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/
+        pattern: /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/,
     })
     public email: string;
 
     @Parameter({
         description: "your ABSA username",
-        validInput: "Domain username in the following format: domain\\usernmae"
+        validInput: "Domain username in the following format: domain\\usernmae",
     })
     public domainUsername: string;
 
@@ -57,7 +58,7 @@ export class OnboardMember implements HandleCommand<HandlerResult> {
                 slack: {
                     screenName: this.screenName,
                     userId: this.userId,
-                }
+                },
             })
             .then(() => {
                 // if successful, then send him a message to welcome him to Subatomic
@@ -71,7 +72,7 @@ Next steps are to either join an existing team or create a new one.
                 `;
 
                 const msg: SlackMessage = {
-                    text: text,
+                    text,
                     attachments: [{
                         fallback: "Welcome to the Subatomic environment",
                         footer: `For more information, please read the ${this.docs()}`, // TODO use actual icon
@@ -80,7 +81,7 @@ Next steps are to either join an existing team or create a new one.
                             buttonForCommand(
                                 {
                                     text: "Apply to join a team",
-                                    style: "primary"
+                                    style: "primary",
                                 },
                                 new JoinTeam()),
                             buttonForCommand(
@@ -90,7 +91,7 @@ Next steps are to either join an existing team or create a new one.
                     }],
                 };
 
-                return ctx.messageClient.addressUsers(msg, this.userId)
+                return ctx.messageClient.addressUsers(msg, this.userId);
             })
             .catch(err => failure(err));
     }

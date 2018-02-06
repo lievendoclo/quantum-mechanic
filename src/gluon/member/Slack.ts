@@ -3,8 +3,9 @@ import {
     logger, MappedParameter, MappedParameters, Parameter
 } from "@atomist/automation-client";
 import axios from "axios";
+import * as config from "config";
 
-@CommandHandler("Add Slack details to an existing team member", "subatomic add slack")
+@CommandHandler("Add Slack details to an existing team member", config.get("subatomic").commandPrefix + " add slack")
 export class AddSlackDetails implements HandleCommand<HandlerResult> {
 
     @MappedParameter(MappedParameters.SlackUserName)
@@ -49,7 +50,7 @@ export class AddSlackDetails implements HandleCommand<HandlerResult> {
     }
 }
 
-@CommandHandler("Display your Slack user details", "subatomic whoami")
+@CommandHandler("Display your Slack user details", config.get("subatomic").commandPrefix + " whoami")
 export class Whoami implements HandleCommand<HandlerResult> {
 
     @MappedParameter(MappedParameters.SlackUserName)

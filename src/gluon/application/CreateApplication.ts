@@ -5,13 +5,14 @@ import {
     HandlerResult,
     MappedParameter,
     MappedParameters,
-    Parameter
+    Parameter,
 } from "@atomist/automation-client";
+import axios from "axios";
+import * as config from "config";
 import {memberFromScreenName} from "../member/Members";
 import {projectFromProjectName} from "../project/Projects";
-import axios from "axios";
 
-@CommandHandler("Create a new Bitbucket project", "subatomic create bitbucket project")
+@CommandHandler("Create a new Bitbucket project", config.get("subatomic").commandPrefix + " create bitbucket project")
 export class CreateApplication implements HandleCommand<HandlerResult> {
 
     @MappedParameter(MappedParameters.SlackUserName)
@@ -21,27 +22,27 @@ export class CreateApplication implements HandleCommand<HandlerResult> {
     public teamChannel: string;
 
     @Parameter({
-        description: "application name"
+        description: "application name",
     })
     public name: string;
 
     @Parameter({
-        description: "application description"
+        description: "application description",
     })
     public description: string;
 
     @Parameter({
-        description: "project name"
+        description: "project name",
     })
     public projectName: string;
 
     @Parameter({
-        description: "Bitbucket repository name"
+        description: "Bitbucket repository name",
     })
     public bitbucketRepositoryName: string;
 
     @Parameter({
-        description: "Bitbucket repository URL"
+        description: "Bitbucket repository URL",
     })
     public bitbucketRepositoryRepoUrl: string;
 
@@ -75,12 +76,12 @@ export class CreateApplication implements HandleCommand<HandlerResult> {
                                         createdBy: member.memberId,
                                     });
                             });
-                    })
+                    });
             })
             .then(() => {
                 return ctx.messageClient.addressChannels({
                     text: "🚀 Your new application is being provisioned...",
-                }, this.teamChannel)
+                }, this.teamChannel);
             });
     }
 }

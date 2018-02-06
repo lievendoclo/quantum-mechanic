@@ -7,13 +7,14 @@ import {
     MappedParameter,
     MappedParameters,
     Parameter,
-    Tags
+    Tags,
 } from "@atomist/automation-client";
 import axios from "axios";
-import {projectFromProjectName} from "./Projects";
+import * as config from "config";
 import {memberFromScreenName} from "../member/Members";
+import {projectFromProjectName} from "./Projects";
 
-@CommandHandler("Create new OpenShift environments for a project", "subatomic request project environments")
+@CommandHandler("Create new OpenShift environments for a project", config.get("subatomic").commandPrefix + " request project environments")
 @Tags("subatomic", "openshift", "project")
 export class NewProjectEnvironments implements HandleCommand {
 
@@ -40,13 +41,13 @@ export class NewProjectEnvironments implements HandleCommand {
                             {
                                 projectEnvironment: {
                                     requestedBy: member.memberId,
-                                }
+                                },
                             });
                     })
                     .then(() => {
                         return ctx.messageClient.addressChannels({
                             text: "🚀 Your team's project environment is being provisioned...",
-                        }, this.teamChannel)
+                        }, this.teamChannel);
                     });
             });
     }

@@ -2,29 +2,29 @@ import {
     CommandHandler, failure, HandleCommand, HandlerContext, HandlerResult,
     logger, MappedParameter, MappedParameters, Parameter, success, Tags,
 } from "@atomist/automation-client";
-import {SlackMessage, url} from "@atomist/slack-messages";
 import {buttonForCommand} from "@atomist/automation-client/spi/message/MessageClient";
-import {NewDevOpsEnvironment} from "./DevOpsEnvironment";
-import {createChannel} from "@atomist/lifecycle-automation/handlers/command/slack/CreateChannel";
 import {addBotToSlackChannel} from "@atomist/lifecycle-automation/handlers/command/slack/AddBotToChannel";
-import {AddMemberToTeam} from "./JoinTeam";
-import * as _ from "lodash";
+import {createChannel} from "@atomist/lifecycle-automation/handlers/command/slack/CreateChannel";
+import {SlackMessage, url} from "@atomist/slack-messages";
 import axios from "axios";
+import * as config from "config";
+import * as _ from "lodash";
 import {CreateTeam} from "./CreateTeam";
-import {CreateProject} from "../project/CreateProject";
+import {NewDevOpsEnvironment} from "./DevOpsEnvironment";
+import {AddMemberToTeam} from "./JoinTeam";
 
 @CommandHandler("Check whether to create a new team channel or use an existing channel")
 @Tags("subatomic", "slack", "channel", "team")
 export class NewOrUseTeamSlackChannel implements HandleCommand {
 
     @Parameter({
-        description: "team name"
+        description: "team name",
     })
     public teamName: string;
 
     @Parameter({
         description: "team channel name",
-        required: false
+        required: false,
     })
     public teamChannel: string;
 
@@ -35,7 +35,7 @@ if you have an existing channel you'd like to use for team wide messages, \
 rather use that instead?\
         `;
         const msg: SlackMessage = {
-            text: text,
+            text,
             attachments: [{
                 fallback: `Do you want to create a new team channel (${this.teamChannel}) or link an existing one?`,
                 footer: `For more information, please read the ${this.docs()}`, // TODO use actual icon
@@ -49,7 +49,7 @@ rather use that instead?\
                         }),
                     buttonForCommand(
                         {text: "Use an existing channel"},
-                        this)
+                        this),
                 ],
             }],
         };
@@ -63,7 +63,7 @@ rather use that instead?\
     }
 }
 
-@CommandHandler("Create team channel", "subatomic create team channel")
+@CommandHandler("Create team channel", config.get("subatomic").commandPrefix + " create team channel")
 @Tags("subatomic", "slack", "channel", "team")
 export class NewTeamSlackChannel implements HandleCommand {
 
@@ -71,14 +71,14 @@ export class NewTeamSlackChannel implements HandleCommand {
     public teamId: string;
 
     @Parameter({
-        description: "team name"
+        description: "team name",
     })
     public teamName: string;
 
     @Parameter({
         description: "team channel name",
         required: false,
-        displayable: false
+        displayable: false,
     })
     public teamChannel: string;
 
@@ -98,7 +98,7 @@ export class NewTeamSlackChannel implements HandleCommand {
                         {
                             slack: {
                                 teamChannel: kebabbedTeamChannel,
-                            }
+                            },
                         })
                         .then(() => {
                             return createChannel(ctx, this.teamId, kebabbedTeamChannel)
@@ -147,9 +147,8 @@ If you haven't already, you might want to:
                                     }
                                 })
                                 .catch(err => failure(err));
-                        })
-                }
-                else {
+                        });
+                } else {
                     const msg: SlackMessage = {
                         text: `There was an error creating your *${this.teamName}* team channel`,
                         attachments: [{
@@ -164,7 +163,7 @@ To create a team channel you must first create a team. Click the button below to
                             actions: [
                                 buttonForCommand(
                                     {
-                                        text: "Create team"
+                                        text: "Create team",
                                     },
                                     new CreateTeam()),
                             ],
