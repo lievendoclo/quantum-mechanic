@@ -1,9 +1,9 @@
+import {logger} from "@atomist/automation-client";
 import * as fs from "fs";
 import {OCCommand} from "./base/OCCommand";
 import {OCCommandResult} from "./base/OCCommandResult";
 import {AbstractOption} from "./base/options/AbstractOption";
 import {SimpleOption} from "./base/options/SimpleOption";
-import {logger} from "@atomist/automation-client";
 import {StandardOption} from "./base/options/StandardOption";
 
 export class OCCommon {

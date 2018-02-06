@@ -1,42 +1,42 @@
+import {secret} from "@atomist/lifecycle-automation/util/secrets";
 import * as appRoot from "app-root-path";
-import {
-    DevOpsEnvironmentRequestedEvent,
-    TeamCreatedEvent
-} from "./gluon/team/teamIngester";
-import {TeamCreated} from "./gluon/team/TeamCreated";
-import {NewDevOpsEnvironment} from "./gluon/team/DevOpsEnvironment";
-import {
-    NewOrUseTeamSlackChannel,
-    NewTeamSlackChannel
-} from "./gluon/team/TeamSlackChannel";
-import {OnboardMember} from "./gluon/member/Onboard";
-import {AddMemberToTeam, JoinTeam} from "./gluon/team/JoinTeam";
-import {TeamMemberCreated} from "./gluon/member/TeamMemberCreated";
-import {TeamMemberCreatedEvent} from "./gluon/member/teamMemberIngester";
-import {AddSlackDetails, Whoami} from "./gluon/member/Slack";
-import {CreateTeam} from "./gluon/team/CreateTeam";
-import {ProjectCreated} from "./gluon/project/ProjectCreated";
-import {
-    ProjectCreatedEvent,
-    ProjectEnvironmentsRequestedEvent
-} from "./gluon/project/projectIngester";
-import {ApplicationCreatedEvent} from "./gluon/application/applicationsIngester";
+import * as config from "config";
 import {ApplicationCreated} from "./gluon/application/ApplicationCreated";
-import {CreateProject} from "./gluon/project/CreateProject";
-import {SlackIdentity, Team} from "./gluon/shared/sharedIngester";
+import {ApplicationCreatedEvent} from "./gluon/application/applicationsIngester";
+import {CreateApplication} from "./gluon/application/CreateApplication";
 import {
     BitbucketProjectAddedEvent,
-    BitbucketProjectRequestedEvent
+    BitbucketProjectRequestedEvent,
 } from "./gluon/bitbucket/bitbucketIngester";
-import {BitbucketProjectRequested} from "./gluon/bitbucket/BitbucketProjectRequested";
 import {NewBitbucketProject} from "./gluon/bitbucket/BitbucketProject";
 import {BitbucketProjectAdded} from "./gluon/bitbucket/BitbucketProjectAdded";
-import {ProjectEnvironmentsRequested} from "./gluon/project/ProjectEnvironmentsRequested";
-import {DevOpsEnvironmentRequested} from "./gluon/team/DevOpsEnvironmentRequested";
+import {BitbucketProjectRequested} from "./gluon/bitbucket/BitbucketProjectRequested";
+import {OnboardMember} from "./gluon/member/Onboard";
+import {AddSlackDetails, Whoami} from "./gluon/member/Slack";
+import {TeamMemberCreated} from "./gluon/member/TeamMemberCreated";
+import {TeamMemberCreatedEvent} from "./gluon/member/teamMemberIngester";
+import {CreateProject} from "./gluon/project/CreateProject";
+import {ProjectCreated} from "./gluon/project/ProjectCreated";
 import {NewProjectEnvironments} from "./gluon/project/ProjectEnvironments";
-import {CreateApplication} from "./gluon/application/CreateApplication";
-import * as config from "config";
-import {secret} from "@atomist/lifecycle-automation/util/secrets";
+import {ProjectEnvironmentsRequested} from "./gluon/project/ProjectEnvironmentsRequested";
+import {
+    ProjectCreatedEvent,
+    ProjectEnvironmentsRequestedEvent,
+} from "./gluon/project/projectIngester";
+import {SlackIdentity, Team} from "./gluon/shared/sharedIngester";
+import {CreateTeam} from "./gluon/team/CreateTeam";
+import {NewDevOpsEnvironment} from "./gluon/team/DevOpsEnvironment";
+import {DevOpsEnvironmentRequested} from "./gluon/team/DevOpsEnvironmentRequested";
+import {AddMemberToTeam, JoinTeam} from "./gluon/team/JoinTeam";
+import {TeamCreated} from "./gluon/team/TeamCreated";
+import {
+    DevOpsEnvironmentRequestedEvent,
+    TeamCreatedEvent,
+} from "./gluon/team/teamIngester";
+import {
+    NewOrUseTeamSlackChannel,
+    NewTeamSlackChannel,
+} from "./gluon/team/TeamSlackChannel";
 
 const pj = require(`${appRoot.path}/package.json`);
 

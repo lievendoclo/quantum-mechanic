@@ -52,7 +52,7 @@ export const ApplicationCreatedEvent: Ingester = {
                         name: "RequestedBy",
                     },
                 },
-            ]
+            ],
         },
         {
             kind: "OBJECT",

@@ -67,7 +67,7 @@ export const TeamMemberCreatedEvent: Ingester = {
                         kind: "SCALAR",
                         name: "String",
                     },
-                }
+                },
             ],
         },
     ],

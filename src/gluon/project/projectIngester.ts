@@ -28,7 +28,7 @@ export const ProjectCreatedEvent: Ingester = {
                         name: "CreatedBy",
                     },
                 },
-            ]
+            ],
         },
         {
             kind: "OBJECT",
@@ -132,7 +132,7 @@ export const ProjectEnvironmentsRequestedEvent: Ingester = {
                         name: "RequestedBy",
                     },
                 },
-            ]
+            ],
         },
         {
             kind: "OBJECT",

@@ -7,15 +7,15 @@ import {
     HandlerResult,
     logger,
     success,
-    SuccessPromise
+    SuccessPromise,
 } from "@atomist/automation-client";
-import * as _ from "lodash";
-import {OCCommon} from "../../openshift/OCCommon";
-import * as https from "https";
-import {SimpleOption} from "../../openshift/base/options/SimpleOption";
 import axios from "axios";
 import * as fs from "fs";
+import * as https from "https";
+import * as _ from "lodash";
 import * as path from "path";
+import {SimpleOption} from "../../openshift/base/options/SimpleOption";
+import {OCCommon} from "../../openshift/OCCommon";
 
 @EventHandler("Receive ApplicationCreatedEvent events", `
 subscription ApplicationCreatedEvent {
@@ -43,7 +43,7 @@ subscription ApplicationCreatedEvent {
       name
       description
       url
-    }    
+    }
     teams {
       teamId
       name
@@ -75,10 +75,10 @@ export class ApplicationCreated implements HandleEvent<any> {
         return OCCommon.commonCommand("serviceaccounts",
             "get-token",
             [
-                "subatomic-jenkins"
+                "subatomic-jenkins",
             ], [
                 new SimpleOption("-namespace", teamDevOpsProjectId),
-            ],)
+            ])
             .then(token => {
                 return OCCommon.commonCommand(
                     "get",
@@ -94,7 +94,7 @@ export class ApplicationCreated implements HandleEvent<any> {
                         const jenkinsAxios = axios.create({
                             httpsAgent: new https.Agent({
                                 rejectUnauthorized: false,
-                            })
+                            }),
                         });
 
                         return jenkinsAxios.post(`https://${jenkinsHost.output}/job/${_.kebabCase(applicationCreatedEvent.project.name).toLowerCase()}/createItem?name=${_.kebabCase(applicationCreatedEvent.application.name).toLowerCase()}`,
@@ -147,7 +147,7 @@ export class ApplicationCreated implements HandleEvent<any> {
                                 headers: {
                                     "Content-Type": "application/xml",
                                     "Authorization": `Bearer ${token.output}`,
-                                }
+                                },
                             })
                             .then(success, error => {
                                 if (error.response.status === 400) {
@@ -177,31 +177,31 @@ export class ApplicationCreated implements HandleEvent<any> {
                         // https://docs.atlassian.com/bitbucket-server/rest/5.7.0/bitbucket-rest.html#idm45568365941504
                         // list all repos for a project and then look for a matching repo URL matching
                         // and then use the clone links...
-                        let caFile = path.resolve(__dirname, '/Users/donovan/dev/absa/core/bitbucket-server/ca-chain.cert.pem');
+                        const caFile = path.resolve(__dirname, "/Users/donovan/dev/absa/core/bitbucket-server/ca-chain.cert.pem");
                         const bitbucketAxios = axios.create({
                             httpsAgent: new https.Agent({
                                 rejectUnauthorized: true,
                                 ca: fs.readFileSync(caFile),
-                            })
+                            }),
                         });
 
                         return bitbucketAxios.get(`https://bitbucket.core.local/rest/api/1.0/projects/${applicationCreatedEvent.bitbucketProject.key}/repos`,
                             {
                                 auth: {
-                                    username: 'donovan',
-                                    password: 'donovan'
-                                }
+                                    username: "donovan",
+                                    password: "donovan",
+                                },
                             })
                             .then(repos => {
 
                                 logger.info(`Got Bitbucket repos in project: ${JSON.stringify(repos.data)}`);
-                                let repo = repos.data.values.find(repo => {
+                                const repo = repos.data.values.find(existingRepo => {
                                     // _.find(repo.links.clone, clone => {
                                     //     return (clone as any).href === applicationCreatedEvent.bitbucketRepository.repoUrl;
                                     // })
-                                    return repo.name === applicationCreatedEvent.bitbucketRepository.name;
+                                    return existingRepo.name === applicationCreatedEvent.bitbucketRepository.name;
                                 });
-                                let remoteUrl = _.find(repo.links.clone, clone => {
+                                const remoteUrl = _.find(repo.links.clone, clone => {
                                     return (clone as any).name === "ssh";
                                 }) as any;
 
@@ -225,7 +225,7 @@ export class ApplicationCreated implements HandleEvent<any> {
                                                 },
                                                 sourceSecret: {
                                                     // TODO should this be configurable?
-                                                    name: "bitbucket-ssh"
+                                                    name: "bitbucket-ssh",
                                                 },
                                             },
                                             strategy: {
@@ -234,7 +234,7 @@ export class ApplicationCreated implements HandleEvent<any> {
                                                         kind: "ImageStreamTag",
                                                         name: "jdk8-maven3-newrelic-subatomic:2.0",
                                                     },
-                                                }
+                                                },
                                             },
                                             output: {
                                                 to: {
@@ -247,7 +247,7 @@ export class ApplicationCreated implements HandleEvent<any> {
                                     [
                                         new SimpleOption("-namespace", teamDevOpsProjectId),
                                     ], true); // TODO clean up this hack - cannot be a boolean (magic)
-                            })
+                            });
                     })
                     .then(() => {
                         return Promise.all([["dev"],
@@ -262,7 +262,7 @@ export class ApplicationCreated implements HandleEvent<any> {
                                     ["subatomic-app-template"],
                                     [
                                         new SimpleOption("-namespace", "openshift"),
-                                        new SimpleOption("-output", "json")
+                                        new SimpleOption("-output", "json"),
                                     ],
                                 )
                                     .then(template => {
@@ -272,7 +272,7 @@ export class ApplicationCreated implements HandleEvent<any> {
                                             [
                                                 new SimpleOption("-namespace", projectId),
                                             ]
-                                            ,)
+                                            , );
                                     })
                                     .then(() => {
                                         return OCCommon.commonCommand("process",
@@ -282,7 +282,7 @@ export class ApplicationCreated implements HandleEvent<any> {
                                                 new SimpleOption("p", `APP_NAME=${appName}`),
                                                 new SimpleOption("p", `IMAGE_STREAM_PROJECT=${projectId}`),
                                                 new SimpleOption("-namespace", projectId),
-                                            ]
+                                            ],
                                         )
                                             .then(appTemplate => {
                                                 logger.debug(`Processed app [${appName}] Template: ${appTemplate.output}`);

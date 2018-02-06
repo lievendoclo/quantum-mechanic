@@ -3,5 +3,5 @@ node_js:
   - 8.7.0
 script:
   - npm run tscSourceMap
-  - npm run build-no-lint
+  - npm run build
   - npm run sendCodeCoverage

@@ -1,8 +1,8 @@
-import {SlackMessage, url} from "@atomist/slack-messages";
 import {HandlerContext} from "@atomist/automation-client";
-import * as _ from "lodash";
 import {buttonForCommand} from "@atomist/automation-client/spi/message/MessageClient";
+import {SlackMessage, url} from "@atomist/slack-messages";
 import axios from "axios";
+import * as _ from "lodash";
 import {CreateProject} from "./CreateProject";
 
 export function projectFromProjectName(ctx: HandlerContext,
@@ -12,8 +12,7 @@ export function projectFromProjectName(ctx: HandlerContext,
         .then(projects => {
             if (!_.isEmpty(projects.data._embedded)) {
                 return Promise.resolve(projects.data._embedded.projectResources[0]);
-            }
-            else {
+            } else {
                 const msg: SlackMessage = {
                     text: message,
                     attachments: [{
@@ -29,7 +28,7 @@ Consider creating a new project called ${projectName}. Click the button below to
                         actions: [
                             buttonForCommand(
                                 {
-                                    text: "Create project"
+                                    text: "Create project",
                                 },
                                 new CreateProject(), {
                                     name: projectName,

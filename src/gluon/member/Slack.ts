@@ -1,6 +1,6 @@
 import {
     CommandHandler, failure, HandleCommand, HandlerContext, HandlerResult,
-    logger, MappedParameter, MappedParameters, Parameter
+    logger, MappedParameter, MappedParameters, Parameter,
 } from "@atomist/automation-client";
 import axios from "axios";
 import * as config from "config";
@@ -16,7 +16,7 @@ export class AddSlackDetails implements HandleCommand<HandlerResult> {
 
     @Parameter({
         description: "ABSA email address",
-        pattern: /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/
+        pattern: /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/,
     })
     public email: string;
 
@@ -32,11 +32,11 @@ export class AddSlackDetails implements HandleCommand<HandlerResult> {
                         slack: {
                             screenName: this.screenName,
                             userId: this.userId,
-                    }
+                    },
                 })
-                .then(member => {
+                .then(gluonMember => {
                     return ctx.messageClient.respond({
-                        text: `Thanks *${member.data.firstName}*, your Slack details have been added to your Subatomic profile. 👍`,
+                        text: `Thanks *${gluonMember.data.firstName}*, your Slack details have been added to your Subatomic profile. 👍`,
                     });
 
                     // TODO check if they've been added to any teams?
@@ -63,7 +63,7 @@ export class Whoami implements HandleCommand<HandlerResult> {
         return ctx.messageClient.respond({
             text: `
 *Slack screen name:* ${this.screenName}
-*Slack user Id:* ${this.userId}  
+*Slack user Id:* ${this.userId}
                   `});
     }
 }

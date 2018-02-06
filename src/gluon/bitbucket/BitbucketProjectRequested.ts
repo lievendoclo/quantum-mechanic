@@ -6,11 +6,11 @@ import {
     HandlerResult,
     logger,
     success,
-    SuccessPromise
+    SuccessPromise,
 } from "@atomist/automation-client";
 import axios from "axios";
+import * as fs from "fs";
 import * as https from "https";
-import * as fs from 'fs';
 import * as path from "path";
 
 @EventHandler("Receive BitbucketProjectRequestedEvent events", `
@@ -52,12 +52,12 @@ export class BitbucketProjectRequested implements HandleEvent<any> {
     public handle(event: EventFired<any>, ctx: HandlerContext): Promise<HandlerResult> {
         logger.info(`Ingested BitbucketProjectRequested event: ${JSON.stringify(event.data)}`);
 
-        let caFile = path.resolve(__dirname, '/Users/donovan/dev/absa/core/bitbucket-server/ca-chain.cert.pem');
+        const caFile = path.resolve(__dirname, "/Users/donovan/dev/absa/core/bitbucket-server/ca-chain.cert.pem");
         const bitbucketAxios = axios.create({
             httpsAgent: new https.Agent({
                 rejectUnauthorized: true,
                 ca: fs.readFileSync(caFile),
-            })
+            }),
         });
 
         const bitbucketProjectRequestedEvent = event.data.BitbucketProjectRequestedEvent[0];
@@ -67,14 +67,14 @@ export class BitbucketProjectRequested implements HandleEvent<any> {
 
         return bitbucketAxios.post("https://bitbucket.core.local/rest/api/1.0/projects",
             {
-                key: key,
-                name: name,
-                description: description,
+                key,
+                name,
+                description,
             }, {
                 auth: {
-                    username: 'donovan',
-                    password: 'donovan'
-                }
+                    username: "donovan",
+                    password: "donovan",
+                },
             })
             .then(project => {
                 logger.info(`Created project: ${JSON.stringify(project.data)} -> ${project.data.id} + ${project.data.links.self[0].href}`);
@@ -88,12 +88,11 @@ export class BitbucketProjectRequested implements HandleEvent<any> {
                     // TODO if the status is 409, then get the existing project id and Url
 
                     return this.configureProject(key);
-                }
-                else {
+                } else {
                     return ctx.messageClient.addressUsers({
                         // TODO make this more descriptive
-                        text: `There was an error creating the ${bitbucketProjectRequestedEvent.project.name} Bitbucket project`
-                    }, bitbucketProjectRequestedEvent.requestedBy.slackIdentity.screenName)
+                        text: `There was an error creating the ${bitbucketProjectRequestedEvent.project.name} Bitbucket project`,
+                    }, bitbucketProjectRequestedEvent.requestedBy.slackIdentity.screenName);
                 }
             })
             .then(() => {
@@ -102,16 +101,16 @@ export class BitbucketProjectRequested implements HandleEvent<any> {
                     {
                         key: {
                             // TODO where do we store/reference this key?
-                            text: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQCzuPsKSdUwMVw7qQsNY0DQ0jCD3nAJSYoU7yHTgE2MLsRznNpec2dhjkzrgkWULXZlzFqf7MIJheYoIxHeoJzxrV+3nKT99FyFHSWJiEfk1G7PDRyptXspWRSvkhk8ovijVa7IeoYGLGxfGjF+gwO0dpyr/p8bX7t2+N0X0FZbkU7zjKJ5TrSgJuheVi7r1MO16Zr3k0uyRNDSDKPRt2IDmjRT9y6/ofhvFMn7JrMXkHpRYIJJQ/H2py63qYQatCpi38znBfke5fFoBK4L4/vALbH/Gjqj1J5Uadn8inGyrL0WxohWuhwk/K/bwOSw0LNO8bQ5lAmPgPgJYyA4Plm0onPLp1MZcO/Zj5UjEbmf3w+p2/Th0z6LxA0ytIedTYk8lz35h1yuINd1sp2VmiYS10pqJ1HW/3Mx7McwA8tLsuxKjYmOw4sIsunS+GQPPJbVQrB8ekx2CkD/nwf6fyH+RqtIQ6UBo+9013KwJKOd4qEGkKEN3kBzNoamOvfHvJROX7DQJKRux2/qJXggxJ8F7u0Hj5bSrhYbRNV9T9IfJPGWrJm56V+CbqA0mm7FmSuz2+EeUd3h5R8fxju75gbqFsCLnpuDhhUKxE2PMyRqAAaJ7AZYdXXl8NeNbWEPg/GgyEx4not76ibBDggkEjfYxYSU3689uVMhCv+VN2h6ew== CI/CD for Test Team Alpha"
+                            text: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQCzuPsKSdUwMVw7qQsNY0DQ0jCD3nAJSYoU7yHTgE2MLsRznNpec2dhjkzrgkWULXZlzFqf7MIJheYoIxHeoJzxrV+3nKT99FyFHSWJiEfk1G7PDRyptXspWRSvkhk8ovijVa7IeoYGLGxfGjF+gwO0dpyr/p8bX7t2+N0X0FZbkU7zjKJ5TrSgJuheVi7r1MO16Zr3k0uyRNDSDKPRt2IDmjRT9y6/ofhvFMn7JrMXkHpRYIJJQ/H2py63qYQatCpi38znBfke5fFoBK4L4/vALbH/Gjqj1J5Uadn8inGyrL0WxohWuhwk/K/bwOSw0LNO8bQ5lAmPgPgJYyA4Plm0onPLp1MZcO/Zj5UjEbmf3w+p2/Th0z6LxA0ytIedTYk8lz35h1yuINd1sp2VmiYS10pqJ1HW/3Mx7McwA8tLsuxKjYmOw4sIsunS+GQPPJbVQrB8ekx2CkD/nwf6fyH+RqtIQ6UBo+9013KwJKOd4qEGkKEN3kBzNoamOvfHvJROX7DQJKRux2/qJXggxJ8F7u0Hj5bSrhYbRNV9T9IfJPGWrJm56V+CbqA0mm7FmSuz2+EeUd3h5R8fxju75gbqFsCLnpuDhhUKxE2PMyRqAAaJ7AZYdXXl8NeNbWEPg/GgyEx4not76ibBDggkEjfYxYSU3689uVMhCv+VN2h6ew== CI/CD for Test Team Alpha",
                         },
-                        permission: "PROJECT_READ"
+                        permission: "PROJECT_READ",
                     },
                     {
                         auth: {
-                            username: 'donovan',
-                            password: 'donovan'
-                        }
-                    })
+                            username: "donovan",
+                            password: "donovan",
+                        },
+                    });
             })
             .catch(error => {
                 logger.warn(`Could not add SSH keys to Bitbucket project: [${error.response.status}-${error.response.data}]`);
@@ -121,7 +120,7 @@ export class BitbucketProjectRequested implements HandleEvent<any> {
                 }
 
                 return ctx.messageClient.addressUsers({
-                    text: `There was an error adding SSH keys for ${bitbucketProjectRequestedEvent.project.name} Bitbucket project`
+                    text: `There was an error adding SSH keys for ${bitbucketProjectRequestedEvent.project.name} Bitbucket project`,
                 }, bitbucketProjectRequestedEvent.requestedBy.slackIdentity.screenName);
             })
             .then(() => {
@@ -133,13 +132,13 @@ export class BitbucketProjectRequested implements HandleEvent<any> {
                             bitbucketProject: {
                                 bitbucketProjectId: this.bitbucketProjectId,
                                 url: this.bitbucketProjectUrl,
-                            }
+                            },
                         })
                         .then(success, error => {
                             logger.error(`Could not confirm Bitbucket project: [${error.response.status}-${error.response.data}]`);
                             return ctx.messageClient.addressUsers({
-                                text: `There was an error confirming the ${bitbucketProjectRequestedEvent.project.name} Bitbucket project details`
-                            }, bitbucketProjectRequestedEvent.requestedBy.slackIdentity.screenName)
+                                text: `There was an error confirming the ${bitbucketProjectRequestedEvent.project.name} Bitbucket project details`,
+                            }, bitbucketProjectRequestedEvent.requestedBy.slackIdentity.screenName);
                         });
                 } else {
                     logger.warn(`Bitbucket project [${name}] probably already exists, so not confirming.`);
@@ -157,17 +156,17 @@ export class BitbucketProjectRequested implements HandleEvent<any> {
     }
 
     private configureProject(key: string): Promise<[any]> {
-        let caFile = path.resolve(__dirname, '/Users/donovan/dev/absa/core/bitbucket-server/ca-chain.cert.pem');
+        const caFile = path.resolve(__dirname, "/Users/donovan/dev/absa/core/bitbucket-server/ca-chain.cert.pem");
         const bitbucketAxios = axios.create({
             httpsAgent: new https.Agent({
                 rejectUnauthorized: true,
                 ca: fs.readFileSync(caFile),
-            })
+            }),
         });
 
-        let owner = "bob";
-        let bitbucketUsername = "donovan";
-        let bitbucketId = "1";
+        const owner = "bob";
+        const bitbucketUsername = "donovan";
+        const bitbucketId = "1";
 
         logger.info(`Configuring project for key: ${key}`);
 
@@ -179,9 +178,9 @@ export class BitbucketProjectRequested implements HandleEvent<any> {
                 {},
                 {
                     auth: {
-                        username: 'donovan',
-                        password: 'donovan'
-                    }
+                        username: "donovan",
+                        password: "donovan",
+                    },
                 }),
             // Add branch permissions
             bitbucketAxios.post(`https://bitbucket.core.local/rest/branch-permissions/2.0/projects/${key}/restrictions`,
@@ -192,21 +191,21 @@ export class BitbucketProjectRequested implements HandleEvent<any> {
                         displayId: "master",
                         type: {
                             id: "BRANCH",
-                            name: "Branch"
-                        }
+                            name: "Branch",
+                        },
                     },
                     users: [
                         // need to get this via the /users API
                         // use the members email address?
                         // https://docs.atlassian.com/bitbucket-server/rest/5.7.0/bitbucket-rest.html#idm45568366416656
                         bitbucketUsername,
-                    ]
+                    ],
                 },
                 {
                     auth: {
-                        username: 'donovan',
-                        password: 'donovan'
-                    }
+                        username: "donovan",
+                        password: "donovan",
+                    },
                 }),
             bitbucketAxios.post(`https://bitbucket.core.local/rest/branch-permissions/2.0/projects/${key}/restrictions`,
                 {
@@ -216,21 +215,21 @@ export class BitbucketProjectRequested implements HandleEvent<any> {
                         displayId: "master",
                         type: {
                             id: "BRANCH",
-                            name: "Branch"
-                        }
+                            name: "Branch",
+                        },
                     },
                     users: [
                         // need to get this via the /users API
                         // use the members email address?
                         // https://docs.atlassian.com/bitbucket-server/rest/5.7.0/bitbucket-rest.html#idm45568366416656
                         bitbucketUsername,
-                    ]
+                    ],
                 },
                 {
                     auth: {
-                        username: 'donovan',
-                        password: 'donovan'
-                    }
+                        username: "donovan",
+                        password: "donovan",
+                    },
                 }),
             bitbucketAxios.post(`https://bitbucket.core.local/rest/branch-permissions/2.0/projects/${key}/restrictions`,
                 {
@@ -240,50 +239,50 @@ export class BitbucketProjectRequested implements HandleEvent<any> {
                         displayId: "master",
                         type: {
                             id: "BRANCH",
-                            name: "Branch"
-                        }
+                            name: "Branch",
+                        },
                     },
                     users: [
                         // need to get this via the /users API
                         // use the members email address?
                         // https://docs.atlassian.com/bitbucket-server/rest/5.7.0/bitbucket-rest.html#idm45568366416656
                         bitbucketUsername,
-                    ]
+                    ],
                 },
                 {
                     auth: {
-                        username: 'donovan',
-                        password: 'donovan'
-                    }
+                        username: "donovan",
+                        password: "donovan",
+                    },
                 }),
             // Enable and configure hooks
             bitbucketAxios.put(`https://bitbucket.core.local/rest/api/1.0/projects/${key}/settings/hooks/com.atlassian.bitbucket.server.bitbucket-bundled-hooks:verify-committer-hook/enabled`,
                 {},
                 {
                     auth: {
-                        username: 'donovan',
-                        password: 'donovan'
-                    }
+                        username: "donovan",
+                        password: "donovan",
+                    },
                 }),
             // Enable and configure hooks
             bitbucketAxios.put(`https://bitbucket.core.local/rest/api/1.0/projects/${key}/settings/hooks/com.atlassian.bitbucket.server.bitbucket-bundled-hooks:incomplete-tasks-merge-check/enabled`,
                 {},
                 {
                     auth: {
-                        username: 'donovan',
-                        password: 'donovan'
-                    }
+                        username: "donovan",
+                        password: "donovan",
+                    },
                 }),
             // Enable and configure merge checks
             bitbucketAxios.put(`https://bitbucket.core.local/rest/api/1.0/projects/${key}/settings/hooks/com.atlassian.bitbucket.server.bitbucket-build:requiredBuildsMergeCheck/enabled`,
                 {
-                    requiredCount: 1
+                    requiredCount: 1,
                 },
                 {
                     auth: {
-                        username: 'donovan',
-                        password: 'donovan'
-                    }
+                        username: "donovan",
+                        password: "donovan",
+                    },
                 }),
             // Add default reviewers (the team owners - in future everyone with 'reviewer' role?)
             bitbucketAxios.post(`https://bitbucket.core.local/rest/default-reviewers/1.0/projects/${key}/condition`,
@@ -292,31 +291,31 @@ export class BitbucketProjectRequested implements HandleEvent<any> {
                         {
                             // TODO get user id from email?
                             id: bitbucketId,
-                        }
+                        },
                     ],
                     sourceMatcher: {
                         id: "ANY_REF_MATCHER_ID",
                         displayId: "ANY_REF_MATCHER_ID",
                         type: {
                             id: "ANY_REF",
-                            name: "Any branch"
-                        }
+                            name: "Any branch",
+                        },
                     },
                     targetMatcher: {
                         id: "ANY_REF_MATCHER_ID",
                         displayId: "ANY_REF_MATCHER_ID",
                         type: {
                             id: "ANY_REF",
-                            name: "Any branch"
-                        }
+                            name: "Any branch",
+                        },
                     },
-                    requiredApprovals: 0
+                    requiredApprovals: 0,
                 },
                 {
                     auth: {
-                        username: 'donovan',
-                        password: 'donovan'
-                    }
+                        username: "donovan",
+                        password: "donovan",
+                    },
                 }),
         ]);
     }

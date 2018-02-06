@@ -38,7 +38,7 @@ export const BitbucketProjectRequestedEvent: Ingester = {
                         name: "RequestedBy",
                     },
                 },
-            ]
+            ],
         },
         {
             kind: "OBJECT",
@@ -176,7 +176,7 @@ export const BitbucketProjectAddedEvent: Ingester = {
                         name: "CreatedBy",
                     },
                 },
-            ]
+            ],
         },
         {
             kind: "OBJECT",

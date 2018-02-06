@@ -1,8 +1,8 @@
+import {HandlerContext} from "@atomist/automation-client";
+import {buttonForCommand} from "@atomist/automation-client/spi/message/MessageClient";
 import axios from "axios";
 import * as _ from "lodash";
-import {HandlerContext} from "@atomist/automation-client";
 import {CreateTeam} from "./CreateTeam";
-import {buttonForCommand} from "@atomist/automation-client/spi/message/MessageClient";
 import {JoinTeam} from "./JoinTeam";
 
 export function teamsWhoScreenNameBelongsToo(ctx: HandlerContext, screenName: string): Promise<any[]> {
@@ -21,14 +21,14 @@ export function teamsWhoScreenNameBelongsToo(ctx: HandlerContext, screenName: st
                         buttonForCommand(
                             {
                                 text: "Apply to join a team",
-                                style: "primary"
+                                style: "primary",
                             },
                             new JoinTeam()),
                         buttonForCommand(
                             {text: "Create a new team"},
                             new CreateTeam()),
                     ],
-                }]
+                }],
             })
                 .then(() => Promise.reject(`${screenName} does not belong to any teams`));
         });

@@ -7,18 +7,18 @@ import {
     HandlerResult,
     logger,
     success,
-    SuccessPromise
+    SuccessPromise,
 } from "@atomist/automation-client";
-import {OCClient} from "../../openshift/OCClient";
-import {OCCommon} from "../../openshift/OCCommon";
-import * as _ from "lodash";
-import {SimpleOption} from "../../openshift/base/options/SimpleOption";
-import * as https from "https";
-import axios from "axios";
 import {buttonForCommand} from "@atomist/automation-client/spi/message/MessageClient";
 import {SlackMessage, url} from "@atomist/slack-messages";
+import axios from "axios";
+import * as https from "https";
+import * as _ from "lodash";
+import * as qs from "query-string";
+import {SimpleOption} from "../../openshift/base/options/SimpleOption";
+import {OCClient} from "../../openshift/OCClient";
+import {OCCommon} from "../../openshift/OCCommon";
 import {CreateApplication} from "../application/CreateApplication";
-import * as qs from "query-string"
 
 @EventHandler("Receive ProjectEnvironmentsRequestedEvent events", `
 subscription ProjectEnvironmentsRequestedEvent {
@@ -40,14 +40,14 @@ subscription ProjectEnvironmentsRequestedEvent {
         domainUsername
         slackIdentity {
           screenName
-        }      
+        }
       }
       members {
         firstName
         domainUsername
         slackIdentity {
           screenName
-        }      
+        }
       }
     }
     requestedBy {
@@ -103,11 +103,11 @@ export class ProjectEnvironmentsRequested implements HandleEvent<any> {
                                 hard: {
                                     "limits.cpu": "80", // 20 * 4m
                                     "limits.memory": "20480Mi", // 20 * 1024Mi
-                                    pods: "20",
-                                    replicationcontrollers: "20",
-                                    services: "20",
+                                    "pods": "20",
+                                    "replicationcontrollers": "20",
+                                    "services": "20",
                                 },
-                            }
+                            },
                         }, [
                             new SimpleOption("-namespace", projectId),
                         ])
@@ -125,7 +125,7 @@ export class ProjectEnvironmentsRequested implements HandleEvent<any> {
                                                 cpu: "8",
                                                 memory: "4096Mi",
                                             },
-                                            "default": {
+                                            default: {
                                                 cpu: "4",
                                                 memory: "512Mi",
                                             },
@@ -148,7 +148,7 @@ export class ProjectEnvironmentsRequested implements HandleEvent<any> {
                             ["subatomic-app-template"],
                             [
                                 new SimpleOption("-namespace", "openshift"),
-                                new SimpleOption("-output", "json")
+                                new SimpleOption("-output", "json"),
                             ],
                         )
                             .then(template => {
@@ -158,7 +158,7 @@ export class ProjectEnvironmentsRequested implements HandleEvent<any> {
                                     [
                                         new SimpleOption("-namespace", projectId),
                                     ]
-                                    ,)
+                                    , );
                             });
                     })
                     .then(() => {
@@ -167,10 +167,10 @@ export class ProjectEnvironmentsRequested implements HandleEvent<any> {
                             "policy add-role-to-user",
                             "edit",
                             [
-                                `system:serviceaccount:${teamDevOpsProjectId}:jenkins`
+                                `system:serviceaccount:${teamDevOpsProjectId}:jenkins`,
                             ], [
                                 new SimpleOption("-namespace", projectId),
-                            ],)
+                            ]);
                     });
             }))
             .then(() => {
@@ -182,10 +182,10 @@ export class ProjectEnvironmentsRequested implements HandleEvent<any> {
                 return OCCommon.commonCommand("serviceaccounts",
                     "get-token",
                     [
-                        "subatomic-jenkins"
+                        "subatomic-jenkins",
                     ], [
                         new SimpleOption("-namespace", teamDevOpsProjectId),
-                    ],)
+                    ])
                     .then(token => {
                         return OCCommon.commonCommand(
                             "get",
@@ -201,7 +201,7 @@ export class ProjectEnvironmentsRequested implements HandleEvent<any> {
                                 const jenkinsAxios = axios.create({
                                     httpsAgent: new https.Agent({
                                         rejectUnauthorized: false,
-                                    })
+                                    }),
                                 });
 
                                 return jenkinsAxios.post(`https://${jenkinsHost.output}/createItem?name=${_.kebabCase(environmentsRequestedEvent.project.name).toLowerCase()}`,
@@ -255,7 +255,7 @@ export class ProjectEnvironmentsRequested implements HandleEvent<any> {
                                         headers: {
                                             "Content-Type": "application/xml",
                                             "Authorization": `Bearer ${token.output}`,
-                                        }
+                                        },
                                     })
                                     .then(success, error => {
                                         if (error.response.status === 400) {
@@ -266,17 +266,17 @@ export class ProjectEnvironmentsRequested implements HandleEvent<any> {
                                         }
                                     });
                             });
-                    })
+                    });
             })
             .then(() => {
                 const teamDevOpsProjectId = `${_.kebabCase(environmentsRequestedEvent.teams[0].name).toLowerCase()}-devops`;
                 return OCCommon.commonCommand("serviceaccounts",
                     "get-token",
                     [
-                        "subatomic-jenkins"
+                        "subatomic-jenkins",
                     ], [
                         new SimpleOption("-namespace", teamDevOpsProjectId),
-                    ],)
+                    ]);
             })
             .then(token => {
                 const teamDevOpsProjectId = `${_.kebabCase(environmentsRequestedEvent.teams[0].name).toLowerCase()}-devops`;
@@ -291,40 +291,40 @@ export class ProjectEnvironmentsRequested implements HandleEvent<any> {
                     .then(jenkinsHost => {
                         const jenkinsCredentials = {
                             "": "0",
-                            credentials: {
+                            "credentials": {
                                 scope: "GLOBAL",
                                 id: `${teamDevOpsProjectId}-bitbucket`,
                                 // TODO get this from config obviously
                                 username: "donovan",
                                 password: "donovan",
                                 description: `${teamDevOpsProjectId}-bitbucket`,
-                                $class: "com.cloudbees.plugins.credentials.impl.UsernamePasswordCredentialsImpl"
-                            }
+                                $class: "com.cloudbees.plugins.credentials.impl.UsernamePasswordCredentialsImpl",
+                            },
                         };
 
                         const jenkinsAxios = axios.create({
                             httpsAgent: new https.Agent({
                                 rejectUnauthorized: false,
-                            })
+                            }),
                         });
 
-                        jenkinsAxios.interceptors.request.use((request) => {
-                            if (request.data && (request.headers['Content-Type'].indexOf('application/x-www-form-urlencoded') !== -1)) {
+                        jenkinsAxios.interceptors.request.use( request => {
+                            if (request.data && (request.headers["Content-Type"].indexOf("application/x-www-form-urlencoded") !== -1)) {
                                 logger.debug(`Stringifying URL encoded data: ${qs.stringify(request.data)}`);
-                                request.data = qs.stringify(request.data)
+                                request.data = qs.stringify(request.data);
                             }
-                            return request
+                            return request;
                         });
 
                         return jenkinsAxios.post(`https://${jenkinsHost.output}/credentials/store/system/domain/_/createCredentials`,
                             {
-                                json: `${JSON.stringify(jenkinsCredentials)}`
+                                json: `${JSON.stringify(jenkinsCredentials)}`,
                             },
                             {
                                 headers: {
                                     "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
                                     "Authorization": `Bearer ${token.output}`,
-                                }
+                                },
                             });
                     });
             })
@@ -344,7 +344,7 @@ A package is either an application or a shared library, click the button below t
                                 new CreateApplication(),
                                 {}),
                         ],
-                    }]
+                    }],
                 };
 
                 return ctx.messageClient.addressChannels(msg,
@@ -352,30 +352,30 @@ A package is either an application or a shared library, click the button below t
                         team.slackIdentity.teamChannel));
             })
             .catch(err => {
-                return failure(err)
+                return failure(err);
             });
     }
 
-    private addMembershipPermissions(projectId: string, teams: any[]): Promise<any[]>[] {
+    private addMembershipPermissions(projectId: string, teams: any[]): Array<Promise<any[]>> {
         return teams.map(team => {
             return Promise.all(
                 team.owners.map(owner => {
-                    let ownerUsername = /[^\\]*$/.exec(owner.domainUsername)[0];
+                    const ownerUsername = /[^\\]*$/.exec(owner.domainUsername)[0];
                     logger.info(`Adding role to project [${projectId}] and owner [${owner.domainUsername}]: ${ownerUsername}`);
                     return OCClient.policy.addRoleToUser(ownerUsername,
                         "admin",
-                        projectId)
+                        projectId);
                 }))
                 .then(() => {
                     return Promise.all(
                         team.members.map(member => {
-                            let memberUsername = /[^\\]*$/.exec(member.domainUsername)[0];
+                            const memberUsername = /[^\\]*$/.exec(member.domainUsername)[0];
                             logger.info(`Adding role to project [${projectId}] and member [${member.domainUsername}]: ${memberUsername}`);
                             return OCClient.policy.addRoleToUser(memberUsername,
                                 "view",
-                                projectId)
-                        }))
-                })
+                                projectId);
+                        }));
+                });
         });
     }
 

@@ -1,9 +1,9 @@
 import {
     EventFired, EventHandler, HandleEvent, HandlerContext, HandlerResult,
-    logger
+    logger,
 } from "@atomist/automation-client";
-import {url} from "@atomist/slack-messages";
 import {buttonForCommand} from "@atomist/automation-client/spi/message/MessageClient";
+import {url} from "@atomist/slack-messages";
 import {NewBitbucketProject} from "../bitbucket/BitbucketProject";
 import {NewProjectEnvironments} from "./ProjectEnvironments";
 
@@ -56,7 +56,7 @@ This can be a new Bitbucket project that will be created and configured accordin
                         }),
                     buttonForCommand(
                         {text: "Link existing Bitbucket project"},
-                        this)
+                        this),
                 ],
             }, {
                 text: `
@@ -81,7 +81,7 @@ If you would like to associate more teams to the *${projectCreatedEvent.project.
                 fallback: "Associate multiple teams to this project",
                 footer: `For more information, please read the ${this.docs()}`, // TODO use actual icon
                 color: "#00a5ff",
-            },]
+            }],
         }, projectCreatedEvent.team.slackIdentity.teamChannel);
     }
 

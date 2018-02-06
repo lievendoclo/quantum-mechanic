@@ -1,10 +1,10 @@
 import {
     EventFired, EventHandler, HandleEvent, HandlerContext, HandlerResult,
-    logger
+    logger,
 } from "@atomist/automation-client";
-import {NewProjectEnvironments} from "../project/ProjectEnvironments";
 import {buttonForCommand} from "@atomist/automation-client/spi/message/MessageClient";
 import {url} from "@atomist/slack-messages";
+import {NewProjectEnvironments} from "../project/ProjectEnvironments";
 
 @EventHandler("Receive BitbucketProjectAddedEvent events", `
 subscription BitbucketProjectAddedEvent {
@@ -63,7 +63,7 @@ These environments are realised as OpenShift projects and need to be created or 
                             new NewProjectEnvironments(),
                             {
                                 projectName: addedEvent.project.name,
-                            })
+                            }),
                     ],
                 },
 //                 {
@@ -87,7 +87,7 @@ If you would like to associate more teams to the *${addedEvent.project.name}* pr
                     fallback: "Associate multiple teams to this project",
                     footer: `For more information, please read the ${this.docs()}`, // TODO use actual icon
                     color: "#00a5ff",
-                },]
+                }],
         }, addedEvent.teams.map(team => team.slackIdentity.teamChannel));
     }
 

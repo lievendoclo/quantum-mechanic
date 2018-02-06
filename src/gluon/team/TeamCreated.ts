@@ -2,14 +2,14 @@ import {
     EventFired, EventHandler, HandleEvent, HandlerContext, HandlerResult,
     logger, success,
 } from "@atomist/automation-client";
-import {SlackMessage, url} from "@atomist/slack-messages";
 import {
     addressSlackUsers,
-    buttonForCommand
+    buttonForCommand,
 } from "@atomist/automation-client/spi/message/MessageClient";
-import {NewOrUseTeamSlackChannel} from "./TeamSlackChannel";
-import {NewDevOpsEnvironment} from "./DevOpsEnvironment";
+import {SlackMessage, url} from "@atomist/slack-messages";
 import * as _ from "lodash";
+import {NewDevOpsEnvironment} from "./DevOpsEnvironment";
+import {NewOrUseTeamSlackChannel} from "./TeamSlackChannel";
 
 @EventHandler("Receive TeamCreated events", `
 subscription TeamCreatedEvent {
@@ -43,7 +43,7 @@ ${teamCreatedEvent.createdBy.firstName}, your ${teamCreatedEvent.team.name} team
 Next you should configure your team Slack channel and OpenShift DevOps environment
                             `;
         const msg: SlackMessage = {
-            text: text,
+            text,
             attachments: [{
                 fallback: "Next you should configure your team Slack channel and OpenShift DevOps environment",
                 footer: `For more information, please read the ${this.docs()}`, // TODO use actual icon
@@ -53,7 +53,7 @@ Next you should configure your team Slack channel and OpenShift DevOps environme
                         new NewOrUseTeamSlackChannel(),
                         {
                             teamName: teamCreatedEvent.team.name,
-                            teamChannel: _.kebabCase(teamCreatedEvent.team.name)
+                            teamChannel: _.kebabCase(teamCreatedEvent.team.name),
                         }),
                     // buttonForCommand(
                     //     {text: "OpenShift DevOps environment"},

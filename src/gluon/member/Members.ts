@@ -1,8 +1,8 @@
 import {HandlerContext, logger} from "@atomist/automation-client";
-import * as _ from "lodash";
+import {buttonForCommand} from "@atomist/automation-client/spi/message/MessageClient";
 import {SlackMessage, url} from "@atomist/slack-messages";
 import axios from "axios";
-import {buttonForCommand} from "@atomist/automation-client/spi/message/MessageClient";
+import * as _ from "lodash";
 import {OnboardMember} from "./Onboard";
 
 export function memberFromScreenName(ctx: HandlerContext,
@@ -12,8 +12,7 @@ export function memberFromScreenName(ctx: HandlerContext,
         .then(members => {
             if (!_.isEmpty(members.data._embedded)) {
                 return Promise.resolve(members.data._embedded.teamMemberResources[0]);
-            }
-            else {
+            } else {
                 const msg: SlackMessage = {
                     text: message,
                     attachments: [{
@@ -29,7 +28,7 @@ To create a team you must first onboard yourself. Click the button below to do t
                         actions: [
                             buttonForCommand(
                                 {
-                                    text: "Onboard me"
+                                    text: "Onboard me",
                                 },
                                 new OnboardMember()),
                         ],

@@ -21,7 +21,7 @@ export const TeamCreatedEvent: Ingester = {
                         name: "CreatedBy",
                     },
                 },
-            ]
+            ],
         },
         {
             kind: "OBJECT",
@@ -88,7 +88,7 @@ export const DevOpsEnvironmentRequestedEvent: Ingester = {
                         name: "RequestedBy",
                     },
                 },
-            ]
+            ],
         },
         {
             kind: "OBJECT",

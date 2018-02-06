@@ -6,19 +6,19 @@ import {
     HandlerContext,
     HandlerResult,
     logger,
-    SuccessPromise
+    SuccessPromise,
 } from "@atomist/automation-client";
-import {OCClient} from "../../openshift/OCClient";
-import {SimpleOption} from "../../openshift/base/options/SimpleOption";
-import {OCCommon} from "../../openshift/OCCommon";
-import * as _ from "lodash";
-import {timeout, TimeoutError} from 'promise-timeout';
+import {buttonForCommand} from "@atomist/automation-client/spi/message/MessageClient";
+import {SlackMessage, url} from "@atomist/slack-messages";
 import axios from "axios";
 import * as https from "https";
-import * as qs from "query-string"
-import {buttonForCommand} from "@atomist/automation-client/spi/message/MessageClient";
+import * as _ from "lodash";
+import {timeout, TimeoutError} from "promise-timeout";
+import * as qs from "query-string";
+import {SimpleOption} from "../../openshift/base/options/SimpleOption";
+import {OCClient} from "../../openshift/OCClient";
+import {OCCommon} from "../../openshift/OCCommon";
 import {CreateProject} from "../project/CreateProject";
-import {SlackMessage, url} from "@atomist/slack-messages";
 
 @EventHandler("Receive DevOpsEnvironmentRequestedEvent events", `
 subscription DevOpsEnvironmentRequestedEvent {
@@ -35,15 +35,15 @@ subscription DevOpsEnvironmentRequestedEvent {
         domainUsername
         slackIdentity {
           screenName
-        }      
+        }
       }
       members {
         firstName
         domainUsername
         slackIdentity {
           screenName
-        }      
-      }      
+        }
+      }
     }
     requestedBy {
       firstName
@@ -90,11 +90,11 @@ export class DevOpsEnvironmentRequested implements HandleEvent<any> {
                         hard: {
                             "limits.cpu": "16", // 4 * 4m
                             "limits.memory": "4096Mi", // 4 * 1024Mi
-                            pods: "4",
-                            replicationcontrollers: "4",
-                            services: "4",
+                            "pods": "4",
+                            "replicationcontrollers": "4",
+                            "services": "4",
                         },
-                    }
+                    },
                 }, [
                     new SimpleOption("-namespace", projectId),
                 ])
@@ -112,7 +112,7 @@ export class DevOpsEnvironmentRequested implements HandleEvent<any> {
                                         cpu: "4",
                                         memory: "1024Mi",
                                     },
-                                    "default": {
+                                    default: {
                                         cpu: "4",
                                         memory: "512Mi",
                                     },
@@ -132,7 +132,7 @@ export class DevOpsEnvironmentRequested implements HandleEvent<any> {
                     ["jenkins-persistent-subatomic"],
                     [
                         new SimpleOption("-namespace", "openshift"),
-                        new SimpleOption("-output", "json")
+                        new SimpleOption("-output", "json"),
                     ],
                 )
                     .then(template => {
@@ -142,7 +142,7 @@ export class DevOpsEnvironmentRequested implements HandleEvent<any> {
                             [
                                 new SimpleOption("-namespace", projectId),
                             ]
-                            ,)
+                            , );
                     });
             }).then(() => {
                 return Promise.all([OCCommon.commonCommand("tag",
@@ -174,7 +174,7 @@ export class DevOpsEnvironmentRequested implements HandleEvent<any> {
                         // TODO the registry Cluster IP we will have to get by introspecting the registry Service
                         new SimpleOption("p", `MAVEN_SLAVE_IMAGE=172.30.1.1:5000/${projectId}/jenkins-slave-maven-subatomic:2.0`),
                         new SimpleOption("-namespace", projectId),
-                    ]
+                    ],
                 )
                     .then(jenkinsTemplate => {
                         logger.debug(`Processed Jenkins Template: ${jenkinsTemplate.output}`);
@@ -203,42 +203,42 @@ export class DevOpsEnvironmentRequested implements HandleEvent<any> {
                             "subatomic.bison.co.za/managed": "true",
                             "serviceaccounts.openshift.io/oauth-redirectreference.jenkins": '{"kind":"OAuthRedirectReference", "apiVersion":"v1","reference":{"kind":"Route","name":"jenkins"}}',
                         },
-                        name: "subatomic-jenkins"
-                    }
+                        name: "subatomic-jenkins",
+                    },
                 }, [
                     new SimpleOption("-namespace", projectId),
-                ],)
+                ])
                     .then(() => {
                         return OCCommon.createFromData({
                             apiVersion: "rbac.authorization.k8s.io/v1beta1",
                             kind: "RoleBinding",
                             metadata: {
                                 annotations: {
-                                    "subatomic.bison.co.za/managed": "true"
+                                    "subatomic.bison.co.za/managed": "true",
                                 },
-                                name: "subatomic-jenkins-edit"
+                                name: "subatomic-jenkins-edit",
                             },
                             roleRef: {
                                 apiGroup: "rbac.authorization.k8s.io",
                                 kind: "ClusterRole",
-                                name: "admin"
+                                name: "admin",
                             },
                             subjects: [{
                                 kind: "ServiceAccount",
-                                name: "subatomic-jenkins"
-                            }]
+                                name: "subatomic-jenkins",
+                            }],
                         }, [
                             new SimpleOption("-namespace", projectId),
-                        ], true)
+                        ], true);
                     })
                     .then(() => {
                         return OCCommon.commonCommand("serviceaccounts",
                             "get-token",
                             [
-                                "subatomic-jenkins"
+                                "subatomic-jenkins",
                             ], [
                                 new SimpleOption("-namespace", projectId),
-                            ],)
+                            ]);
                     })
                     .then(token => {
                         logger.info(`Using Service Account token: ${token.output}`);
@@ -275,43 +275,43 @@ export class DevOpsEnvironmentRequested implements HandleEvent<any> {
                                         const jenkinsAxios = axios.create({
                                             httpsAgent: new https.Agent({
                                                 rejectUnauthorized: false,
-                                            })
+                                            }),
                                         });
 
-                                        jenkinsAxios.interceptors.request.use((request) => {
-                                            if (request.data && (request.headers['Content-Type'].indexOf('application/x-www-form-urlencoded') !== -1)) {
+                                        jenkinsAxios.interceptors.request.use( request => {
+                                            if (request.data && (request.headers["Content-Type"].indexOf("application/x-www-form-urlencoded") !== -1)) {
                                                 logger.debug(`Stringifying URL encoded data: ${qs.stringify(request.data)}`);
-                                                request.data = qs.stringify(request.data)
+                                                request.data = qs.stringify(request.data);
                                             }
-                                            return request
+                                            return request;
                                         });
 
                                         const jenkinsCredentials = {
                                             "": "0",
-                                            credentials: {
+                                            "credentials": {
                                                 scope: "GLOBAL",
                                                 id: `${projectId}-bitbucket`,
                                                 // TODO get this from config obviously
                                                 username: "donovan",
                                                 password: "donovan",
                                                 description: `${projectId}-bitbucket`,
-                                                $class: "com.cloudbees.plugins.credentials.impl.UsernamePasswordCredentialsImpl"
-                                            }
+                                                $class: "com.cloudbees.plugins.credentials.impl.UsernamePasswordCredentialsImpl",
+                                            },
                                         };
 
                                         return jenkinsAxios.post(`https://${jenkinsHost.output}/credentials/store/system/domain/_/createCredentials`,
                                             {
-                                                json: `${JSON.stringify(jenkinsCredentials)}`
+                                                json: `${JSON.stringify(jenkinsCredentials)}`,
                                             },
                                             {
                                                 headers: {
                                                     "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
                                                     "Authorization": `Bearer ${token.output}`,
-                                                }
+                                                },
                                             });
                                     });
                             })
-                            .catch((err) => {
+                            .catch( err => {
                                 if (err instanceof TimeoutError) {
                                     logger.error(`Waiting for dc/jenkins deployment timed out`);
                                 }
@@ -361,29 +361,29 @@ If you haven't already, you might want to create a Project for your team to work
                 return ctx.messageClient.addressChannels(msg, devOpsRequestedEvent.team.slackIdentity.teamChannel);
             })
             .catch(err => {
-                return failure(err)
+                return failure(err);
             });
     }
 
     private addMembershipPermissions(projectId: string, team: any): Promise<any> {
         return Promise.all(
             team.owners.map(owner => {
-                let ownerUsername = /[^\\]*$/.exec(owner.domainUsername)[0];
+                const ownerUsername = /[^\\]*$/.exec(owner.domainUsername)[0];
                 logger.info(`Adding role to project [${projectId}] and owner [${owner.domainUsername}]: ${ownerUsername}`);
                 return OCClient.policy.addRoleToUser(ownerUsername,
                     "admin",
-                    projectId)
+                    projectId);
             }))
             .then(() => {
                 return Promise.all(
                     team.members.map(member => {
-                        let memberUsername = /[^\\]*$/.exec(member.domainUsername)[0];
+                        const memberUsername = /[^\\]*$/.exec(member.domainUsername)[0];
                         logger.info(`Adding role to project [${projectId}] and member [${member.domainUsername}]: ${memberUsername}`);
                         return OCClient.policy.addRoleToUser(memberUsername,
                             "view",
-                            projectId)
-                    }))
-            })
+                            projectId);
+                    }));
+            });
     }
 
     private docs(): string {

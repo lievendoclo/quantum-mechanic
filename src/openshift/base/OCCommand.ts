@@ -1,7 +1,7 @@
+import {logger} from "@atomist/automation-client";
 import {CommandLineElement} from "./CommandLineElement";
 import {OCCommandResult} from "./OCCommandResult";
 import {AbstractOption} from "./options/AbstractOption";
-import {logger} from "@atomist/automation-client";
 
 export class OCCommand implements CommandLineElement {
 
@@ -14,7 +14,9 @@ export class OCCommand implements CommandLineElement {
     public buildDisplayCommand(): string {
         let commandString = this.buildBaseCommand();
         for (const option of this.options) {
-            option ? commandString += `${option.buildDisplayCommand()} ` : null;
+            if (option) {
+                commandString += `${option.buildDisplayCommand()} `;
+            }
         }
 
         return commandString;
@@ -26,7 +28,7 @@ export class OCCommand implements CommandLineElement {
         return new Promise((resolve, reject) => {
             logger.debug(`Executing oc command: ${command}`);
             try {
-                let execution: any = require("child_process").execSync(command);
+                const execution: any = require("child_process").execSync(command);
                 // exec(command, (error: any, inherit: string) => {
                 const response = new OCCommandResult();
                 response.command = this.buildDisplayCommand();
@@ -51,7 +53,9 @@ export class OCCommand implements CommandLineElement {
     public build(): string {
         let commandString = this.buildBaseCommand();
         for (const option of this.options) {
-            option ? commandString += `${option.build()} ` : null;
+            if (option) {
+                commandString += `${option.buildDisplayCommand()} `;
+            }
         }
 
         return commandString;

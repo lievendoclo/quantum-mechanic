@@ -4,7 +4,7 @@ import {
     HandleEvent,
     HandlerContext,
     HandlerResult, logger,
-    SuccessPromise
+    SuccessPromise,
 } from "@atomist/automation-client";
 
 @EventHandler("Receive TeamMemberCreated events", `
