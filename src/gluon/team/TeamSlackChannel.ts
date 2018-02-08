@@ -49,7 +49,11 @@ rather use that instead?\
                         }),
                     buttonForCommand(
                         {text: "Use an existing channel"},
-                        this),
+                        new LinkExistingTeamSlackChannel(),
+                        {
+                            teamId: ctx.teamId,
+                            teamName: this.teamName,
+                        }),
                 ],
             }],
         };
@@ -89,95 +93,127 @@ export class NewTeamSlackChannel implements HandleCommand {
         // and have an event handler actually create the channel
 
         this.teamChannel = _.isEmpty(this.teamChannel) ? this.teamName : this.teamChannel;
-        const kebabbedTeamChannel: string = _.kebabCase(this.teamChannel);
-        return axios.get(`http://localhost:8080/teams?name=${this.teamName}`)
-            .then(team => {
-                if (!_.isEmpty(team.data._embedded)) {
-                    logger.info(`Updating team channel [${kebabbedTeamChannel}]: ${team.data._embedded.teamResources[0].teamId}`);
-                    return axios.put(`http://localhost:8080/teams/${team.data._embedded.teamResources[0].teamId}`,
-                        {
-                            slack: {
-                                teamChannel: kebabbedTeamChannel,
-                            },
-                        })
-                        .then(() => {
-                            return createChannel(ctx, this.teamId, kebabbedTeamChannel)
-                                .then(channel => {
-                                    if (channel && channel.createSlackChannel) {
-                                        return addBotToSlackChannel(ctx, this.teamId, channel.createSlackChannel.id)
-                                            .then(() => {
-
-                                                // TODO add all existing team members to the team
-                                                // Slack channel just created
-
-                                                const msg: SlackMessage = {
-                                                    text: `Welcome to the new ${this.teamChannel} team channel!`,
-                                                    attachments: [{
-                                                        fallback: `Welcome to the ${this.teamChannel} team channel!`,
-                                                        footer: `For more information, please read the ${this.docs()}`, // TODO use actual icon
-                                                        text: `
-If you haven't already, you might want to:
-
-• create an OpenShift DevOps environment
-• add new team members
-                                                          `,
-                                                        // • create and/or attach projects to this team
-                                                        mrkdwn_in: ["text"],
-                                                        actions: [
-                                                            buttonForCommand(
-                                                                {text: "Create DevOps environment"},
-                                                                new NewDevOpsEnvironment()),
-                                                            buttonForCommand(
-                                                                {text: "Add team members"},
-                                                                new AddMemberToTeam(),
-                                                                {teamChannel: kebabbedTeamChannel}),
-                                                            // buttonForCommand(
-                                                            //     {text: "Create project"},
-                                                            //     new CreateProject(),
-                                                            //     {teamName: team.data._embedded.teamResources[0].teamId}),
-                                                        ],
-                                                    }],
-                                                };
-
-                                                return ctx.messageClient.addressChannels(msg, kebabbedTeamChannel);
-
-                                                // TODO respond back after creating team channel and now offer
-                                                // opportunity to create OpenShift Dev environment?
-                                            });
-                                    }
-                                })
-                                .catch(err => failure(err));
-                        });
-                } else {
-                    const msg: SlackMessage = {
-                        text: `There was an error creating your *${this.teamName}* team channel`,
-                        attachments: [{
-                            text: `
-Unfortunately this team does not seem to exist on Subatomic.
-To create a team channel you must first create a team. Click the button below to do that now.
-                                                  `,
-                            fallback: "Team does not exist on Subatomic",
-                            footer: `For more information, please read the ${this.docs()}`, // TODO use actual icon
-                            color: "#D94649",
-                            mrkdwn_in: ["text"],
-                            actions: [
-                                buttonForCommand(
-                                    {
-                                        text: "Create team",
-                                    },
-                                    new CreateTeam()),
-                            ],
-                        }],
-                    };
-
-                    return ctx.messageClient.respond(msg);
-                }
-            })
-            .catch(e => failure(e));
+        return associateSlackChannelToGluonTeam(ctx, this.teamName, this.teamId, this.teamChannel, this.docs());
     }
 
     private docs(): string {
         return `${url("https://subatomic.bison.absa.co.za/docs/teams",
             "documentation")}`;
     }
+}
+
+@CommandHandler("Create team channel", config.get("subatomic").commandPrefix + " link team channel")
+@Tags("subatomic", "slack", "channel", "team")
+export class LinkExistingTeamSlackChannel implements HandleCommand {
+
+    @MappedParameter(MappedParameters.SlackTeam)
+    public teamId: string;
+
+    @Parameter({
+        description: "team name",
+    })
+    public teamName: string;
+
+    @Parameter({
+        description: "team channel name",
+        required: true,
+    })
+    public teamChannel: string;
+
+    public handle(ctx: HandlerContext): Promise<HandlerResult> {
+        return associateSlackChannelToGluonTeam(ctx, this.teamName, this.teamId, this.teamChannel, this.docs());
+    }
+
+    private docs(): string {
+        return `${url("https://subatomic.bison.absa.co.za/docs/teams",
+            "documentation")}`;
+    }
+}
+
+function associateSlackChannelToGluonTeam(ctx: HandlerContext,
+                                          gluonTeamName: string,
+                                          slackTeamId: string,
+                                          slackChannelName: string,
+                                          documentationLink: string): Promise<HandlerResult> {
+    const kebabbedTeamChannel: string = _.kebabCase(slackChannelName);
+    return axios.get(`http://localhost:8080/teams?name=${gluonTeamName}`)
+        .then(team => {
+            if (!_.isEmpty(team.data._embedded)) {
+                logger.info(`Updating team channel [${kebabbedTeamChannel}]: ${team.data._embedded.teamResources[0].teamId}`);
+                return axios.put(`http://localhost:8080/teams/${team.data._embedded.teamResources[0].teamId}`,
+                    {
+                        slack: {
+                            teamChannel: kebabbedTeamChannel,
+                        },
+                    })
+                    .then(() => {
+                        return createChannel(ctx, slackTeamId, kebabbedTeamChannel)
+                            .then(channel => {
+                                if (channel && channel.createSlackChannel) {
+                                    return addBotToSlackChannel(ctx, slackTeamId, channel.createSlackChannel.id);
+                                } else {
+                                    return Promise.reject("Error creating or finding slack channel: " + JSON.stringify(channel));
+                                }
+                            }).then(() => {
+
+                                // TODO add all existing team members to the team
+                                // Slack channel just created
+
+                                const msg: SlackMessage = {
+                                    text: `Welcome to the ${slackChannelName} team channel!`,
+                                    attachments: [{
+                                        fallback: `Welcome to the ${slackChannelName} team channel!`,
+                                        footer: `For more information, please read the ${documentationLink}`, // TODO use actual icon
+                                        text: `
+If you haven't already, you might want to:
+
+• create an OpenShift DevOps environment
+• add new team members
+                                                          `,
+                                        mrkdwn_in: ["text"],
+                                        actions: [
+                                            buttonForCommand(
+                                                {text: "Create DevOps environment"},
+                                                new NewDevOpsEnvironment()),
+                                            buttonForCommand(
+                                                {text: "Add team members"},
+                                                new AddMemberToTeam(),
+                                                {teamChannel: kebabbedTeamChannel}),
+                                        ],
+                                    }],
+                                };
+
+                                return ctx.messageClient.addressChannels(msg, kebabbedTeamChannel);
+
+                                // TODO respond back after creating team channel and now offer
+                                // opportunity to create OpenShift Dev environment?
+                            })
+                            .catch(err => failure(err));
+                    });
+            } else {
+                const msg: SlackMessage = {
+                    text: `There was an error creating your *${gluonTeamName}* team channel`,
+                    attachments: [{
+                        text: `
+Unfortunately this team does not seem to exist on Subatomic.
+To create a team channel you must first create a team. Click the button below to do that now.
+                                                  `,
+                        fallback: "Team does not exist on Subatomic",
+                        footer: `For more information, please read the ${documentationLink}`, // TODO use actual icon
+                        color: "#D94649",
+                        mrkdwn_in: ["text"],
+                        actions: [
+                            buttonForCommand(
+                                {
+                                    text: "Create team",
+                                },
+                                new CreateTeam()),
+                        ],
+                    }],
+                };
+
+                return ctx.messageClient.respond(msg);
+            }
+        })
+        .catch(e => failure(e));
 }

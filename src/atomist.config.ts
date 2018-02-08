@@ -34,6 +34,7 @@ import {
     TeamCreatedEvent,
 } from "./gluon/team/teamIngester";
 import {
+    LinkExistingTeamSlackChannel,
     NewOrUseTeamSlackChannel,
     NewTeamSlackChannel,
 } from "./gluon/team/TeamSlackChannel";
@@ -50,6 +51,7 @@ export const configuration: any = {
         NewDevOpsEnvironment,
         NewOrUseTeamSlackChannel,
         NewTeamSlackChannel,
+        LinkExistingTeamSlackChannel,
         OnboardMember,
         AddSlackDetails,
         JoinTeam,
