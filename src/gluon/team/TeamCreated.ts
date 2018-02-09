@@ -1,14 +1,14 @@
 import {
     EventFired, EventHandler, HandleEvent, HandlerContext, HandlerResult,
-    logger, success,
+    logger,
 } from "@atomist/automation-client";
 import {
     addressSlackUsers,
     buttonForCommand,
 } from "@atomist/automation-client/spi/message/MessageClient";
 import {SlackMessage, url} from "@atomist/slack-messages";
+import * as config from "config";
 import * as _ from "lodash";
-import {NewDevOpsEnvironment} from "./DevOpsEnvironment";
 import {NewOrUseTeamSlackChannel} from "./TeamSlackChannel";
 
 @EventHandler("Receive TeamCreated events", `
@@ -64,7 +64,7 @@ Next you should configure your team Slack channel and OpenShift DevOps environme
 
         // TODO fix the below if not created from Slack
         return ctx.messageClient.send(msg,
-            addressSlackUsers("T8RGCS6T0", teamCreatedEvent.createdBy.slackIdentity.screenName));
+            addressSlackUsers(config.get("teamId"), teamCreatedEvent.createdBy.slackIdentity.screenName));
     }
 
     private docs(): string {

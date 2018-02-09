@@ -46,7 +46,7 @@ const token = secret("github.token", process.env.GITHUB_TOKEN);
 export const configuration: any = {
     name: pj.name,
     version: pj.version,
-    teamIds: config.get("teamIds"),
+    teamIds: [config.get("teamId")],
     commands: [
         NewDevOpsEnvironment,
         NewOrUseTeamSlackChannel,
