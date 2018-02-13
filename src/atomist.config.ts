@@ -1,4 +1,3 @@
-import {secret} from "@atomist/lifecycle-automation/util/secrets";
 import * as appRoot from "app-root-path";
 import * as config from "config";
 import {ApplicationCreated} from "./gluon/application/ApplicationCreated";
@@ -41,7 +40,7 @@ import {
 
 const pj = require(`${appRoot.path}/package.json`);
 
-const token = secret("github.token", process.env.GITHUB_TOKEN);
+const token = config.get("token");
 
 export const configuration: any = {
     name: pj.name,
