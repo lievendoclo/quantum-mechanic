@@ -17,7 +17,7 @@ the default configurations.
 
 Here is an example `local.json`:
 
-```json
+```javascript
 {
   "subatomic": {
     "commandPrefix" : "sub",
