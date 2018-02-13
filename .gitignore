@@ -16,3 +16,6 @@ graphql.config.json
 
 git-info.json
 
+# Do not commit local configuration
+config/local.json
+
