@@ -9,8 +9,8 @@ import {
 } from "@atomist/automation-client";
 import axios from "axios";
 import * as config from "config";
-import {memberFromScreenName} from "../member/Members";
-import {projectFromProjectName} from "../project/Projects";
+import {gluonMemberFromScreenName} from "../member/Members";
+import {gluonProjectFromProjectName} from "../project/Projects";
 
 @CommandHandler("Create a new Bitbucket project", config.get("subatomic").commandPrefix + " create bitbucket project")
 export class CreateApplication implements HandleCommand<HandlerResult> {
@@ -49,13 +49,13 @@ export class CreateApplication implements HandleCommand<HandlerResult> {
     public handle(ctx: HandlerContext): Promise<HandlerResult> {
 
         // get memberId for createdBy
-        return memberFromScreenName(ctx, this.screenName)
+        return gluonMemberFromScreenName(ctx, this.screenName)
             .then(member => {
 
                 // get project by project name
                 // TODO this should be a drop down for the member to select projects
                 // that he is associated with via Teams
-                return projectFromProjectName(ctx, this.projectName)
+                return gluonProjectFromProjectName(ctx, this.projectName)
                     .then(project => {
                         // update project by creating new Bitbucket project (new domain concept)
                         return axios.post(`http://localhost:8080/applications`,

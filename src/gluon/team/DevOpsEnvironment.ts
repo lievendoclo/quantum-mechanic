@@ -12,7 +12,7 @@ import {
 import axios from "axios";
 import * as config from "config";
 import * as _ from "lodash";
-import {memberFromScreenName} from "../member/Members";
+import {gluonMemberFromScreenName} from "../member/Members";
 
 @CommandHandler("Check whether to create a new OpenShift DevOps environment or use and existing one", config.get("subatomic").commandPrefix + " request devops environment")
 @Tags("subatomic", "slack", "team", "openshift", "devops")
@@ -41,7 +41,7 @@ export class NewDevOpsEnvironment implements HandleCommand {
         // then circle back with one selected and param = teamName;
         // if member only belongs to one team then just continue...
 
-        return memberFromScreenName(ctx, this.screenName)
+        return gluonMemberFromScreenName(ctx, this.screenName)
             .then(member => {
                 return axios.get(`http://localhost:8080/teams?name=${this.teamName}`)
                     .then(team => {

@@ -1,12 +1,19 @@
 import {
-    CommandHandler, HandleCommand, HandlerContext, HandlerResult, logger,
-    MappedParameter, MappedParameters, Parameter, success,
+    CommandHandler,
+    HandleCommand,
+    HandlerContext,
+    HandlerResult,
+    logger,
+    MappedParameter,
+    MappedParameters,
+    Parameter,
+    success,
 } from "@atomist/automation-client";
 import {menuForCommand} from "@atomist/automation-client/spi/message/MessageClient";
 import axios from "axios";
 import * as config from "config";
 import * as _ from "lodash";
-import {memberFromScreenName} from "../member/Members";
+import {gluonMemberFromScreenName} from "../member/Members";
 import {teamsWhoScreenNameBelongsToo} from "../team/Teams";
 
 @CommandHandler("Create a new project", config.get("subatomic").commandPrefix + " create project")
@@ -36,7 +43,7 @@ export class CreateProject implements HandleCommand<HandlerResult> {
         // ask which team to assign to this project too
         // you must belong to those teams
         if (!_.isEmpty(this.teamName)) {
-            return memberFromScreenName(ctx, this.screenName,
+            return gluonMemberFromScreenName(ctx, this.screenName,
                 `There was an error creating your ${this.name} project`)
                 .then(member => axios.post("http://localhost:8080/projects",
                     {

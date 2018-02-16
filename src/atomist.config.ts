@@ -7,7 +7,10 @@ import {
     BitbucketProjectAddedEvent,
     BitbucketProjectRequestedEvent,
 } from "./gluon/bitbucket/bitbucketIngester";
-import {NewBitbucketProject} from "./gluon/bitbucket/BitbucketProject";
+import {
+    ListExistingBitbucketProject,
+    NewBitbucketProject,
+} from "./gluon/bitbucket/BitbucketProject";
 import {BitbucketProjectAdded} from "./gluon/bitbucket/BitbucketProjectAdded";
 import {BitbucketProjectRequested} from "./gluon/bitbucket/BitbucketProjectRequested";
 import {OnboardMember} from "./gluon/member/Onboard";
@@ -70,6 +73,7 @@ export const configuration: any = {
         Whoami,
         CreateMembershipRequestToTeam,
         MembershipRequestClosed,
+        ListExistingBitbucketProject,
     ],
     events: [
         TeamCreated,

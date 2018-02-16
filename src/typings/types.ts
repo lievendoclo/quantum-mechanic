@@ -143,30 +143,6 @@ export type _PullRequestImpactOrdering = "atmTeamId_asc" | "atmTeamId_desc" | "i
 /* Ordering Enum for UserJoinedChannel */
 export type _UserJoinedChannelOrdering = "atmTeamId_asc" | "atmTeamId_desc" | "id_asc" | "id_desc";
 
-export namespace Channels {
-  export type Variables = {
-    teamId: string;
-    first: number;
-    offset: number;
-  }
-
-  export type Query = {
-    ChatTeam?: ChatTeam[] | null; 
-  } 
-
-  export type ChatTeam = {
-    channels?: Channels[] | null; 
-  } 
-
-  export type Channels = {
-    repos?: Repos[] | null; 
-  } 
-
-  export type Repos = {
-    name?: string | null; 
-    owner?: string | null; 
-  } 
-}
 export namespace ChatId {
   export type Variables = {
     userId: string;

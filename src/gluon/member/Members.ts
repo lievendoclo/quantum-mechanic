@@ -1,13 +1,13 @@
-import {HandlerContext, logger} from "@atomist/automation-client";
+import {HandlerContext} from "@atomist/automation-client";
 import {buttonForCommand} from "@atomist/automation-client/spi/message/MessageClient";
 import {SlackMessage, url} from "@atomist/slack-messages";
 import axios from "axios";
 import * as _ from "lodash";
 import {OnboardMember} from "./Onboard";
 
-export function memberFromScreenName(ctx: HandlerContext,
-                                     screenName: string,
-                                     message: string = "This command requires an onboarded member"): Promise<any> {
+export function gluonMemberFromScreenName(ctx: HandlerContext,
+                                          screenName: string,
+                                          message: string = "This command requires an onboarded member"): Promise<any> {
     return axios.get(`http://localhost:8080/members?slackScreenName=${screenName}`)
         .then(members => {
             if (!_.isEmpty(members.data._embedded)) {
@@ -40,4 +40,8 @@ To create a team you must first onboard yourself. Click the button below to do t
                         `Member with screen name ${screenName} is not onboarded`));
             }
         });
+}
+
+export function usernameFromDomainUsername(domainUsername: string): string {
+    return /[^\\]*$/.exec(domainUsername)[0];
 }

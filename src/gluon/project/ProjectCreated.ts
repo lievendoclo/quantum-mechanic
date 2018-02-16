@@ -1,10 +1,17 @@
 import {
-    EventFired, EventHandler, HandleEvent, HandlerContext, HandlerResult,
+    EventFired,
+    EventHandler,
+    HandleEvent,
+    HandlerContext,
+    HandlerResult,
     logger,
 } from "@atomist/automation-client";
 import {buttonForCommand} from "@atomist/automation-client/spi/message/MessageClient";
 import {url} from "@atomist/slack-messages";
-import {NewBitbucketProject} from "../bitbucket/BitbucketProject";
+import {
+    ListExistingBitbucketProject,
+    NewBitbucketProject,
+} from "../bitbucket/BitbucketProject";
 import {NewProjectEnvironments} from "./ProjectEnvironments";
 
 @EventHandler("Receive ProjectCreated events", `
@@ -56,7 +63,9 @@ This can be a new Bitbucket project that will be created and configured accordin
                         }),
                     buttonForCommand(
                         {text: "Link existing Bitbucket project"},
-                        this),
+                        new ListExistingBitbucketProject(), {
+                            projectName: projectCreatedEvent.project.name,
+                        }),
                 ],
             }, {
                 text: `

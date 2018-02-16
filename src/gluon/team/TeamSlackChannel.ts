@@ -102,7 +102,7 @@ export class NewTeamSlackChannel implements HandleCommand {
     }
 }
 
-@CommandHandler("Create team channel", config.get("subatomic").commandPrefix + " link team channel")
+@CommandHandler("Link existing team channel", config.get("subatomic").commandPrefix + " link team channel")
 @Tags("subatomic", "slack", "channel", "team")
 export class LinkExistingTeamSlackChannel implements HandleCommand {
 

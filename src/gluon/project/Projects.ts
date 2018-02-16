@@ -5,9 +5,9 @@ import axios from "axios";
 import * as _ from "lodash";
 import {CreateProject} from "./CreateProject";
 
-export function projectFromProjectName(ctx: HandlerContext,
-                                       projectName: string,
-                                       message: string = "This command requires an existing project"): Promise<any> {
+export function gluonProjectFromProjectName(ctx: HandlerContext,
+                                            projectName: string,
+                                            message: string = "This command requires an existing project"): Promise<any> {
     return axios.get(`http://localhost:8080/projects?name=${projectName}`)
         .then(projects => {
             if (!_.isEmpty(projects.data._embedded)) {
