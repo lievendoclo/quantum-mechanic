@@ -10,7 +10,7 @@ import {SlackMessage} from "@atomist/slack-messages";
 import axios from "axios";
 import * as config from "config";
 
-@CommandHandler("Close a membership request", config.get("subatomic").commandPrefix + " close membership request")
+@CommandHandler("Close a membership request")
 @Tags("subatomic", "team", "membership")
 export class MembershipRequestClosed implements HandleCommand<HandlerResult> {
 
