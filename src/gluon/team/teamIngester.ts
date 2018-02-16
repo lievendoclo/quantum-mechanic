@@ -133,3 +133,77 @@ export const DevOpsEnvironmentRequestedEvent: Ingester = {
         },
     ],
 };
+
+export const MembershipRequestCreatedEvent: Ingester = {
+    root_type: "MembershipRequestCreatedEvent",
+    types: [
+        {
+            kind: "OBJECT",
+            name: "MembershipRequestCreatedEvent",
+            fields: [
+                {
+                    name: "membershipRequestId",
+                    type: {
+                        kind: "SCALAR",
+                        name: "String",
+                    },
+                },
+                {
+                    name: "team",
+                    type: {
+                        kind: "OBJECT",
+                        name: "Team",
+                    },
+                },
+                {
+                    name: "requestedBy",
+                    type: {
+                        kind: "OBJECT",
+                        name: "RequestedBy",
+                    },
+                },
+            ],
+        },
+        {
+            kind: "OBJECT",
+            name: "RequestedBy",
+            fields: [
+                {
+                    name: "firstName",
+                    type: {
+                        kind: "SCALAR",
+                        name: "String",
+                    },
+                },
+                {
+                    name: "lastName",
+                    type: {
+                        kind: "SCALAR",
+                        name: "String",
+                    },
+                },
+                {
+                    name: "email",
+                    type: {
+                        kind: "SCALAR",
+                        name: "String",
+                    },
+                },
+                {
+                    name: "domainUsername",
+                    type: {
+                        kind: "SCALAR",
+                        name: "String",
+                    },
+                },
+                {
+                    name: "slackIdentity",
+                    type: {
+                        kind: "OBJECT",
+                        name: "SlackIdentity",
+                    },
+                },
+            ],
+        },
+    ],
+};

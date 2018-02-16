@@ -26,10 +26,17 @@ import {SlackIdentity, Team} from "./gluon/shared/sharedIngester";
 import {CreateTeam} from "./gluon/team/CreateTeam";
 import {NewDevOpsEnvironment} from "./gluon/team/DevOpsEnvironment";
 import {DevOpsEnvironmentRequested} from "./gluon/team/DevOpsEnvironmentRequested";
-import {AddMemberToTeam, JoinTeam} from "./gluon/team/JoinTeam";
+import {
+    AddMemberToTeam,
+    CreateMembershipRequestToTeam,
+    JoinTeam,
+} from "./gluon/team/JoinTeam";
+import {MembershipRequestClosed} from "./gluon/team/MembershipRequestClosed";
+import {MembershipRequestCreated} from "./gluon/team/MembershipRequestCreated";
 import {TeamCreated} from "./gluon/team/TeamCreated";
 import {
     DevOpsEnvironmentRequestedEvent,
+    MembershipRequestCreatedEvent,
     TeamCreatedEvent,
 } from "./gluon/team/teamIngester";
 import {
@@ -61,6 +68,8 @@ export const configuration: any = {
         NewProjectEnvironments,
         CreateApplication,
         Whoami,
+        CreateMembershipRequestToTeam,
+        MembershipRequestClosed,
     ],
     events: [
         TeamCreated,
@@ -71,6 +80,7 @@ export const configuration: any = {
         DevOpsEnvironmentRequested,
         ProjectEnvironmentsRequested,
         ApplicationCreated,
+        MembershipRequestCreated,
     ],
     ingesters: [
         SlackIdentity,
@@ -83,6 +93,7 @@ export const configuration: any = {
         DevOpsEnvironmentRequestedEvent,
         ProjectEnvironmentsRequestedEvent,
         ApplicationCreatedEvent,
+        MembershipRequestCreatedEvent,
     ],
     token,
     http: {

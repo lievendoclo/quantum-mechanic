@@ -1,6 +1,15 @@
 import {
-    CommandHandler, failure, HandleCommand, HandlerContext, HandlerResult,
-    logger, MappedParameter, MappedParameters, Parameter, success, Tags,
+    CommandHandler,
+    failure,
+    HandleCommand,
+    HandlerContext,
+    HandlerResult,
+    logger,
+    MappedParameter,
+    MappedParameters,
+    Parameter,
+    success,
+    Tags,
 } from "@atomist/automation-client";
 import {
     buttonForCommand,
@@ -22,7 +31,7 @@ export class JoinTeam implements HandleCommand<HandlerResult> {
 
     public handle(ctx: HandlerContext): Promise<HandlerResult> {
         return axios.get("http://localhost:8080/teams")
-            .then( teams => {
+            .then(teams => {
                 logger.info(`Got teams data: ${JSON.stringify(teams.data)}`);
 
                 // remove teams that he is already a member of - TODO in future
@@ -37,18 +46,12 @@ export class JoinTeam implements HandleCommand<HandlerResult> {
                                     text: "Select Team", options:
                                         teams.data._embedded.teamResources.map(team => {
                                             return {
-                                                value: _.kebabCase(team.name),
+                                                value: team.teamId,
                                                 text: team.name,
                                             };
                                         }),
                                 },
-                                // TODO this command should notify the team channel of the application
-                                // the options would be to add this member to the team or decline him
-                                // in which case the member should be notified of the outcome
-
-                                // don't make this complicated for now.
-                                // just send a message that he wants to join - that's it
-                                "AddMemberToTeam", "teamChannel",
+                                "CreateMembershipRequestToTeam", "teamId",
                                 {slackName: this.slackName}),
                         ],
                     }],
@@ -58,14 +61,9 @@ export class JoinTeam implements HandleCommand<HandlerResult> {
                     .then(success);
             });
     }
-
-    private docs(): string {
-        return `${url("https://subatomic.bison.absa.co.za/docs/teams#join",
-            "documentation")}`;
-    }
 }
 
-@CommandHandler("Add a member to a team", config.get("subatomic").commandPrefix + " add member")
+@CommandHandler("Add a member to a team")
 @Tags("subatomic", "team", "member")
 export class AddMemberToTeam implements HandleCommand<HandlerResult> {
 
@@ -99,7 +97,7 @@ export class AddMemberToTeam implements HandleCommand<HandlerResult> {
             screenName = _.replace(this.slackName, /(<@)|>/g, "");
         }
 
-        return this.loadScreenNameByUserId(ctx, screenName)
+        return loadScreenNameByUserId(ctx, screenName)
             .then(chatId => {
                 if (!_.isEmpty(chatId)) {
                     logger.info(`Got ChatId: ${chatId}`);
@@ -222,27 +220,78 @@ Adding a team member from Slack requires typing their \`@mention\` name or using
         // that he has the X role assigned to him.
     }
 
-    // see loadChatIdByChatId
-    private loadScreenNameByUserId(ctx: HandlerContext, userId: string): Promise<graphql.ChatId.ChatId> {
-        return ctx.graphClient.executeQueryFromFile<graphql.ChatId.Query, graphql.ChatId.Variables>(
-            "graphql/query/chatIdByUserId",
-            {userId})
-            .then(result => {
-                if (result) {
-                    if (result.ChatId && result.ChatId.length > 0) {
-                        return result.ChatId[0].screenName;
-                    }
-                }
-                return null;
-            })
-            .catch(err => {
-                logger.error("Error occurred running GraphQL query: %s", err);
-                return null;
-            });
-    }
-
     private docs(): string {
         return `${url("https://subatomic.bison.absa.co.za/docs/teams",
             "documentation")}`;
     }
+}
+
+@CommandHandler("Request membership to a team", config.get("subatomic").commandPrefix + " request membership")
+@Tags("subatomic", "team", "member")
+export class CreateMembershipRequestToTeam implements HandleCommand<HandlerResult> {
+
+    @MappedParameter(MappedParameters.SlackUserName)
+    public screenName: string;
+
+    @Parameter({
+        description: "Gluon team id to create a membership request to.",
+        displayable: false,
+
+    })
+    public teamId: string;
+
+    @Parameter({
+        description: "Slack name of the member to add.",
+    })
+    public slackName: string;
+
+    public handle(ctx: HandlerContext): Promise<HandlerResult> {
+        logger.info(`Request to join team: ${this.teamId}`);
+
+        let screenName = this.slackName;
+        if (this.slackName.startsWith("<@")) {
+            screenName = _.replace(this.slackName, /(<@)|>/g, "");
+        }
+
+        return loadScreenNameByUserId(ctx, screenName)
+            .then(chatId => {
+                if (!_.isEmpty(chatId)) {
+                    logger.info(`Got ChatId: ${chatId}`);
+                    return axios.get(`http://localhost:8080/members?slackScreenName=${chatId}`)
+                        .then(newMember => {
+                            logger.info(`Member: ${JSON.stringify(newMember.data)}`);
+                            return axios.put(`http://localhost:8080/teams/${this.teamId}`,
+                                {
+                                    membershipRequests: [
+                                        {
+                                            requestedBy: {
+                                                memberId: newMember.data._embedded.teamMemberResources[0].memberId,
+                                            },
+                                        }],
+                                }).then(() => {
+                                return success();
+                            });
+
+                        });
+                }
+            }).catch(error => failure(error));
+    }
+}
+
+export function loadScreenNameByUserId(ctx: HandlerContext, userId: string): Promise<graphql.ChatId.ChatId> {
+    return ctx.graphClient.executeQueryFromFile<graphql.ChatId.Query, graphql.ChatId.Variables>(
+        "graphql/query/chatIdByUserId",
+        {userId})
+        .then(result => {
+            if (result) {
+                if (result.ChatId && result.ChatId.length > 0) {
+                    return result.ChatId[0].screenName;
+                }
+            }
+            return null;
+        })
+        .catch(err => {
+            logger.error("Error occurred running GraphQL query: %s", err);
+            return null;
+        });
 }
