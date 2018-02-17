@@ -14,7 +14,7 @@ import axios from "axios";
 import * as config from "config";
 import * as _ from "lodash";
 import {gluonMemberFromScreenName} from "../member/Members";
-import {teamsWhoScreenNameBelongsToo} from "../team/Teams";
+import {gluonTeamsWhoSlackScreenNameBelongsToo} from "../team/Teams";
 
 @CommandHandler("Create a new project", config.get("subatomic").commandPrefix + " create project")
 export class CreateProject implements HandleCommand<HandlerResult> {
@@ -56,7 +56,7 @@ export class CreateProject implements HandleCommand<HandlerResult> {
                     }), err => logger.warn(err))
                 .then(success);
         } else {
-            return teamsWhoScreenNameBelongsToo(ctx, this.screenName)
+            return gluonTeamsWhoSlackScreenNameBelongsToo(ctx, this.screenName)
                 .then(teams => {
                     return ctx.messageClient.respond({
                         text: "Please select a team you would like to associate this project with",
