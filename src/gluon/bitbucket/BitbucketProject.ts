@@ -87,12 +87,10 @@ export class ListExistingBitbucketProject implements HandleCommand<HandlerResult
     })
     public bitbucketProjectKey: string;
 
-    private bitbucketAxios: AxiosInstance = bitbucketAxios();
-
     public handle(ctx: HandlerContext): Promise<HandlerResult> {
         if (_.isEmpty(this.bitbucketProjectKey)) {
             // then get a list of projects that the member has access too
-            return this.bitbucketAxios.get(`${config.get("subatomic").bitbucket.baseUrl}/api/1.0/projects`)
+            return bitbucketAxios().get(`${config.get("subatomic").bitbucket.baseUrl}/api/1.0/projects`)
                 .then(projects => {
                     logger.info(`Got Bitbucket projects: ${JSON.stringify(projects.data)}`);
 
@@ -126,7 +124,7 @@ export class ListExistingBitbucketProject implements HandleCommand<HandlerResult
                     return gluonProjectFromProjectName(ctx, this.projectName)
                         .then(gluonProject => {
                             // get the selected project's details
-                            return this.bitbucketAxios.get(`${config.get("subatomic").bitbucket.baseUrl}/api/1.0/projects/${this.bitbucketProjectKey}`)
+                            return bitbucketAxios().get(`${config.get("subatomic").bitbucket.baseUrl}/api/1.0/projects/${this.bitbucketProjectKey}`)
                                 .then(project => {
                                     return axios.put(`${config.get("subatomic").gluon.baseUrl}/projects/${gluonProject.projectId}`,
                                         {

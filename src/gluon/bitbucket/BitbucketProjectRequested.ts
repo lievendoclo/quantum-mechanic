@@ -67,8 +67,6 @@ export class BitbucketProjectRequested implements HandleEvent<any> {
 
     private bitbucketProjectUrl: string;
 
-    private bitbucketAxios: AxiosInstance = bitbucketAxios();
-
     public handle(event: EventFired<any>, ctx: HandlerContext): Promise<HandlerResult> {
         logger.info(`Ingested BitbucketProjectRequested event: ${JSON.stringify(event.data)}`);
 
@@ -89,7 +87,7 @@ export class BitbucketProjectRequested implements HandleEvent<any> {
             teamMembers,
         );
 
-        return this.bitbucketAxios.post(`${config.get("subatomic").bitbucket.baseUrl}/api/1.0/projects`,
+        return bitbucketAxios().post(`${config.get("subatomic").bitbucket.baseUrl}/api/1.0/projects`,
             {
                 key,
                 name,
@@ -120,7 +118,7 @@ export class BitbucketProjectRequested implements HandleEvent<any> {
             })
             .then(() => {
                 // Add access CI/CD access key
-                return this.bitbucketAxios.post(`${config.get("subatomic").bitbucket.baseUrl}/keys/1.0/projects/${key}/ssh`,
+                return bitbucketAxios().post(`${config.get("subatomic").bitbucket.baseUrl}/keys/1.0/projects/${key}/ssh`,
                     {
                         key: {
                             text: config.get("subatomic").bitbucket.cicdKey,
