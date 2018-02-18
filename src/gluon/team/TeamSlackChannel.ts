@@ -1,6 +1,15 @@
 import {
-    CommandHandler, failure, HandleCommand, HandlerContext, HandlerResult,
-    logger, MappedParameter, MappedParameters, Parameter, success, Tags,
+    CommandHandler,
+    failure,
+    HandleCommand,
+    HandlerContext,
+    HandlerResult,
+    logger,
+    MappedParameter,
+    MappedParameters,
+    Parameter,
+    success,
+    Tags,
 } from "@atomist/automation-client";
 import {buttonForCommand} from "@atomist/automation-client/spi/message/MessageClient";
 import {addBotToSlackChannel} from "@atomist/lifecycle-automation/handlers/command/slack/AddBotToChannel";
@@ -38,7 +47,7 @@ rather use that instead?\
             text,
             attachments: [{
                 fallback: `Do you want to create a new team channel (${this.teamChannel}) or link an existing one?`,
-                footer: `For more information, please read the ${this.docs()}`, // TODO use actual icon
+                footer: `For more information, please read the ${this.docs()}`,
                 actions: [
                     buttonForCommand(
                         {text: `Create channel ${this.teamChannel}`},
@@ -46,6 +55,7 @@ rather use that instead?\
                         {
                             teamId: ctx.teamId,
                             teamName: this.teamName,
+                            teamChannel: this.teamChannel,
                         }),
                     buttonForCommand(
                         {text: "Use an existing channel"},
@@ -62,7 +72,7 @@ rather use that instead?\
     }
 
     private docs(): string {
-        return `${url("https://subatomic.bison.absa.co.za/docs/teams#slack",
+        return `${url(`${config.get("subatomic").docs.baseUrl}/teams#slack`,
             "documentation")}`;
     }
 }
@@ -81,8 +91,6 @@ export class NewTeamSlackChannel implements HandleCommand {
 
     @Parameter({
         description: "team channel name",
-        required: false,
-        displayable: false,
     })
     public teamChannel: string;
 
@@ -93,11 +101,11 @@ export class NewTeamSlackChannel implements HandleCommand {
         // and have an event handler actually create the channel
 
         this.teamChannel = _.isEmpty(this.teamChannel) ? this.teamName : this.teamChannel;
-        return associateSlackChannelToGluonTeam(ctx, this.teamName, this.teamId, this.teamChannel, this.docs());
+        return linkSlackChannelToGluonTeam(ctx, this.teamName, this.teamId, this.teamChannel, this.docs());
     }
 
     private docs(): string {
-        return `${url("https://subatomic.bison.absa.co.za/docs/teams",
+        return `${url(`${config.get("subatomic").docs.baseUrl}/teams`,
             "documentation")}`;
     }
 }
@@ -121,26 +129,26 @@ export class LinkExistingTeamSlackChannel implements HandleCommand {
     public teamChannel: string;
 
     public handle(ctx: HandlerContext): Promise<HandlerResult> {
-        return associateSlackChannelToGluonTeam(ctx, this.teamName, this.teamId, this.teamChannel, this.docs());
+        return linkSlackChannelToGluonTeam(ctx, this.teamName, this.teamId, this.teamChannel, this.docs());
     }
 
     private docs(): string {
-        return `${url("https://subatomic.bison.absa.co.za/docs/teams",
+        return `${url(`${config.get("subatomic").docs.baseUrl}/teams`,
             "documentation")}`;
     }
 }
 
-function associateSlackChannelToGluonTeam(ctx: HandlerContext,
-                                          gluonTeamName: string,
-                                          slackTeamId: string,
-                                          slackChannelName: string,
-                                          documentationLink: string): Promise<HandlerResult> {
+function linkSlackChannelToGluonTeam(ctx: HandlerContext,
+                                     gluonTeamName: string,
+                                     slackTeamId: string,
+                                     slackChannelName: string,
+                                     documentationLink: string): Promise<HandlerResult> {
     const kebabbedTeamChannel: string = _.kebabCase(slackChannelName);
-    return axios.get(`http://localhost:8080/teams?name=${gluonTeamName}`)
+    return axios.get(`${config.get("subatomic").gluon.baseUrl}/teams?name=${gluonTeamName}`)
         .then(team => {
             if (!_.isEmpty(team.data._embedded)) {
                 logger.info(`Updating team channel [${kebabbedTeamChannel}]: ${team.data._embedded.teamResources[0].teamId}`);
-                return axios.put(`http://localhost:8080/teams/${team.data._embedded.teamResources[0].teamId}`,
+                return axios.put(`${config.get("subatomic").gluon.baseUrl}/teams/${team.data._embedded.teamResources[0].teamId}`,
                     {
                         slack: {
                             teamChannel: kebabbedTeamChannel,
@@ -152,7 +160,15 @@ function associateSlackChannelToGluonTeam(ctx: HandlerContext,
                                 if (channel && channel.createSlackChannel) {
                                     return addBotToSlackChannel(ctx, slackTeamId, channel.createSlackChannel.id);
                                 } else {
-                                    return Promise.reject("Error creating or finding slack channel: " + JSON.stringify(channel));
+                                    return Promise.reject(`Error creating or finding slack channel: ${JSON.stringify(channel)}`);
+                                }
+                            }, error => {
+                                logger.error(`Error creating Slack channel: ${JSON.stringify(error)}`);
+
+                                if (error.networkError.response.status === 400) {
+                                    logger.warn(`Most likely trying to link a private Slack channel: ${error.message}. This is currently NOT SUPPORTED`);
+                                } else {
+                                    return Promise.reject(`Slack channel could not be created: ${error.message}`);
                                 }
                             }).then(() => {
 
@@ -163,7 +179,7 @@ function associateSlackChannelToGluonTeam(ctx: HandlerContext,
                                     text: `Welcome to the ${slackChannelName} team channel!`,
                                     attachments: [{
                                         fallback: `Welcome to the ${slackChannelName} team channel!`,
-                                        footer: `For more information, please read the ${documentationLink}`, // TODO use actual icon
+                                        footer: `For more information, please read the ${documentationLink}`,
                                         text: `
 If you haven't already, you might want to:
 
@@ -199,7 +215,7 @@ Unfortunately this team does not seem to exist on Subatomic.
 To create a team channel you must first create a team. Click the button below to do that now.
                                                   `,
                         fallback: "Team does not exist on Subatomic",
-                        footer: `For more information, please read the ${documentationLink}`, // TODO use actual icon
+                        footer: `For more information, please read the ${documentationLink}`,
                         color: "#D94649",
                         mrkdwn_in: ["text"],
                         actions: [
