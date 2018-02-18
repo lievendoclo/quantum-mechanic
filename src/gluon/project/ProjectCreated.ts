@@ -8,6 +8,7 @@ import {
 } from "@atomist/automation-client";
 import {buttonForCommand} from "@atomist/automation-client/spi/message/MessageClient";
 import {url} from "@atomist/slack-messages";
+import * as config from "config";
 import {
     ListExistingBitbucketProject,
     NewBitbucketProject,
@@ -46,13 +47,13 @@ export class ProjectCreated implements HandleEvent<any> {
 
         const projectCreatedEvent = event.data.ProjectCreatedEvent[0];
         return ctx.messageClient.addressChannels({
-            text: `The ${projectCreatedEvent.project.name} project has been created successfully by @${projectCreatedEvent.createdBy.slackIdentity.screenName} 👍`,
+            text: `The *${projectCreatedEvent.project.name}* project has been created successfully.`,
             attachments: [{
                 text: `
 A Subatomic project is linked to a Bitbucket project. \
 This can be a new Bitbucket project that will be created and configured according to best practice or you can choose to link an existing project. The existing project will also be configured accordingly.`,
                 fallback: "Create or link Bitbucket project",
-                footer: `For more information, please read the ${this.docs()}`, // TODO use actual icon
+                footer: `For more information, please read the ${this.docs()}`,
                 color: "#45B254",
                 actions: [
                     buttonForCommand(
@@ -73,7 +74,7 @@ A Subatomic project is deployed into the OpenShift platform. \
 The platform consists of two clusters, an Non Prod and a Prod cluster. The project environments span both clusters and are the deployment targets for the applications managed by Subatomic.
 These environments are realised as OpenShift projects and need to be created or linked to existing projects. If you haven't done either, please do that now.`,
                 fallback: "Create or link existing OpenShift environments",
-                footer: `For more information, please read the ${this.docs()}`, // TODO use actual icon
+                footer: `For more information, please read the ${this.docs()}`,
                 color: "#45B254",
                 actions: [
                     buttonForCommand(
@@ -88,14 +89,14 @@ These environments are realised as OpenShift projects and need to be created or 
 Projects can be associated with multiple teams. \
 If you would like to associate more teams to the *${projectCreatedEvent.project.name}* project, please use the \`@atomist subatomic associate team\` command`,
                 fallback: "Associate multiple teams to this project",
-                footer: `For more information, please read the ${this.docs()}`, // TODO use actual icon
+                footer: `For more information, please read the ${this.docs()}`,
                 color: "#00a5ff",
             }],
         }, projectCreatedEvent.team.slackIdentity.teamChannel);
     }
 
     private docs(): string {
-        return `${url("https://subatomic.bison.absa.co.za/docs/projects",
+        return `${url(`${config.get("subatomic").docs.baseUrl}/projects`,
             "documentation")}`;
     }
 }

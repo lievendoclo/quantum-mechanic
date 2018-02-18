@@ -37,8 +37,6 @@ export class NewDevOpsEnvironment implements HandleCommand {
     public teamName: string;
 
     public handle(ctx: HandlerContext): Promise<HandlerResult> {
-        logger.info(`Creating new DevOps environment for ...`);
-
         return gluonTeamForSlackTeamChannel(this.teamChannel)
             .then(team => {
                 return this.requestDevOpsEnvironment(
