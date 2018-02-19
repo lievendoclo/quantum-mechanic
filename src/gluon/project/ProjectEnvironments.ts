@@ -37,7 +37,7 @@ export class NewProjectEnvironments implements HandleCommand {
             .then(member => {
                 return gluonProjectFromProjectName(ctx, this.projectName)
                     .then(project => {
-                        return axios.put(`http://localhost:8080/projects/${project.projectId}`,
+                        return axios.put(`${QMConfig.subatomic.gluon.baseUrl}/projects/${project.projectId}`,
                             {
                                 projectEnvironment: {
                                     requestedBy: member.memberId,

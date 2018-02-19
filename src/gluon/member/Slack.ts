@@ -30,11 +30,11 @@ export class AddSlackDetails implements HandleCommand<HandlerResult> {
     public handle(ctx: HandlerContext): Promise<HandlerResult> {
         logger.info(`Adding Slack details for member: ${this.email}`);
 
-        return axios.get(`http://localhost:8080/members?email=${this.email}`)
+        return axios.get(`${QMConfig.subatomic.gluon.baseUrl}/members?email=${this.email}`)
             .then(member => {
                 logger.info(`Found existing member: ${member.data._embedded.teamMemberResources[0].memberId}`);
                 return axios.put(
-                    `http://localhost:8080/members/${member.data._embedded.teamMemberResources[0].memberId}`,
+                    `${QMConfig.subatomic.gluon.baseUrl}/members/${member.data._embedded.teamMemberResources[0].memberId}`,
                     {
                         slack: {
                             screenName: this.screenName,

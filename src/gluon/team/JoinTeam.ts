@@ -30,7 +30,7 @@ export class JoinTeam implements HandleCommand<HandlerResult> {
     public slackName: string;
 
     public handle(ctx: HandlerContext): Promise<HandlerResult> {
-        return axios.get("http://localhost:8080/teams")
+        return axios.get(`${QMConfig.subatomic.gluon.baseUrl}/teams`)
             .then(teams => {
                 logger.info(`Got teams data: ${JSON.stringify(teams.data)}`);
 
@@ -101,13 +101,13 @@ export class AddMemberToTeam implements HandleCommand<HandlerResult> {
             .then(chatId => {
                 if (!_.isEmpty(chatId)) {
                     logger.info(`Got ChatId: ${chatId}`);
-                    return axios.get(`http://localhost:8080/members?slackScreenName=${chatId}`)
+                    return axios.get(`${QMConfig.subatomic.gluon.baseUrl}/members?slackScreenName=${chatId}`)
                         .then(newMember => {
                             logger.info(`Member: ${JSON.stringify(newMember.data)}`);
                             if (!_.isEmpty(newMember.data._embedded)) {
                                 logger.info(`Getting teams that ${this.screenName} (you) are a part of...`);
 
-                                return axios.get(`http://localhost:8080/members?slackScreenName=${this.screenName}`)
+                                return axios.get(`${QMConfig.subatomic.gluon.baseUrl}/members?slackScreenName=${this.screenName}`)
                                     .then(member => {
                                         if (!_.isEmpty(member.data._embedded)) {
                                             const you = member.data._embedded.teamMemberResources[0];
@@ -257,10 +257,10 @@ export class CreateMembershipRequestToTeam implements HandleCommand<HandlerResul
             .then(chatId => {
                 if (!_.isEmpty(chatId)) {
                     logger.info(`Got ChatId: ${chatId}`);
-                    return axios.get(`http://localhost:8080/members?slackScreenName=${chatId}`)
+                    return axios.get(`${QMConfig.subatomic.gluon.baseUrl}/members?slackScreenName=${chatId}`)
                         .then(newMember => {
                             logger.info(`Member: ${JSON.stringify(newMember.data)}`);
-                            return axios.put(`http://localhost:8080/teams/${this.teamId}`,
+                            return axios.put(`${QMConfig.subatomic.gluon.baseUrl}/teams/${this.teamId}`,
                                 {
                                     membershipRequests: [
                                         {

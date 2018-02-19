@@ -3,12 +3,13 @@ import {buttonForCommand} from "@atomist/automation-client/spi/message/MessageCl
 import {SlackMessage, url} from "@atomist/slack-messages";
 import axios from "axios";
 import * as _ from "lodash";
+import {QMConfig} from "../../config/QMConfig";
 import {CreateProject} from "./CreateProject";
 
 export function gluonProjectFromProjectName(ctx: HandlerContext,
                                             projectName: string,
                                             message: string = "This command requires an existing project"): Promise<any> {
-    return axios.get(`http://localhost:8080/projects?name=${projectName}`)
+    return axios.get(`${QMConfig.subatomic.gluon.baseUrl}/projects?name=${projectName}`)
         .then(projects => {
             if (!_.isEmpty(projects.data._embedded)) {
                 return Promise.resolve(projects.data._embedded.projectResources[0]);

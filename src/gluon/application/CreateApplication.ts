@@ -58,7 +58,7 @@ export class CreateApplication implements HandleCommand<HandlerResult> {
                 return gluonProjectFromProjectName(ctx, this.projectName)
                     .then(project => {
                         // update project by creating new Bitbucket project (new domain concept)
-                        return axios.post(`http://localhost:8080/applications`,
+                        return axios.post(`${QMConfig.subatomic.gluon.baseUrl}/applications`,
                             {
                                 name: this.name,
                                 description: this.description,

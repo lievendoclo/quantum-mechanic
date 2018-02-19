@@ -56,7 +56,7 @@ export class OnboardMember implements HandleCommand<HandlerResult> {
 
         // if NOT, then call Gluon to onboard him
         // axios.post(...)
-        return axios.post(`http://localhost:8080/members`,
+        return axios.post(`${QMConfig.subatomic.gluon.baseUrl}/members`,
             {
                 firstName: this.firstName,
                 lastName: this.lastName,

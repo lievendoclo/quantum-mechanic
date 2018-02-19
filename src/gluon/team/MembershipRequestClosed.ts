@@ -65,10 +65,10 @@ export class MembershipRequestClosed implements HandleCommand<HandlerResult> {
     public handle(ctx: HandlerContext): Promise<HandlerResult> {
         logger.info(`Attempting approval from user: ${this.approverUserName}`);
 
-        return axios.get(`http://localhost:8080/members?slackScreenName=${this.approverUserName}`)
+        return axios.get(`${QMConfig.subatomic.gluon.baseUrl}/members?slackScreenName=${this.approverUserName}`)
             .then(newMember => {
                 logger.info(`Member: ${JSON.stringify(newMember.data)}`);
-                return axios.put(`http://localhost:8080/teams/${this.teamId}`,
+                return axios.put(`${QMConfig.subatomic.gluon.baseUrl}/teams/${this.teamId}`,
                     {
                         membershipRequests: [
                             {

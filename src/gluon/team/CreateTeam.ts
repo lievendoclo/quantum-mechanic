@@ -28,11 +28,11 @@ export class CreateTeam implements HandleCommand<HandlerResult> {
 
     public handle(ctx: HandlerContext): Promise<HandlerResult> {
         logger.info(`Creating team for member: ${this.screenName}`);
-        return axios.get(`http://localhost:8080/members?slackScreenName=${this.screenName}`)
+        return axios.get(`${QMConfig.subatomic.gluon.baseUrl}/members?slackScreenName=${this.screenName}`)
             .then(member => {
                 if (!_.isEmpty(member.data._embedded)) {
                     const memberId: string = member.data._embedded.teamMemberResources[0].memberId;
-                    return axios.post("http://localhost:8080/teams", {
+                    return axios.post(`${QMConfig.subatomic.gluon.baseUrl}/teams`, {
                         name: this.name,
                         description: this.description,
                         createdBy: memberId,
