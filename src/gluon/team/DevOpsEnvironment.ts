@@ -3,7 +3,6 @@ import {
     HandleCommand,
     HandlerContext,
     HandlerResult,
-    logger,
     MappedParameter,
     MappedParameters,
     Parameter,
@@ -16,7 +15,7 @@ import {QMConfig} from "../../config/QMConfig";
 import {gluonMemberFromScreenName} from "../member/Members";
 import {
     gluonTeamForSlackTeamChannel,
-    gluonTeamsWhoSlackScreenNameBelongsToo,
+    gluonTeamsWhoSlackScreenNameBelongsTo,
 } from "./Teams";
 
 @CommandHandler("Check whether to create a new OpenShift DevOps environment or use and existing one", QMConfig.subatomic.commandPrefix + " request devops environment")
@@ -54,7 +53,7 @@ export class NewDevOpsEnvironment implements HandleCommand {
                         this.teamChannel,
                     );
                 } else {
-                    return gluonTeamsWhoSlackScreenNameBelongsToo(ctx, this.screenName)
+                    return gluonTeamsWhoSlackScreenNameBelongsTo(ctx, this.screenName)
                         .then(teams => {
                             if (teams.length === 1) {
                                 this.teamName = teams[0].name;

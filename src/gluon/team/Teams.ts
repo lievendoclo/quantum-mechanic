@@ -6,7 +6,7 @@ import {QMConfig} from "../../config/QMConfig";
 import {CreateTeam} from "./CreateTeam";
 import {JoinTeam} from "./JoinTeam";
 
-export function gluonTeamsWhoSlackScreenNameBelongsToo(ctx: HandlerContext, screenName: string): Promise<any[]> {
+export function gluonTeamsWhoSlackScreenNameBelongsTo(ctx: HandlerContext, screenName: string): Promise<any[]> {
     return axios.get(`${QMConfig.subatomic.gluon.baseUrl}/teams?slackScreenName=${screenName}`)
         .then(teams => {
             if (!_.isEmpty(teams.data._embedded)) {

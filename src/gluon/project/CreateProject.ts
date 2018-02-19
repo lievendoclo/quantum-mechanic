@@ -14,7 +14,7 @@ import {QMConfig} from "../../config/QMConfig";
 import {gluonMemberFromScreenName} from "../member/Members";
 import {
     gluonTeamForSlackTeamChannel,
-    gluonTeamsWhoSlackScreenNameBelongsToo,
+    gluonTeamsWhoSlackScreenNameBelongsTo,
 } from "../team/Teams";
 
 @CommandHandler("Create a new project", QMConfig.subatomic.commandPrefix + " create project")
@@ -61,7 +61,7 @@ export class CreateProject implements HandleCommand<HandlerResult> {
                         this.teamChannel,
                     );
                 } else {
-                    return gluonTeamsWhoSlackScreenNameBelongsToo(ctx, this.screenName)
+                    return gluonTeamsWhoSlackScreenNameBelongsTo(ctx, this.screenName)
                         .then(teams => {
                             return ctx.messageClient.respond({
                                 text: "Please select a team you would like to associate this project with",
