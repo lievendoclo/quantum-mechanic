@@ -1,7 +1,7 @@
 import {logger} from "@atomist/automation-client";
 import {AxiosInstance, AxiosPromise} from "axios-https-proxy-fix";
-import * as config from "config";
 import * as _ from "lodash";
+import {QMConfig} from "../../config/QMConfig";
 import {usernameFromDomainUsername} from "../member/Members";
 import {bitbucketAxios, bitbucketUserFromUsername} from "./Bitbucket";
 
@@ -44,13 +44,13 @@ export class BitbucketConfiguration {
     }
 
     private addProjectPermission(projectKey: string, user: string, permission: string = "PROJECT_READ"): AxiosPromise {
-        return this.axios.put(`${config.get("subatomic").bitbucket.baseUrl}/api/1.0/projects/${projectKey}/permissions/users?name=${user}&permission=${permission}`,
+        return this.axios.put(`${QMConfig.subatomic.bitbucket.baseUrl}/api/1.0/projects/${projectKey}/permissions/users?name=${user}&permission=${permission}`,
             {});
     }
 
     private addBranchPermissions(bitbucketProjectKey: string, owners: string[]): Promise<[any]> {
         return Promise.all([
-            this.axios.post(`${config.get("subatomic").bitbucket.baseUrl}/branch-permissions/2.0/projects/${bitbucketProjectKey}/restrictions`,
+            this.axios.post(`${QMConfig.subatomic.bitbucket.baseUrl}/branch-permissions/2.0/projects/${bitbucketProjectKey}/restrictions`,
                 {
                     type: "fast-forward-only",
                     matcher: {
@@ -63,7 +63,7 @@ export class BitbucketConfiguration {
                     },
                     users: owners,
                 }),
-            this.axios.post(`${config.get("subatomic").bitbucket.baseUrl}/branch-permissions/2.0/projects/${bitbucketProjectKey}/restrictions`,
+            this.axios.post(`${QMConfig.subatomic.bitbucket.baseUrl}/branch-permissions/2.0/projects/${bitbucketProjectKey}/restrictions`,
                 {
                     type: "no-deletes",
                     matcher: {
@@ -76,7 +76,7 @@ export class BitbucketConfiguration {
                     },
                     users: owners,
                 }),
-            this.axios.post(`${config.get("subatomic").bitbucket.baseUrl}/branch-permissions/2.0/projects/${bitbucketProjectKey}/restrictions`,
+            this.axios.post(`${QMConfig.subatomic.bitbucket.baseUrl}/branch-permissions/2.0/projects/${bitbucketProjectKey}/restrictions`,
                 {
                     type: "pull-request-only",
                     matcher: {
@@ -95,13 +95,13 @@ export class BitbucketConfiguration {
     private addHooks(bitbucketProjectKey: string): Promise<[any]> {
         // Enable and configure hooks
         return Promise.all([
-            this.axios.put(`${config.get("subatomic").bitbucket.baseUrl}/api/1.0/projects/${bitbucketProjectKey}/settings/hooks/com.atlassian.bitbucket.server.bitbucket-bundled-hooks:verify-committer-hook/enabled`,
+            this.axios.put(`${QMConfig.subatomic.bitbucket.baseUrl}/api/1.0/projects/${bitbucketProjectKey}/settings/hooks/com.atlassian.bitbucket.server.bitbucket-bundled-hooks:verify-committer-hook/enabled`,
                 {}),
             // Enable and configure hooks
-            this.axios.put(`${config.get("subatomic").bitbucket.baseUrl}/api/1.0/projects/${bitbucketProjectKey}/settings/hooks/com.atlassian.bitbucket.server.bitbucket-bundled-hooks:incomplete-tasks-merge-check/enabled`,
+            this.axios.put(`${QMConfig.subatomic.bitbucket.baseUrl}/api/1.0/projects/${bitbucketProjectKey}/settings/hooks/com.atlassian.bitbucket.server.bitbucket-bundled-hooks:incomplete-tasks-merge-check/enabled`,
                 {}),
             // Enable and configure merge checks
-            this.axios.put(`${config.get("subatomic").bitbucket.baseUrl}/api/1.0/projects/${bitbucketProjectKey}/settings/hooks/com.atlassian.bitbucket.server.bitbucket-build:requiredBuildsMergeCheck/enabled`,
+            this.axios.put(`${QMConfig.subatomic.bitbucket.baseUrl}/api/1.0/projects/${bitbucketProjectKey}/settings/hooks/com.atlassian.bitbucket.server.bitbucket-build:requiredBuildsMergeCheck/enabled`,
                 {
                     requiredCount: 1,
                 }),
@@ -117,7 +117,7 @@ export class BitbucketConfiguration {
             return bitbucketUserFromUsername(bitbucketUsername)
                 .then(user => {
                     logger.debug(`Adding to the default reviewers the Bitbucket user: ${JSON.stringify(user)}`);
-                    return this.axios.post(`${config.get("subatomic").bitbucket.baseUrl}/default-reviewers/1.0/projects/${bitbucketProjectKey}/condition`,
+                    return this.axios.post(`${QMConfig.subatomic.bitbucket.baseUrl}/default-reviewers/1.0/projects/${bitbucketProjectKey}/condition`,
                         {
                             reviewers: [
                                 {

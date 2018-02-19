@@ -1,5 +1,5 @@
 import * as appRoot from "app-root-path";
-import * as config from "config";
+import {QMConfig} from "./config/QMConfig";
 import {ApplicationCreated} from "./gluon/application/ApplicationCreated";
 import {ApplicationCreatedEvent} from "./gluon/application/applicationsIngester";
 import {CreateApplication} from "./gluon/application/CreateApplication";
@@ -50,12 +50,12 @@ import {
 
 const pj = require(`${appRoot.path}/package.json`);
 
-const token = config.get("token");
+const token = QMConfig.token;
 
 export const configuration: any = {
     name: pj.name,
     version: pj.version,
-    teamIds: [config.get("teamId")],
+    teamIds: [QMConfig.teamId],
     commands: [
         NewDevOpsEnvironment,
         NewOrUseTeamSlackChannel,

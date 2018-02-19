@@ -8,11 +8,11 @@ import {
     Parameter,
 } from "@atomist/automation-client";
 import axios from "axios";
-import * as config from "config";
+import {QMConfig} from "../../config/QMConfig";
 import {gluonMemberFromScreenName} from "../member/Members";
 import {gluonProjectFromProjectName} from "../project/Projects";
 
-@CommandHandler("Create a new Bitbucket project", config.get("subatomic").commandPrefix + " create bitbucket project")
+@CommandHandler("Create a new Bitbucket project", QMConfig.subatomic.commandPrefix + " create bitbucket project")
 export class CreateApplication implements HandleCommand<HandlerResult> {
 
     @MappedParameter(MappedParameters.SlackUserName)

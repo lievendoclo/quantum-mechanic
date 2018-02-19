@@ -8,7 +8,7 @@ import {
 } from "@atomist/automation-client";
 import {buttonForCommand} from "@atomist/automation-client/spi/message/MessageClient";
 import {url} from "@atomist/slack-messages";
-import * as config from "config";
+import {QMConfig} from "../../config/QMConfig";
 import {
     ListExistingBitbucketProject,
     NewBitbucketProject,
@@ -96,7 +96,7 @@ If you would like to associate more teams to the *${projectCreatedEvent.project.
     }
 
     private docs(): string {
-        return `${url(`${config.get("subatomic").docs.baseUrl}/projects`,
+        return `${url(`${QMConfig.subatomic.docs.baseUrl}/projects`,
             "documentation")}`;
     }
 }

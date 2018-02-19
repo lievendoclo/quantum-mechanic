@@ -13,7 +13,7 @@ import {
     buttonForCommand,
 } from "@atomist/automation-client/spi/message/MessageClient";
 import {SlackMessage} from "@atomist/slack-messages";
-import * as config from "config";
+import {QMConfig} from "../../config/QMConfig";
 import {MembershipRequestClosed} from "./MembershipRequestClosed";
 
 @EventHandler("Receive MembershipRequestCreated events", `
@@ -45,7 +45,7 @@ export class MembershipRequestCreated implements HandleEvent<any> {
 
         const membershipRequestCreatedEvent = event.data.MembershipRequestCreatedEvent[0];
         return ctx.messageClient.send(`A membership request to team '${membershipRequestCreatedEvent.team.name}' has been sent for approval`,
-            addressSlackUsers(config.get("teamId"), membershipRequestCreatedEvent.requestedBy.slackIdentity.screenName))
+            addressSlackUsers(QMConfig.teamId, membershipRequestCreatedEvent.requestedBy.slackIdentity.screenName))
             .then(() => {
                 logger.info("Team: " + membershipRequestCreatedEvent.team.slackIdentity.teamChannel);
                 const msg: SlackMessage = {

@@ -18,11 +18,11 @@ import {
 import {inviteUserToSlackChannel} from "@atomist/lifecycle-automation/handlers/command/slack/AssociateRepo";
 import {SlackMessage, url} from "@atomist/slack-messages";
 import axios from "axios";
-import * as config from "config";
 import * as _ from "lodash";
+import {QMConfig} from "../../config/QMConfig";
 import * as graphql from "../../typings/types";
 
-@CommandHandler("Apply to join an existing team", config.get("subatomic").commandPrefix + " apply to team")
+@CommandHandler("Apply to join an existing team", QMConfig.subatomic.commandPrefix + " apply to team")
 @Tags("subatomic", "team")
 export class JoinTeam implements HandleCommand<HandlerResult> {
 
@@ -226,7 +226,7 @@ Adding a team member from Slack requires typing their \`@mention\` name or using
     }
 }
 
-@CommandHandler("Request membership to a team", config.get("subatomic").commandPrefix + " request membership")
+@CommandHandler("Request membership to a team", QMConfig.subatomic.commandPrefix + " request membership")
 @Tags("subatomic", "team", "member")
 export class CreateMembershipRequestToTeam implements HandleCommand<HandlerResult> {
 

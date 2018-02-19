@@ -1,13 +1,13 @@
 import {HandlerContext} from "@atomist/automation-client";
 import {buttonForCommand} from "@atomist/automation-client/spi/message/MessageClient";
 import axios from "axios";
-import * as config from "config";
 import * as _ from "lodash";
+import {QMConfig} from "../../config/QMConfig";
 import {CreateTeam} from "./CreateTeam";
 import {JoinTeam} from "./JoinTeam";
 
 export function gluonTeamsWhoSlackScreenNameBelongsToo(ctx: HandlerContext, screenName: string): Promise<any[]> {
-    return axios.get(`${config.get("subatomic").gluon.baseUrl}/teams?slackScreenName=${screenName}`)
+    return axios.get(`${QMConfig.subatomic.gluon.baseUrl}/teams?slackScreenName=${screenName}`)
         .then(teams => {
             if (!_.isEmpty(teams.data._embedded)) {
                 return Promise.resolve(teams.data._embedded.teamResources);
@@ -37,7 +37,7 @@ export function gluonTeamsWhoSlackScreenNameBelongsToo(ctx: HandlerContext, scre
 }
 
 export function gluonTeamForSlackTeamChannel(teamChannel: string): Promise<any> {
-    return axios.get(`${config.get("subatomic").gluon.baseUrl}/teams?slackTeamChannel=${teamChannel}`)
+    return axios.get(`${QMConfig.subatomic.gluon.baseUrl}/teams?slackTeamChannel=${teamChannel}`)
         .then(teams => {
             if (!_.isEmpty(teams.data._embedded)) {
                 if (teams.data._embedded.teamResources.length === 1) {

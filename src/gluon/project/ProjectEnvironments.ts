@@ -10,11 +10,11 @@ import {
     Tags,
 } from "@atomist/automation-client";
 import axios from "axios";
-import * as config from "config";
+import {QMConfig} from "../../config/QMConfig";
 import {gluonMemberFromScreenName} from "../member/Members";
 import {gluonProjectFromProjectName} from "./Projects";
 
-@CommandHandler("Create new OpenShift environments for a project", config.get("subatomic").commandPrefix + " request project environments")
+@CommandHandler("Create new OpenShift environments for a project", QMConfig.subatomic.commandPrefix + " request project environments")
 @Tags("subatomic", "openshift", "project")
 export class NewProjectEnvironments implements HandleCommand {
 

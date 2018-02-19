@@ -16,8 +16,8 @@ import {addBotToSlackChannel} from "@atomist/lifecycle-automation/handlers/comma
 import {createChannel} from "@atomist/lifecycle-automation/handlers/command/slack/CreateChannel";
 import {SlackMessage, url} from "@atomist/slack-messages";
 import axios from "axios";
-import * as config from "config";
 import * as _ from "lodash";
+import {QMConfig} from "../../config/QMConfig";
 import {CreateTeam} from "./CreateTeam";
 import {NewDevOpsEnvironment} from "./DevOpsEnvironment";
 import {AddMemberToTeam} from "./JoinTeam";
@@ -72,12 +72,12 @@ rather use that instead?\
     }
 
     private docs(): string {
-        return `${url(`${config.get("subatomic").docs.baseUrl}/teams#slack`,
+        return `${url(`${QMConfig.subatomic.docs.baseUrl}/teams#slack`,
             "documentation")}`;
     }
 }
 
-@CommandHandler("Create team channel", config.get("subatomic").commandPrefix + " create team channel")
+@CommandHandler("Create team channel", QMConfig.subatomic.commandPrefix + " create team channel")
 @Tags("subatomic", "slack", "channel", "team")
 export class NewTeamSlackChannel implements HandleCommand {
 
@@ -91,6 +91,8 @@ export class NewTeamSlackChannel implements HandleCommand {
 
     @Parameter({
         description: "team channel name",
+        required: false,
+        displayable: false,
     })
     public teamChannel: string;
 
@@ -105,12 +107,12 @@ export class NewTeamSlackChannel implements HandleCommand {
     }
 
     private docs(): string {
-        return `${url(`${config.get("subatomic").docs.baseUrl}/teams`,
+        return `${url(`${QMConfig.subatomic.docs.baseUrl}/teams`,
             "documentation")}`;
     }
 }
 
-@CommandHandler("Link existing team channel", config.get("subatomic").commandPrefix + " link team channel")
+@CommandHandler("Link existing team channel", QMConfig.subatomic.commandPrefix + " link team channel")
 @Tags("subatomic", "slack", "channel", "team")
 export class LinkExistingTeamSlackChannel implements HandleCommand {
 
@@ -133,7 +135,7 @@ export class LinkExistingTeamSlackChannel implements HandleCommand {
     }
 
     private docs(): string {
-        return `${url(`${config.get("subatomic").docs.baseUrl}/teams`,
+        return `${url(`${QMConfig.subatomic.docs.baseUrl}/teams`,
             "documentation")}`;
     }
 }
@@ -144,11 +146,11 @@ function linkSlackChannelToGluonTeam(ctx: HandlerContext,
                                      slackChannelName: string,
                                      documentationLink: string): Promise<HandlerResult> {
     const kebabbedTeamChannel: string = _.kebabCase(slackChannelName);
-    return axios.get(`${config.get("subatomic").gluon.baseUrl}/teams?name=${gluonTeamName}`)
+    return axios.get(`${QMConfig.subatomic.gluon.baseUrl}/teams?name=${gluonTeamName}`)
         .then(team => {
             if (!_.isEmpty(team.data._embedded)) {
                 logger.info(`Updating team channel [${kebabbedTeamChannel}]: ${team.data._embedded.teamResources[0].teamId}`);
-                return axios.put(`${config.get("subatomic").gluon.baseUrl}/teams/${team.data._embedded.teamResources[0].teamId}`,
+                return axios.put(`${QMConfig.subatomic.gluon.baseUrl}/teams/${team.data._embedded.teamResources[0].teamId}`,
                     {
                         slack: {
                             teamChannel: kebabbedTeamChannel,

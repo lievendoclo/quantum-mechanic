@@ -13,14 +13,13 @@ import {
 import {menuForCommand} from "@atomist/automation-client/spi/message/MessageClient";
 import {SlackMessage} from "@atomist/slack-messages";
 import axios from "axios";
-import {AxiosInstance} from "axios-https-proxy-fix";
-import * as config from "config";
 import * as _ from "lodash";
+import {QMConfig} from "../../config/QMConfig";
 import {gluonMemberFromScreenName} from "../member/Members";
 import {gluonProjectFromProjectName} from "../project/Projects";
 import {bitbucketAxios} from "./Bitbucket";
 
-@CommandHandler("Create a new Bitbucket project", config.get("subatomic").commandPrefix + " create bitbucket project")
+@CommandHandler("Create a new Bitbucket project", QMConfig.subatomic.commandPrefix + " create bitbucket project")
 export class NewBitbucketProject implements HandleCommand<HandlerResult> {
 
     @MappedParameter(MappedParameters.SlackUserName)
@@ -44,7 +43,7 @@ export class NewBitbucketProject implements HandleCommand<HandlerResult> {
                 return gluonProjectFromProjectName(ctx, this.name)
                     .then(project => {
                         // update project by creating new Bitbucket project (new domain concept)
-                        axios.put(`${config.get("subatomic").gluon.baseUrl}/projects/${project.projectId}`,
+                        axios.put(`${QMConfig.subatomic.gluon.baseUrl}/projects/${project.projectId}`,
                             {
                                 bitbucketProject: {
                                     name: this.name,
@@ -64,7 +63,7 @@ export class NewBitbucketProject implements HandleCommand<HandlerResult> {
     }
 }
 
-@CommandHandler("Link an existing Bitbucket project", config.get("subatomic").commandPrefix + " link bitbucket project")
+@CommandHandler("Link an existing Bitbucket project", QMConfig.subatomic.commandPrefix + " link bitbucket project")
 export class ListExistingBitbucketProject implements HandleCommand<HandlerResult> {
 
     @MappedParameter(MappedParameters.SlackUser)
@@ -90,7 +89,7 @@ export class ListExistingBitbucketProject implements HandleCommand<HandlerResult
     public handle(ctx: HandlerContext): Promise<HandlerResult> {
         if (_.isEmpty(this.bitbucketProjectKey)) {
             // then get a list of projects that the member has access too
-            return bitbucketAxios().get(`${config.get("subatomic").bitbucket.baseUrl}/api/1.0/projects`)
+            return bitbucketAxios().get(`${QMConfig.subatomic.bitbucket.baseUrl}/api/1.0/projects`)
                 .then(projects => {
                     logger.info(`Got Bitbucket projects: ${JSON.stringify(projects.data)}`);
 
@@ -124,9 +123,9 @@ export class ListExistingBitbucketProject implements HandleCommand<HandlerResult
                     return gluonProjectFromProjectName(ctx, this.projectName)
                         .then(gluonProject => {
                             // get the selected project's details
-                            return bitbucketAxios().get(`${config.get("subatomic").bitbucket.baseUrl}/api/1.0/projects/${this.bitbucketProjectKey}`)
+                            return bitbucketAxios().get(`${QMConfig.subatomic.bitbucket.baseUrl}/api/1.0/projects/${this.bitbucketProjectKey}`)
                                 .then(project => {
-                                    return axios.put(`${config.get("subatomic").gluon.baseUrl}/projects/${gluonProject.projectId}`,
+                                    return axios.put(`${QMConfig.subatomic.gluon.baseUrl}/projects/${gluonProject.projectId}`,
                                         {
                                             bitbucketProject: {
                                                 name: project.data.name,

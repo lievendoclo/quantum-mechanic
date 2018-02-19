@@ -1,15 +1,22 @@
 import {
-    CommandHandler, failure, HandleCommand, HandlerContext, HandlerResult,
-    MappedParameter, MappedParameters, Parameter, Tags,
+    CommandHandler,
+    failure,
+    HandleCommand,
+    HandlerContext,
+    HandlerResult,
+    MappedParameter,
+    MappedParameters,
+    Parameter,
+    Tags,
 } from "@atomist/automation-client";
 import {buttonForCommand} from "@atomist/automation-client/spi/message/MessageClient";
 import {SlackMessage, url} from "@atomist/slack-messages";
 import axios from "axios";
-import * as config from "config";
+import {QMConfig} from "../../config/QMConfig";
 import {CreateTeam} from "../team/CreateTeam";
 import {JoinTeam} from "../team/JoinTeam";
 
-@CommandHandler("Onboard a new team member", config.get("subatomic").commandPrefix + " onboard me")
+@CommandHandler("Onboard a new team member", QMConfig.subatomic.commandPrefix + " onboard me")
 @Tags("subatomic", "slack", "member")
 export class OnboardMember implements HandleCommand<HandlerResult> {
 

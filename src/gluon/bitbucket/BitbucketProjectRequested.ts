@@ -10,9 +10,8 @@ import {
 } from "@atomist/automation-client";
 import {url} from "@atomist/slack-messages";
 import axios from "axios";
-import {AxiosInstance} from "axios-https-proxy-fix";
-import * as config from "config";
 import * as _ from "lodash";
+import {QMConfig} from "../../config/QMConfig";
 import {bitbucketAxios, bitbucketProjectFromKey} from "./Bitbucket";
 import {BitbucketConfiguration} from "./BitbucketConfiguration";
 
@@ -87,7 +86,7 @@ export class BitbucketProjectRequested implements HandleEvent<any> {
             teamMembers,
         );
 
-        return bitbucketAxios().post(`${config.get("subatomic").bitbucket.baseUrl}/api/1.0/projects`,
+        return bitbucketAxios().post(`${QMConfig.subatomic.bitbucket.baseUrl}/api/1.0/projects`,
             {
                 key,
                 name,
@@ -118,10 +117,10 @@ export class BitbucketProjectRequested implements HandleEvent<any> {
             })
             .then(() => {
                 // Add access CI/CD access key
-                return bitbucketAxios().post(`${config.get("subatomic").bitbucket.baseUrl}/keys/1.0/projects/${key}/ssh`,
+                return bitbucketAxios().post(`${QMConfig.subatomic.bitbucket.baseUrl}/keys/1.0/projects/${key}/ssh`,
                     {
                         key: {
-                            text: config.get("subatomic").bitbucket.cicdKey,
+                            text: QMConfig.subatomic.bitbucket.cicdKey,
                         },
                         permission: "PROJECT_READ",
                     });
@@ -139,7 +138,7 @@ export class BitbucketProjectRequested implements HandleEvent<any> {
             })
             .then(() => {
                 logger.info(`Confirming Bitbucket project: [${this.bitbucketProjectId}-${this.bitbucketProjectUrl}]`);
-                return axios.put(`${config.get("subatomic").gluon.baseUrl}/projects/${bitbucketProjectRequestedEvent.project.projectId}`,
+                return axios.put(`${QMConfig.subatomic.gluon.baseUrl}/projects/${bitbucketProjectRequestedEvent.project.projectId}`,
                     {
                         bitbucketProject: {
                             bitbucketProjectId: this.bitbucketProjectId,
@@ -164,7 +163,7 @@ export class BitbucketProjectRequested implements HandleEvent<any> {
     }
 
     private docs(): string {
-        return `${url(`${config.get("subatomic").docs.baseUrl}/projects#bitbucket`,
+        return `${url(`${QMConfig.subatomic.docs.baseUrl}/projects#bitbucket`,
             "documentation")}`;
     }
 }

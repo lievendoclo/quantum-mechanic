@@ -5,11 +5,11 @@ import {
 import {buttonForCommand} from "@atomist/automation-client/spi/message/MessageClient";
 import {SlackMessage, url} from "@atomist/slack-messages";
 import axios from "axios";
-import * as config from "config";
 import * as _ from "lodash";
+import {QMConfig} from "../../config/QMConfig";
 import {OnboardMember} from "../member/Onboard";
 
-@CommandHandler("Create a new team", config.get("subatomic").commandPrefix + " create team")
+@CommandHandler("Create a new team", QMConfig.subatomic.commandPrefix + " create team")
 @Tags("subatomic", "team")
 export class CreateTeam implements HandleCommand<HandlerResult> {
 

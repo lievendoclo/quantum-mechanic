@@ -11,15 +11,15 @@ import {
 } from "@atomist/automation-client";
 import {menuForCommand} from "@atomist/automation-client/spi/message/MessageClient";
 import axios from "axios";
-import * as config from "config";
 import * as _ from "lodash";
+import {QMConfig} from "../../config/QMConfig";
 import {gluonMemberFromScreenName} from "../member/Members";
 import {
     gluonTeamForSlackTeamChannel,
     gluonTeamsWhoSlackScreenNameBelongsToo,
 } from "./Teams";
 
-@CommandHandler("Check whether to create a new OpenShift DevOps environment or use and existing one", config.get("subatomic").commandPrefix + " request devops environment")
+@CommandHandler("Check whether to create a new OpenShift DevOps environment or use and existing one", QMConfig.subatomic.commandPrefix + " request devops environment")
 @Tags("subatomic", "slack", "team", "openshift", "devops")
 export class NewDevOpsEnvironment implements HandleCommand {
 
@@ -92,10 +92,10 @@ export class NewDevOpsEnvironment implements HandleCommand {
                                      teamChannel: string): Promise<any> {
         return gluonMemberFromScreenName(ctx, screenName)
             .then(member => {
-                axios.get(`${config.get("subatomic").gluon.baseUrl}/teams?name=${teamName}`)
+                axios.get(`${QMConfig.subatomic.gluon.baseUrl}/teams?name=${teamName}`)
                     .then(team => {
                         if (!_.isEmpty(team.data._embedded)) {
-                            return axios.put(`${config.get("subatomic").gluon.baseUrl}/teams/${team.data._embedded.teamResources[0].teamId}`,
+                            return axios.put(`${QMConfig.subatomic.gluon.baseUrl}/teams/${team.data._embedded.teamResources[0].teamId}`,
                                 {
                                     devOpsEnvironment: {
                                         requestedBy: member.memberId,
