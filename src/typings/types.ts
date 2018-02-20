@@ -143,30 +143,6 @@ export type _PullRequestImpactOrdering = "atmTeamId_asc" | "atmTeamId_desc" | "i
 /* Ordering Enum for UserJoinedChannel */
 export type _UserJoinedChannelOrdering = "atmTeamId_asc" | "atmTeamId_desc" | "id_asc" | "id_desc";
 
-export namespace Channels {
-  export type Variables = {
-    teamId: string;
-    first: number;
-    offset: number;
-  }
-
-  export type Query = {
-    ChatTeam?: ChatTeam[] | null; 
-  } 
-
-  export type ChatTeam = {
-    channels?: Channels[] | null; 
-  } 
-
-  export type Channels = {
-    repos?: Repos[] | null; 
-  } 
-
-  export type Repos = {
-    name?: string | null; 
-    owner?: string | null; 
-  } 
-}
 export namespace ChatId {
   export type Variables = {
     userId: string;
@@ -179,5 +155,67 @@ export namespace ChatId {
   export type ChatId = {
     userId?: string | null; 
     screenName?: string | null; 
+  } 
+}
+export namespace BotJoinedChannel {
+  export type Variables = {
+  }
+
+  export type Subscription = {
+    UserJoinedChannel?: UserJoinedChannel[] | null; 
+  } 
+
+  export type UserJoinedChannel = {
+    user?: User | null; 
+    channel?: Channel | null; 
+  } 
+
+  export type User = {
+    isAtomistBot?: string | null; 
+    screenName?: string | null; 
+    userId?: string | null; 
+  } 
+
+  export type Channel = {
+    botInvitedSelf?: boolean | null; 
+    channelId?: string | null; 
+    name?: string | null; 
+    repos?: Repos[] | null; 
+    team?: Team | null; 
+  } 
+
+  export type Repos = {
+    name?: string | null; 
+    owner?: string | null; 
+    org?: Org | null; 
+  } 
+
+  export type Org = {
+    provider?: Provider | null; 
+  } 
+
+  export type Provider = {
+    url?: string | null; 
+  } 
+
+  export type Team = {
+    id?: string | null; 
+    orgs?: Orgs[] | null; 
+  } 
+
+  export type Orgs = {
+    owner?: string | null; 
+    ownerType?: OwnerType | null; 
+    provider?: _Provider | null; 
+    repo?: Repo[] | null; 
+  } 
+
+  export type _Provider = {
+    apiUrl?: string | null; 
+  } 
+
+  export type Repo = {
+    name?: string | null; 
+    owner?: string | null; 
   } 
 }

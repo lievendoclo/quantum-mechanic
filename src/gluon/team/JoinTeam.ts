@@ -214,7 +214,10 @@ Adding a team member from Slack requires typing their \`@mention\` name or using
                 }
             })
             .then(success)
-            .catch(err => failure(err));
+            .catch(err => {
+                logger.info("hello");
+                return failure(err);
+            });
 
         // respond to member that he has been added to the team and
         // that he has the X role assigned to him.

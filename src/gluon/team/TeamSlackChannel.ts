@@ -5,7 +5,7 @@ import {
 import {buttonForCommand} from "@atomist/automation-client/spi/message/MessageClient";
 import {addBotToSlackChannel} from "@atomist/lifecycle-automation/handlers/command/slack/AddBotToChannel";
 import {createChannel} from "@atomist/lifecycle-automation/handlers/command/slack/CreateChannel";
-import {SlackMessage, url} from "@atomist/slack-messages";
+import {channel, SlackMessage, url} from "@atomist/slack-messages";
 import axios from "axios";
 import * as config from "config";
 import * as _ from "lodash";
@@ -152,41 +152,14 @@ function associateSlackChannelToGluonTeam(ctx: HandlerContext,
                                 if (channel && channel.createSlackChannel) {
                                     return addBotToSlackChannel(ctx, slackTeamId, channel.createSlackChannel.id);
                                 } else {
-                                    return Promise.reject("Error creating or finding slack channel: " + JSON.stringify(channel));
+                                    //return Promise.reject("Error creating or finding slack channel: " + JSON.stringify(channel));
+
                                 }
-                            }).then(() => {
-
-                                // TODO add all existing team members to the team
-                                // Slack channel just created
-
-                                const msg: SlackMessage = {
-                                    text: `Welcome to the ${slackChannelName} team channel!`,
-                                    attachments: [{
-                                        fallback: `Welcome to the ${slackChannelName} team channel!`,
-                                        footer: `For more information, please read the ${documentationLink}`, // TODO use actual icon
-                                        text: `
-If you haven't already, you might want to:
-
-• create an OpenShift DevOps environment
-• add new team members
-                                                          `,
-                                        mrkdwn_in: ["text"],
-                                        actions: [
-                                            buttonForCommand(
-                                                {text: "Create DevOps environment"},
-                                                new NewDevOpsEnvironment()),
-                                            buttonForCommand(
-                                                {text: "Add team members"},
-                                                new AddMemberToTeam(),
-                                                {teamChannel: kebabbedTeamChannel}),
-                                        ],
-                                    }],
-                                };
-
-                                return ctx.messageClient.addressChannels(msg, kebabbedTeamChannel);
-
-                                // TODO respond back after creating team channel and now offer
-                                // opportunity to create OpenShift Dev environment?
+                            },err=>{
+                                if(err.networkError.response.status === 400){
+                                    return ctx.messageClient.respond("`/invite @atomist` to your channel "+kebabbedTeamChannel);
+                                }
+                                return failure(err);
                             })
                             .catch(err => failure(err));
                     });
