@@ -3,7 +3,8 @@ import {
     EventHandler,
     HandleEvent,
     HandlerContext,
-    HandlerResult, logger,
+    HandlerResult,
+    logger,
     SuccessPromise,
 } from "@atomist/automation-client";
 

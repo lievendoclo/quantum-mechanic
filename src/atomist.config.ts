@@ -1,8 +1,5 @@
 import * as appRoot from "app-root-path";
 import {QMConfig} from "./config/QMConfig";
-import {ApplicationCreated} from "./gluon/application/ApplicationCreated";
-import {ApplicationCreatedEvent} from "./gluon/application/applicationsIngester";
-import {CreateApplication} from "./gluon/application/CreateApplication";
 import {
     BitbucketProjectAddedEvent,
     BitbucketProjectRequestedEvent,
@@ -17,6 +14,12 @@ import {OnboardMember} from "./gluon/member/Onboard";
 import {AddSlackDetails, Whoami} from "./gluon/member/Slack";
 import {TeamMemberCreated} from "./gluon/member/TeamMemberCreated";
 import {TeamMemberCreatedEvent} from "./gluon/member/teamMemberIngester";
+import {ApplicationCreated} from "./gluon/packages/ApplicationCreated";
+import {
+    CreateApplication,
+    LinkExistingApplication,
+} from "./gluon/packages/Applications";
+import {ApplicationCreatedEvent} from "./gluon/packages/applicationsIngester";
 import {CreateProject} from "./gluon/project/CreateProject";
 import {ProjectCreated} from "./gluon/project/ProjectCreated";
 import {NewProjectEnvironments} from "./gluon/project/ProjectEnvironments";
@@ -74,6 +77,7 @@ export const configuration: any = {
         CreateMembershipRequestToTeam,
         MembershipRequestClosed,
         ListExistingBitbucketProject,
+        LinkExistingApplication,
     ],
     events: [
         TeamCreated,

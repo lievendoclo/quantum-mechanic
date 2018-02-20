@@ -154,7 +154,7 @@ export const ApplicationCreatedEvent: Ingester = {
             name: "BitbucketRepository",
             fields: [
                 {
-                    name: "id",
+                    name: "bitbucketId",
                     type: {
                         kind: "SCALAR",
                         name: "String",

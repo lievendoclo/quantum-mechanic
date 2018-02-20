@@ -15,10 +15,11 @@ import axios from "axios";
 import * as https from "https";
 import * as _ from "lodash";
 import * as qs from "query-string";
+import {QMConfig} from "../../config/QMConfig";
 import {SimpleOption} from "../../openshift/base/options/SimpleOption";
 import {OCClient} from "../../openshift/OCClient";
 import {OCCommon} from "../../openshift/OCCommon";
-import {CreateApplication} from "../application/CreateApplication";
+import {LinkExistingApplication} from "../packages/Applications";
 
 @EventHandler("Receive ProjectEnvironmentsRequestedEvent events", `
 subscription ProjectEnvironmentsRequestedEvent {
@@ -207,7 +208,7 @@ export class ProjectEnvironmentsRequested implements HandleEvent<any> {
                                 return jenkinsAxios.post(`https://${jenkinsHost.output}/createItem?name=${_.kebabCase(environmentsRequestedEvent.project.name).toLowerCase()}`,
                                     `
 <com.cloudbees.hudson.plugins.folder.Folder plugin="cloudbees-folder@6.0.4">
-  <description>Folder for ${environmentsRequestedEvent.project.name} project [[managed by Subatomic](https://docs.subatomic.absa.co.za/projects/${environmentsRequestedEvent.project.name})]</description>
+  <description>Folder for ${environmentsRequestedEvent.project.name} project [[managed by Subatomic](${QMConfig.subatomic.docs.baseUrl}/projects/${environmentsRequestedEvent.project.name})]</description>
   <displayName>${environmentsRequestedEvent.project.name}</displayName>
   <properties>
     <com.cloudbees.hudson.plugins.folder.properties.FolderCredentialsProvider_-FolderCredentialsProperty>
@@ -220,6 +221,7 @@ export class ProjectEnvironmentsRequested implements HandleEvent<any> {
         </entry>
         <entry>
           <com.cloudbees.plugins.credentials.domains.Domain plugin="credentials@2.1.16">
+            <name>${environmentsRequestedEvent.project.name} Credentials</name>
             <name>${environmentsRequestedEvent.project.name} Credentials</name>
             <description>The secrets which contain the deployment environments for use in the multibranch jobs for this project</description>
             <specifications />
@@ -294,9 +296,8 @@ export class ProjectEnvironmentsRequested implements HandleEvent<any> {
                             "credentials": {
                                 scope: "GLOBAL",
                                 id: `${teamDevOpsProjectId}-bitbucket`,
-                                // TODO get this from config obviously
-                                username: "donovan",
-                                password: "donovan",
+                                username: QMConfig.subatomic.bitbucket.auth.username,
+                                password: QMConfig.subatomic.bitbucket.auth.password,
                                 description: `${teamDevOpsProjectId}-bitbucket`,
                                 $class: "com.cloudbees.plugins.credentials.impl.UsernamePasswordCredentialsImpl",
                             },
@@ -308,7 +309,7 @@ export class ProjectEnvironmentsRequested implements HandleEvent<any> {
                             }),
                         });
 
-                        jenkinsAxios.interceptors.request.use( request => {
+                        jenkinsAxios.interceptors.request.use(request => {
                             if (request.data && (request.headers["Content-Type"].indexOf("application/x-www-form-urlencoded") !== -1)) {
                                 logger.debug(`Stringifying URL encoded data: ${qs.stringify(request.data)}`);
                                 request.data = qs.stringify(request.data);
@@ -339,10 +340,23 @@ A package is either an application or a shared library, click the button below t
                         footer: `For more information, please read the ${this.docs()}`, // TODO use actual icon
                         color: "#45B254",
                         actions: [
+                            // TODO see https://github.com/absa-subatomic/quantum-mechanic/issues/9
+                            // buttonForCommand(
+                            //     {text: "Create application"},
+                            //     new CreateApplication(),
+                            //     {}),
                             buttonForCommand(
-                                {text: "Create application"},
-                                new CreateApplication(),
+                                {text: "Link existing application"},
+                                new LinkExistingApplication(),
                                 {}),
+                            // buttonForCommand(
+                            //     {text: "Create shared library"},
+                            //     this,
+                            //     {}),
+                            // buttonForCommand(
+                            //     {text: "Link existing shared library"},
+                            //     this,
+                            //     {}),
                         ],
                     }],
                 };
@@ -380,7 +394,7 @@ A package is either an application or a shared library, click the button below t
     }
 
     private docs(): string {
-        return `${url("https://subatomic.bison.absa.co.za/docs/projects",
+        return `${url(`${QMConfig.subatomic.docs.baseUrl}/projects`,
             "documentation")}`;
     }
 }

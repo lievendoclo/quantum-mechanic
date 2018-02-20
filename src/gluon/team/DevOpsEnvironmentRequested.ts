@@ -15,6 +15,7 @@ import * as https from "https";
 import * as _ from "lodash";
 import {timeout, TimeoutError} from "promise-timeout";
 import * as qs from "query-string";
+import {QMConfig} from "../../config/QMConfig";
 import {SimpleOption} from "../../openshift/base/options/SimpleOption";
 import {OCClient} from "../../openshift/OCClient";
 import {OCCommon} from "../../openshift/OCCommon";
@@ -166,7 +167,7 @@ export class DevOpsEnvironmentRequested implements HandleEvent<any> {
                         new SimpleOption("p", `NAMESPACE=${projectId}`),
                         new SimpleOption("p", `JENKINS_IMAGE_STREAM_TAG=jenkins-subatomic:2.0`),
                         new SimpleOption("p", `BITBUCKET_NAME=ABSA Bitbucket`),
-                        new SimpleOption("p", `BITBUCKET_URL=https://bitbucket.core.local`),
+                        new SimpleOption("p", `BITBUCKET_URL=${QMConfig.subatomic.bitbucket.baseUrl}`),
                         new SimpleOption("p", `BITBUCKET_CREDENTIALS_ID=${projectId}-bitbucket`),
                         // TODO this should be a property on Team. I.e. teamEmail
                         // If no team email then the address of the createdBy member
@@ -278,7 +279,7 @@ export class DevOpsEnvironmentRequested implements HandleEvent<any> {
                                             }),
                                         });
 
-                                        jenkinsAxios.interceptors.request.use( request => {
+                                        jenkinsAxios.interceptors.request.use(request => {
                                             if (request.data && (request.headers["Content-Type"].indexOf("application/x-www-form-urlencoded") !== -1)) {
                                                 logger.debug(`Stringifying URL encoded data: ${qs.stringify(request.data)}`);
                                                 request.data = qs.stringify(request.data);
@@ -291,9 +292,8 @@ export class DevOpsEnvironmentRequested implements HandleEvent<any> {
                                             "credentials": {
                                                 scope: "GLOBAL",
                                                 id: `${projectId}-bitbucket`,
-                                                // TODO get this from config obviously
-                                                username: "donovan",
-                                                password: "donovan",
+                                                username: QMConfig.subatomic.bitbucket.auth.username,
+                                                password: QMConfig.subatomic.bitbucket.auth.password,
                                                 description: `${projectId}-bitbucket`,
                                                 $class: "com.cloudbees.plugins.credentials.impl.UsernamePasswordCredentialsImpl",
                                             },
@@ -311,7 +311,7 @@ export class DevOpsEnvironmentRequested implements HandleEvent<any> {
                                             });
                                     });
                             })
-                            .catch( err => {
+                            .catch(err => {
                                 if (err instanceof TimeoutError) {
                                     logger.error(`Waiting for dc/jenkins deployment timed out`);
                                 }
@@ -332,9 +332,8 @@ export class DevOpsEnvironmentRequested implements HandleEvent<any> {
                                     "bitbucket-ssh",
                                     [],
                                     [
-                                        // TODO use configuration to get the cicd key/Root CA for Bitbucket
-                                        new SimpleOption("-ssh-privatekey", "/Users/donovan/dev/absa/core/jenkins-pipeline-test/cicd.key"),
-                                        new SimpleOption("-ca-cert", "/Users/donovan/dev/absa/core/bitbucket-server/ca-chain.cert.pem"),
+                                        new SimpleOption("-ssh-privatekey", QMConfig.subatomic.bitbucket.cicdKey),
+                                        new SimpleOption("-ca-cert", QMConfig.subatomic.bitbucket.caPath),
                                         new SimpleOption("-namespace", projectId),
                                     ]);
                             });
@@ -387,7 +386,7 @@ If you haven't already, you might want to create a Project for your team to work
     }
 
     private docs(): string {
-        return `${url("https://subatomic.bison.absa.co.za/docs/devops",
+        return `${url(`${QMConfig.subatomic.docs.baseUrl}/devops`,
             "documentation")}`;
     }
 }

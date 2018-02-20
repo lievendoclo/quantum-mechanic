@@ -86,7 +86,7 @@ export class BitbucketProjectRequested implements HandleEvent<any> {
             teamMembers,
         );
 
-        return bitbucketAxios().post(`${QMConfig.subatomic.bitbucket.baseUrl}/api/1.0/projects`,
+        return bitbucketAxios().post(`${QMConfig.subatomic.bitbucket.restUrl}/api/1.0/projects`,
             {
                 key,
                 name,
@@ -117,7 +117,7 @@ export class BitbucketProjectRequested implements HandleEvent<any> {
             })
             .then(() => {
                 // Add access CI/CD access key
-                return bitbucketAxios().post(`${QMConfig.subatomic.bitbucket.baseUrl}/keys/1.0/projects/${key}/ssh`,
+                return bitbucketAxios().post(`${QMConfig.subatomic.bitbucket.restUrl}/keys/1.0/projects/${key}/ssh`,
                     {
                         key: {
                             text: QMConfig.subatomic.bitbucket.cicdKey,

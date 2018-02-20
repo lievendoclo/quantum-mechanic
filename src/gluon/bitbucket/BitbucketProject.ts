@@ -89,7 +89,7 @@ export class ListExistingBitbucketProject implements HandleCommand<HandlerResult
     public handle(ctx: HandlerContext): Promise<HandlerResult> {
         if (_.isEmpty(this.bitbucketProjectKey)) {
             // then get a list of projects that the member has access too
-            return bitbucketAxios().get(`${QMConfig.subatomic.bitbucket.baseUrl}/api/1.0/projects`)
+            return bitbucketAxios().get(`${QMConfig.subatomic.bitbucket.restUrl}/api/1.0/projects`)
                 .then(projects => {
                     logger.info(`Got Bitbucket projects: ${JSON.stringify(projects.data)}`);
 
@@ -99,7 +99,7 @@ export class ListExistingBitbucketProject implements HandleCommand<HandlerResult
                             fallback: "Link Bitbucket project",
                             actions: [
                                 menuForCommand({
-                                        text: "Select Team", options:
+                                        text: "Select Bitbucket project", options:
                                             projects.data.values.map(bitbucketProject => {
                                                 return {
                                                     value: bitbucketProject.key,
@@ -123,7 +123,7 @@ export class ListExistingBitbucketProject implements HandleCommand<HandlerResult
                     return gluonProjectFromProjectName(ctx, this.projectName)
                         .then(gluonProject => {
                             // get the selected project's details
-                            return bitbucketAxios().get(`${QMConfig.subatomic.bitbucket.baseUrl}/api/1.0/projects/${this.bitbucketProjectKey}`)
+                            return bitbucketAxios().get(`${QMConfig.subatomic.bitbucket.restUrl}/api/1.0/projects/${this.bitbucketProjectKey}`)
                                 .then(project => {
                                     return axios.put(`${QMConfig.subatomic.gluon.baseUrl}/projects/${gluonProject.projectId}`,
                                         {

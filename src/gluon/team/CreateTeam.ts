@@ -1,6 +1,14 @@
 import {
-    CommandHandler, failure, HandleCommand, HandlerContext, HandlerResult,
-    logger, MappedParameter, MappedParameters, Parameter, success, Tags,
+    CommandHandler,
+    failure,
+    HandleCommand,
+    HandlerContext,
+    HandlerResult,
+    logger,
+    MappedParameter,
+    MappedParameters,
+    Parameter,
+    Tags,
 } from "@atomist/automation-client";
 import {buttonForCommand} from "@atomist/automation-client/spi/message/MessageClient";
 import {SlackMessage, url} from "@atomist/slack-messages";
@@ -66,7 +74,7 @@ To create a team you must first onboard yourself. Click the button below to do t
     }
 
     private docs(): string {
-        return `${url("https://subatomic.bison.absa.co.za/docs/teams",
+        return `${url(`${QMConfig.subatomic.docs.baseUrl}/teams`,
             "documentation")}`;
     }
 }
