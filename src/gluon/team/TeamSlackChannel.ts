@@ -1,17 +1,30 @@
 import {
-    CommandHandler, failure, HandleCommand, HandlerContext, HandlerResult,
-    logger, MappedParameter, MappedParameters, Parameter, success, Tags,
+    CommandHandler,
+    failure,
+    HandleCommand,
+    HandlerContext,
+    HandlerResult,
+    logger,
+    MappedParameter,
+    MappedParameters,
+    Parameter,
+    success,
+    Tags,
 } from "@atomist/automation-client";
-import {buttonForCommand} from "@atomist/automation-client/spi/message/MessageClient";
+import {
+    buttonForCommand,
+    menuForCommand,
+} from "@atomist/automation-client/spi/message/MessageClient";
 import {addBotToSlackChannel} from "@atomist/lifecycle-automation/handlers/command/slack/AddBotToChannel";
 import {createChannel} from "@atomist/lifecycle-automation/handlers/command/slack/CreateChannel";
 import {channel, SlackMessage, url} from "@atomist/slack-messages";
 import axios from "axios";
-import * as config from "config";
 import * as _ from "lodash";
+import {QMConfig} from "../../config/QMConfig";
 import {CreateTeam} from "./CreateTeam";
 import {NewDevOpsEnvironment} from "./DevOpsEnvironment";
 import {AddMemberToTeam} from "./JoinTeam";
+import {gluonTeamsWhoSlackScreenNameBelongsTo} from "./Teams";
 
 @CommandHandler("Check whether to create a new team channel or use an existing channel")
 @Tags("subatomic", "slack", "channel", "team")
@@ -38,7 +51,7 @@ rather use that instead?\
             text,
             attachments: [{
                 fallback: `Do you want to create a new team channel (${this.teamChannel}) or link an existing one?`,
-                footer: `For more information, please read the ${this.docs()}`, // TODO use actual icon
+                footer: `For more information, please read the ${this.docs()}`,
                 actions: [
                     buttonForCommand(
                         {text: `Create channel ${this.teamChannel}`},
@@ -46,6 +59,7 @@ rather use that instead?\
                         {
                             teamId: ctx.teamId,
                             teamName: this.teamName,
+                            teamChannel: this.teamChannel,
                         }),
                     buttonForCommand(
                         {text: "Use an existing channel"},
@@ -62,12 +76,12 @@ rather use that instead?\
     }
 
     private docs(): string {
-        return `${url("https://subatomic.bison.absa.co.za/docs/teams#slack",
+        return `${url(`${QMConfig.subatomic.docs.baseUrl}/teams#slack`,
             "documentation")}`;
     }
 }
 
-@CommandHandler("Create team channel", config.get("subatomic").commandPrefix + " create team channel")
+@CommandHandler("Create team channel", QMConfig.subatomic.commandPrefix + " create team channel")
 @Tags("subatomic", "slack", "channel", "team")
 export class NewTeamSlackChannel implements HandleCommand {
 
@@ -93,26 +107,31 @@ export class NewTeamSlackChannel implements HandleCommand {
         // and have an event handler actually create the channel
 
         this.teamChannel = _.isEmpty(this.teamChannel) ? this.teamName : this.teamChannel;
-        return associateSlackChannelToGluonTeam(ctx, this.teamName, this.teamId, this.teamChannel, this.docs());
+        return linkSlackChannelToGluonTeam(ctx, this.teamName, this.teamId, this.teamChannel, this.docs());
     }
 
     private docs(): string {
-        return `${url("https://subatomic.bison.absa.co.za/docs/teams",
+        return `${url(`${QMConfig.subatomic.docs.baseUrl}/teams`,
             "documentation")}`;
     }
 }
 
-@CommandHandler("Create team channel", config.get("subatomic").commandPrefix + " link team channel")
+@CommandHandler("Link existing team channel", QMConfig.subatomic.commandPrefix + " link team channel")
 @Tags("subatomic", "slack", "channel", "team")
 export class LinkExistingTeamSlackChannel implements HandleCommand {
+
+    @MappedParameter(MappedParameters.SlackUserName)
+    public slackScreenName: string;
 
     @MappedParameter(MappedParameters.SlackTeam)
     public teamId: string;
 
     @Parameter({
         description: "team name",
+        required: false,
+        displayable: false,
     })
-    public teamName: string;
+    public teamName: string = null;
 
     @Parameter({
         description: "team channel name",
@@ -121,26 +140,54 @@ export class LinkExistingTeamSlackChannel implements HandleCommand {
     public teamChannel: string;
 
     public handle(ctx: HandlerContext): Promise<HandlerResult> {
-        return associateSlackChannelToGluonTeam(ctx, this.teamName, this.teamId, this.teamChannel, this.docs());
+        if (this.teamName === null) {
+            return gluonTeamsWhoSlackScreenNameBelongsTo(ctx, this.slackScreenName)
+                .then(teams => {
+                    const msg: SlackMessage = {
+                        text: "Please select the team you would like to link the slack channel to",
+                        attachments: [{
+                            fallback: "A menu",
+                            actions: [
+                                menuForCommand({
+                                        text: "Select Team", options:
+                                            teams.map(team => {
+                                                return {
+                                                    value: team.name,
+                                                    text: team.name,
+                                                };
+                                            }),
+                                    },
+                                    this, "teamName",
+                                    {teamChannel: this.teamChannel}),
+                            ],
+                        }],
+                    };
+
+                    return ctx.messageClient.addressUsers(msg, this.slackScreenName)
+                        .then(success);
+                });
+        } else {
+            return linkSlackChannelToGluonTeam(ctx, this.teamName, this.teamId, this.teamChannel, this.docs());
+        }
     }
 
     private docs(): string {
-        return `${url("https://subatomic.bison.absa.co.za/docs/teams",
+        return `${url(`${QMConfig.subatomic.docs.baseUrl}/teams`,
             "documentation")}`;
     }
 }
 
-function associateSlackChannelToGluonTeam(ctx: HandlerContext,
-                                          gluonTeamName: string,
-                                          slackTeamId: string,
-                                          slackChannelName: string,
-                                          documentationLink: string): Promise<HandlerResult> {
+function linkSlackChannelToGluonTeam(ctx: HandlerContext,
+                                     gluonTeamName: string,
+                                     slackTeamId: string,
+                                     slackChannelName: string,
+                                     documentationLink: string): Promise<HandlerResult> {
     const kebabbedTeamChannel: string = _.kebabCase(slackChannelName);
-    return axios.get(`http://localhost:8080/teams?name=${gluonTeamName}`)
+    return axios.get(`${QMConfig.subatomic.gluon.baseUrl}/teams?name=${gluonTeamName}`)
         .then(team => {
             if (!_.isEmpty(team.data._embedded)) {
                 logger.info(`Updating team channel [${kebabbedTeamChannel}]: ${team.data._embedded.teamResources[0].teamId}`);
-                return axios.put(`http://localhost:8080/teams/${team.data._embedded.teamResources[0].teamId}`,
+                return axios.put(`${QMConfig.subatomic.gluon.baseUrl}/teams/${team.data._embedded.teamResources[0].teamId}`,
                     {
                         slack: {
                             teamChannel: kebabbedTeamChannel,
@@ -172,7 +219,7 @@ Unfortunately this team does not seem to exist on Subatomic.
 To create a team channel you must first create a team. Click the button below to do that now.
                                                   `,
                         fallback: "Team does not exist on Subatomic",
-                        footer: `For more information, please read the ${documentationLink}`, // TODO use actual icon
+                        footer: `For more information, please read the ${documentationLink}`,
                         color: "#D94649",
                         mrkdwn_in: ["text"],
                         actions: [

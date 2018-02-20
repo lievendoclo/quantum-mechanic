@@ -10,11 +10,11 @@ import {
     Tags,
 } from "@atomist/automation-client";
 import axios from "axios";
-import * as config from "config";
-import {memberFromScreenName} from "../member/Members";
-import {projectFromProjectName} from "./Projects";
+import {QMConfig} from "../../config/QMConfig";
+import {gluonMemberFromScreenName} from "../member/Members";
+import {gluonProjectFromProjectName} from "./Projects";
 
-@CommandHandler("Create new OpenShift environments for a project", config.get("subatomic").commandPrefix + " request project environments")
+@CommandHandler("Create new OpenShift environments for a project", QMConfig.subatomic.commandPrefix + " request project environments")
 @Tags("subatomic", "openshift", "project")
 export class NewProjectEnvironments implements HandleCommand {
 
@@ -33,11 +33,11 @@ export class NewProjectEnvironments implements HandleCommand {
     public handle(ctx: HandlerContext): Promise<HandlerResult> {
         logger.info("Creating new OpenShift environments...");
 
-        return memberFromScreenName(ctx, this.screenName)
+        return gluonMemberFromScreenName(ctx, this.screenName)
             .then(member => {
-                return projectFromProjectName(ctx, this.projectName)
+                return gluonProjectFromProjectName(ctx, this.projectName)
                     .then(project => {
-                        return axios.put(`http://localhost:8080/projects/${project.projectId}`,
+                        return axios.put(`${QMConfig.subatomic.gluon.baseUrl}/projects/${project.projectId}`,
                             {
                                 projectEnvironment: {
                                     requestedBy: member.memberId,
