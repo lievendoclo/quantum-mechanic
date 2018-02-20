@@ -10,10 +10,9 @@ import {
     SuccessPromise,
 } from "@atomist/automation-client";
 import axios from "axios";
-import * as fs from "fs";
 import * as https from "https";
 import * as _ from "lodash";
-import * as path from "path";
+import {QMConfig} from "../../config/QMConfig";
 import {SimpleOption} from "../../openshift/base/options/SimpleOption";
 import {OCCommon} from "../../openshift/OCCommon";
 
@@ -32,7 +31,7 @@ subscription ApplicationCreatedEvent {
       description
     }
     bitbucketRepository {
-      id
+      bitbucketId
       name
       repoUrl
       remoteUrl
@@ -68,7 +67,7 @@ export class ApplicationCreated implements HandleEvent<any> {
         const applicationCreatedEvent = event.data.ApplicationCreatedEvent[0];
 
         // TODO a project should have an owning team
-        // this is the Jenkins instance that should be used for the project folder etc.
+        // that owning team's Jenkins instance in their DevOps environment should be used for the project folder etc.
         const teamDevOpsProjectId = `${_.kebabCase(applicationCreatedEvent.teams[0].name).toLowerCase()}-devops`;
         logger.debug(`Using owning team DevOps project: ${teamDevOpsProjectId}`);
 
@@ -100,13 +99,13 @@ export class ApplicationCreated implements HandleEvent<any> {
                         return jenkinsAxios.post(`https://${jenkinsHost.output}/job/${_.kebabCase(applicationCreatedEvent.project.name).toLowerCase()}/createItem?name=${_.kebabCase(applicationCreatedEvent.application.name).toLowerCase()}`,
                             `
 <org.jenkinsci.plugins.workflow.multibranch.WorkflowMultiBranchProject plugin="workflow-multibranch@2.14">
-  <description>${applicationCreatedEvent.application.name} pipelines [[managed by Subatomic](https://docs.subatomic.bison.absa.co.za/projects/${encodeURI(applicationCreatedEvent.project.name)})]</description>
+  <description>${applicationCreatedEvent.application.name} pipelines [[managed by Subatomic](${QMConfig.subatomic.docs.baseUrl}/projects/${encodeURI(applicationCreatedEvent.project.name)})]</description>
   <displayName>${applicationCreatedEvent.application.name}</displayName>
   <sources class="jenkins.branch.MultiBranchProject$BranchSourceList" plugin="branch-api@2.0.18">
   <data>
     <jenkins.branch.BranchSource>
       <source class="com.cloudbees.jenkins.plugins.bitbucket.BitbucketSCMSource" plugin="cloudbees-bitbucket-branch-source@2.2.8">
-        <serverUrl>https://bitbucket.core.local</serverUrl>
+        <serverUrl>${QMConfig.subatomic.bitbucket.baseUrl}</serverUrl>
         <credentialsId>${teamDevOpsProjectId}-bitbucket</credentialsId>
         <repoOwner>${applicationCreatedEvent.bitbucketProject.key}</repoOwner>
         <repository>${applicationCreatedEvent.bitbucketRepository.name}</repository>
@@ -171,83 +170,48 @@ export class ApplicationCreated implements HandleEvent<any> {
                     new SimpleOption("-namespace", teamDevOpsProjectId),
                 ])
                     .then(() => {
+                        logger.info(`Using Git URI: ${applicationCreatedEvent.bitbucketRepository.remoteUrl}`);
 
-                        // TODO get the remote Url for the repo by using the Bitbucket API
-                        // using the project and repo name or just the URL?
-                        // https://docs.atlassian.com/bitbucket-server/rest/5.7.0/bitbucket-rest.html#idm45568365941504
-                        // list all repos for a project and then look for a matching repo URL matching
-                        // and then use the clone links...
-                        const caFile = path.resolve(__dirname, "/Users/donovan/dev/absa/core/bitbucket-server/ca-chain.cert.pem");
-                        const bitbucketAxios = axios.create({
-                            httpsAgent: new https.Agent({
-                                rejectUnauthorized: true,
-                                ca: fs.readFileSync(caFile),
-                            }),
-                        });
-
-                        return bitbucketAxios.get(`https://bitbucket.core.local/rest/api/1.0/projects/${applicationCreatedEvent.bitbucketProject.key}/repos`,
-                            {
-                                auth: {
-                                    username: "donovan",
-                                    password: "donovan",
+                        // TODO this should be extracted to a configurable Template
+                        return OCCommon.createFromData({
+                                apiVersion: "v1",
+                                kind: "BuildConfig",
+                                metadata: {
+                                    name: appBuildName,
                                 },
-                            })
-                            .then(repos => {
-
-                                logger.info(`Got Bitbucket repos in project: ${JSON.stringify(repos.data)}`);
-                                const repo = repos.data.values.find(existingRepo => {
-                                    // _.find(repo.links.clone, clone => {
-                                    //     return (clone as any).href === applicationCreatedEvent.bitbucketRepository.repoUrl;
-                                    // })
-                                    return existingRepo.name === applicationCreatedEvent.bitbucketRepository.name;
-                                });
-                                const remoteUrl = _.find(repo.links.clone, clone => {
-                                    return (clone as any).name === "ssh";
-                                }) as any;
-
-                                logger.info(`Using Git URI: ${remoteUrl.href}`);
-                                // TODO this should be extracted to a configurable Template
-                                // We could use a Template like the Jenkins and app templates
-                                return OCCommon.createFromData({
-                                        apiVersion: "v1",
-                                        kind: "BuildConfig",
-                                        metadata: {
-                                            name: appBuildName,
+                                spec: {
+                                    source: {
+                                        type: "Git",
+                                        git: {
+                                            // temporary hack because of the NodePort
+                                            // TODO remove this!
+                                            uri: `${applicationCreatedEvent.bitbucketRepository.remoteUrl.replace("7999", "30999")}`,
+                                            ref: "master",
                                         },
-                                        spec: {
-                                            source: {
-                                                type: "Git",
-                                                git: {
-                                                    // temporary hack because of the NodePort
-                                                    // TODO remove this!
-                                                    uri: `${remoteUrl.href.replace("7999", "30999")}`,
-                                                    ref: "master",
-                                                },
-                                                sourceSecret: {
-                                                    // TODO should this be configurable?
-                                                    name: "bitbucket-ssh",
-                                                },
-                                            },
-                                            strategy: {
-                                                sourceStrategy: {
-                                                    from: {
-                                                        kind: "ImageStreamTag",
-                                                        name: "jdk8-maven3-newrelic-subatomic:2.0",
-                                                    },
-                                                },
-                                            },
-                                            output: {
-                                                to: {
-                                                    kind: "ImageStreamTag",
-                                                    name: `${appBuildName}:latest`,
-                                                },
+                                        sourceSecret: {
+                                            // TODO should this be configurable?
+                                            name: "bitbucket-ssh",
+                                        },
+                                    },
+                                    strategy: {
+                                        sourceStrategy: {
+                                            from: {
+                                                kind: "ImageStreamTag",
+                                                name: "jdk8-maven3-newrelic-subatomic:2.0",
                                             },
                                         },
                                     },
-                                    [
-                                        new SimpleOption("-namespace", teamDevOpsProjectId),
-                                    ], true); // TODO clean up this hack - cannot be a boolean (magic)
-                            });
+                                    output: {
+                                        to: {
+                                            kind: "ImageStreamTag",
+                                            name: `${appBuildName}:latest`,
+                                        },
+                                    },
+                                },
+                            },
+                            [
+                                new SimpleOption("-namespace", teamDevOpsProjectId),
+                            ], true); // TODO clean up this hack - cannot be a boolean (magic)
                     })
                     .then(() => {
                         return Promise.all([["dev"],

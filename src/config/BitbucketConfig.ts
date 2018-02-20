@@ -2,7 +2,12 @@ import {BasicAuthCredentials} from "@atomist/automation-client/operations/common
 
 export interface BitbucketConfig {
     baseUrl: string;
-    ca: string;
+    restUrl: string;
+    caPath: string;
     cicdKey: string;
-    auth: BasicAuthCredentials;
+    auth: SubatomicAuthCredentials;
+}
+
+export interface SubatomicAuthCredentials extends BasicAuthCredentials {
+    email: string;
 }
