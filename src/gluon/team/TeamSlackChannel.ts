@@ -17,7 +17,7 @@ import {
 } from "@atomist/automation-client/spi/message/MessageClient";
 import {addBotToSlackChannel} from "@atomist/lifecycle-automation/handlers/command/slack/AddBotToChannel";
 import {createChannel} from "@atomist/lifecycle-automation/handlers/command/slack/CreateChannel";
-import {channel, SlackMessage, url} from "@atomist/slack-messages";
+import {SlackMessage, url} from "@atomist/slack-messages";
 import axios from "axios";
 import * as _ from "lodash";
 import {QMConfig} from "../../config/QMConfig";
