@@ -65,9 +65,12 @@ export class DevOpsEnvironmentRequested implements HandleEvent<any> {
         const projectId = `${_.kebabCase(devOpsRequestedEvent.team.name).toLowerCase()}-devops`;
         logger.info(`Working with OpenShift project Id: ${projectId}`);
 
-        return OCClient.newProject(projectId,
-            `${devOpsRequestedEvent.team.name} DevOps`,
-            `DevOps environment for ${devOpsRequestedEvent.team.name} [managed by Subatomic]`)
+        return OCClient.login(QMConfig.subatomic.openshift.masterUrl, QMConfig.subatomic.openshift.auth.token)
+            .then(() => {
+                return OCClient.newProject(projectId,
+                    `${devOpsRequestedEvent.team.name} DevOps`,
+                    `DevOps environment for ${devOpsRequestedEvent.team.name} [managed by Subatomic]`);
+            })
             .then(() => {
                 return this.addMembershipPermissions(projectId,
                     devOpsRequestedEvent.team);

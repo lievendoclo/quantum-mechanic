@@ -77,9 +77,12 @@ export class ProjectEnvironmentsRequested implements HandleEvent<any> {
                 const projectId = `${_.kebabCase(environmentsRequestedEvent.project.name).toLowerCase()}-${environment[0]}`;
                 logger.info(`Working with OpenShift project Id: ${projectId}`);
 
-                return OCClient.newProject(projectId,
-                    `${environmentsRequestedEvent.project.name} ${environment[0].toUpperCase()}`,
-                    `${environment[1]} environment for ${environmentsRequestedEvent.project.name} [managed by Subatomic]`)
+                return OCClient.login(QMConfig.subatomic.openshift.masterUrl, QMConfig.subatomic.openshift.auth.token)
+                    .then(() => {
+                        return OCClient.newProject(projectId,
+                            `${environmentsRequestedEvent.project.name} ${environment[0].toUpperCase()}`,
+                            `${environment[1]} environment for ${environmentsRequestedEvent.project.name} [managed by Subatomic]`);
+                    })
                     .then(() => {
                         // 2. Add permissions to projects based on owners (admin) and members (edit) - future will use roles
                         return this.addMembershipPermissions(projectId,
