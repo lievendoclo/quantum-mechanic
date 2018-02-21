@@ -88,7 +88,7 @@ export const configuration: any = {
         DevOpsEnvironmentRequested,
         ProjectEnvironmentsRequested,
         ApplicationCreated,
-        MembershipRequestCreated
+        MembershipRequestCreated,
     ],
     ingesters: [
         SlackIdentity,
