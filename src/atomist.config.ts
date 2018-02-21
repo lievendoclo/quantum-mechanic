@@ -1,19 +1,25 @@
 import * as appRoot from "app-root-path";
-import * as config from "config";
-import {ApplicationCreated} from "./gluon/application/ApplicationCreated";
-import {ApplicationCreatedEvent} from "./gluon/application/applicationsIngester";
-import {CreateApplication} from "./gluon/application/CreateApplication";
+import {QMConfig} from "./config/QMConfig";
 import {
     BitbucketProjectAddedEvent,
     BitbucketProjectRequestedEvent,
 } from "./gluon/bitbucket/bitbucketIngester";
-import {NewBitbucketProject} from "./gluon/bitbucket/BitbucketProject";
+import {
+    ListExistingBitbucketProject,
+    NewBitbucketProject,
+} from "./gluon/bitbucket/BitbucketProject";
 import {BitbucketProjectAdded} from "./gluon/bitbucket/BitbucketProjectAdded";
 import {BitbucketProjectRequested} from "./gluon/bitbucket/BitbucketProjectRequested";
 import {OnboardMember} from "./gluon/member/Onboard";
 import {AddSlackDetails, Whoami} from "./gluon/member/Slack";
 import {TeamMemberCreated} from "./gluon/member/TeamMemberCreated";
 import {TeamMemberCreatedEvent} from "./gluon/member/teamMemberIngester";
+import {ApplicationCreated} from "./gluon/packages/ApplicationCreated";
+import {
+    CreateApplication,
+    LinkExistingApplication,
+} from "./gluon/packages/Applications";
+import {ApplicationCreatedEvent} from "./gluon/packages/applicationsIngester";
 import {CreateProject} from "./gluon/project/CreateProject";
 import {ProjectCreated} from "./gluon/project/ProjectCreated";
 import {NewProjectEnvironments} from "./gluon/project/ProjectEnvironments";
@@ -48,12 +54,12 @@ import {BotJoinedChannel} from "./gluon/team/BotJoinedChannel";
 
 const pj = require(`${appRoot.path}/package.json`);
 
-const token = config.get("token");
+const token = QMConfig.token;
 
 export const configuration: any = {
     name: pj.name,
     version: pj.version,
-    teamIds: [config.get("teamId")],
+    teamIds: [QMConfig.teamId],
     commands: [
         NewDevOpsEnvironment,
         NewOrUseTeamSlackChannel,
@@ -71,6 +77,8 @@ export const configuration: any = {
         Whoami,
         CreateMembershipRequestToTeam,
         MembershipRequestClosed,
+        ListExistingBitbucketProject,
+        LinkExistingApplication,
     ],
     events: [
         TeamCreated,

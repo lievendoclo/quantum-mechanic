@@ -148,48 +148,6 @@ export namespace ChatId {
     userId: string;
   }
 
-  export type Query = {
-    ChatId?: ChatId[] | null; 
-  } 
-
-  export type ChatId = {
-    userId?: string | null; 
-    screenName?: string | null; 
-  } 
-}
-export namespace BotJoinedChannel {
-  export type Variables = {
-  }
-
-  export type Subscription = {
-    UserJoinedChannel?: UserJoinedChannel[] | null; 
-  } 
-
-  export type UserJoinedChannel = {
-    user?: User | null; 
-    channel?: Channel | null; 
-  } 
-
-  export type User = {
-    isAtomistBot?: string | null; 
-    screenName?: string | null; 
-    userId?: string | null; 
-  } 
-
-  export type Channel = {
-    botInvitedSelf?: boolean | null; 
-    channelId?: string | null; 
-    name?: string | null; 
-    repos?: Repos[] | null; 
-    team?: Team | null; 
-  } 
-
-  export type Repos = {
-    name?: string | null; 
-    owner?: string | null; 
-    org?: Org | null; 
-  } 
-
   export type Org = {
     provider?: Provider | null; 
   } 
