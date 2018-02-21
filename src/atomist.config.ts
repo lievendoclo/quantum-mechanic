@@ -10,16 +10,17 @@ import {
 } from "./gluon/bitbucket/BitbucketProject";
 import {BitbucketProjectAdded} from "./gluon/bitbucket/BitbucketProjectAdded";
 import {BitbucketProjectRequested} from "./gluon/bitbucket/BitbucketProjectRequested";
+import {KickOffJenkinsBuild} from "./gluon/jenkins/JenkinsBuild";
 import {OnboardMember} from "./gluon/member/Onboard";
 import {AddSlackDetails, Whoami} from "./gluon/member/Slack";
 import {TeamMemberCreated} from "./gluon/member/TeamMemberCreated";
 import {TeamMemberCreatedEvent} from "./gluon/member/teamMemberIngester";
 import {ApplicationCreated} from "./gluon/packages/ApplicationCreated";
+import {ApplicationCreatedEvent} from "./gluon/packages/applicationsIngester";
 import {
     CreateApplication,
     LinkExistingApplication,
-} from "./gluon/packages/Applications";
-import {ApplicationCreatedEvent} from "./gluon/packages/applicationsIngester";
+} from "./gluon/packages/CreateApplication";
 import {CreateProject} from "./gluon/project/CreateProject";
 import {ProjectCreated} from "./gluon/project/ProjectCreated";
 import {NewProjectEnvironments} from "./gluon/project/ProjectEnvironments";
@@ -78,6 +79,7 @@ export const configuration: any = {
         MembershipRequestClosed,
         ListExistingBitbucketProject,
         LinkExistingApplication,
+        KickOffJenkinsBuild,
     ],
     events: [
         TeamCreated,

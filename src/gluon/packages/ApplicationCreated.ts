@@ -9,12 +9,15 @@ import {
     success,
     SuccessPromise,
 } from "@atomist/automation-client";
+import {buttonForCommand} from "@atomist/automation-client/spi/message/MessageClient";
+import {url} from "@atomist/slack-messages";
 import axios from "axios";
 import * as https from "https";
 import * as _ from "lodash";
 import {QMConfig} from "../../config/QMConfig";
 import {SimpleOption} from "../../openshift/base/options/SimpleOption";
 import {OCCommon} from "../../openshift/OCCommon";
+import {KickOffJenkinsBuild} from "../jenkins/JenkinsBuild";
 
 @EventHandler("Receive ApplicationCreatedEvent events", `
 subscription ApplicationCreatedEvent {
@@ -272,10 +275,34 @@ export class ApplicationCreated implements HandleEvent<any> {
             })
             .then(() => {
                 return ctx.messageClient.addressChannels({
-                    text: "Your application has been successfully provisioned " +
-                    "and is ready to build and deploy to your project environments via the Jenkins CI/CD pipeline",
+                    text: "Your application has been provisioned successfully " +
+                    "and is ready to build and deploy to your project environments",
+                    attachments: [{
+                        fallback: `Your application has been provisioned successfully`,
+                        footer: `For more information, please read the ${this.docs()}`,
+                        text: `
+You can kick off the build pipeline for you application by clicking the button below or pushing changes to your application's repository`,
+                        mrkdwn_in: ["text"],
+                        actions: [
+                            buttonForCommand(
+                                {
+                                    text: "Start build",
+                                    style: "primary",
+                                },
+                                new KickOffJenkinsBuild(),
+                                {
+                                    projectName: applicationCreatedEvent.project.name,
+                                    applicationName: applicationCreatedEvent.application.name,
+                                }),
+                        ],
+                    }],
                 }, applicationCreatedEvent.teams.map(team =>
                     team.slackIdentity.teamChannel));
             });
+    }
+
+    private docs(): string {
+        return `${url(`${QMConfig.subatomic.docs.baseUrl}/applications`,
+            "documentation")}`;
     }
 }
