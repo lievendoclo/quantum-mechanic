@@ -61,7 +61,6 @@ subscription BitbucketProjectRequestedEvent {
 `)
 export class BitbucketProjectRequested implements HandleEvent<any> {
 
-    // TODO move these to let's if they can (moved up because of another unrelated bug)
     private bitbucketProjectId: string;
 
     private bitbucketProjectUrl: string;
@@ -116,7 +115,6 @@ export class BitbucketProjectRequested implements HandleEvent<any> {
                 }
             })
             .then(() => {
-                // Add access CI/CD access key
                 return bitbucketAxios().post(`${QMConfig.subatomic.bitbucket.restUrl}/keys/1.0/projects/${key}/ssh`,
                     {
                         key: {
@@ -152,14 +150,6 @@ export class BitbucketProjectRequested implements HandleEvent<any> {
                         }, bitbucketProjectRequestedEvent.requestedBy.slackIdentity.screenName);
                     });
             });
-
-        // TODO find out if we can create teams on BBvv
-        // if we can then we can create a group with the teams name
-        // and assign the group read/write (owners still get admin individually)
-        // unless we have a "<team-name>-owners" group?
-
-        // finally, update the Project with the created BB project details
-        // like Id and URL etc.
     }
 
     private docs(): string {
