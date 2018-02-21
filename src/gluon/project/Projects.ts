@@ -24,7 +24,7 @@ Consider creating a new project called ${projectName}. Click the button below to
                             `,
                         fallback: "Project not managed by Subatomic",
                         footer: `For more information, please read the ${url(`${QMConfig.subatomic.docs.baseUrl}/projects`,
-                            "documentation")}`, // TODO use actual icon
+                            "documentation")}`,
                         color: "#ffcc00",
                         mrkdwn_in: ["text"],
                         actions: [
@@ -62,10 +62,7 @@ export function gluonProjectsWhichBelongToGluonTeam(ctx: HandlerContext, teamNam
                             {
                                 text: "Create project",
                             },
-                            new CreateTeam(),
-                            {
-                                teamName,
-                            }),
+                            new CreateTeam()),
                     ],
                 }],
             })
