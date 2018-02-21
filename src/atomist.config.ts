@@ -50,7 +50,6 @@ import {
     NewOrUseTeamSlackChannel,
     NewTeamSlackChannel,
 } from "./gluon/team/TeamSlackChannel";
-import {BotJoinedChannel} from "./gluon/team/BotJoinedChannel";
 
 const pj = require(`${appRoot.path}/package.json`);
 
@@ -89,8 +88,7 @@ export const configuration: any = {
         DevOpsEnvironmentRequested,
         ProjectEnvironmentsRequested,
         ApplicationCreated,
-        MembershipRequestCreated,
-        BotJoinedChannel
+        MembershipRequestCreated
     ],
     ingesters: [
         SlackIdentity,

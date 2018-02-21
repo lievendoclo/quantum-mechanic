@@ -148,32 +148,12 @@ export namespace ChatId {
     userId: string;
   }
 
-  export type Org = {
-    provider?: Provider | null; 
-  } 
+  export type Query = {
+    ChatId?: ChatId[] | null;
+  }
 
-  export type Provider = {
-    url?: string | null; 
-  } 
-
-  export type Team = {
-    id?: string | null; 
-    orgs?: Orgs[] | null; 
-  } 
-
-  export type Orgs = {
-    owner?: string | null; 
-    ownerType?: OwnerType | null; 
-    provider?: _Provider | null; 
-    repo?: Repo[] | null; 
-  } 
-
-  export type _Provider = {
-    apiUrl?: string | null; 
-  } 
-
-  export type Repo = {
-    name?: string | null; 
-    owner?: string | null; 
-  } 
+  export type ChatId = {
+    userId?: string | null;
+    screenName?: string | null;
+  }
 }
