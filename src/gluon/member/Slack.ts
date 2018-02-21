@@ -22,7 +22,7 @@ export class AddSlackDetails implements HandleCommand<HandlerResult> {
     public userId: string;
 
     @Parameter({
-        description: "ABSA email address",
+        description: "email address",
         pattern: /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/,
     })
     public email: string;

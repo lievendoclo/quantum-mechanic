@@ -38,13 +38,13 @@ export class OnboardMember implements HandleCommand<HandlerResult> {
     public lastName: string;
 
     @Parameter({
-        description: "your ABSA email address",
+        description: "your email address",
         pattern: /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/,
     })
     public email: string;
 
     @Parameter({
-        description: "your ABSA username",
+        description: "your username",
         validInput: "Domain username in the following format: domain\\usernmae",
     })
     public domainUsername: string;
