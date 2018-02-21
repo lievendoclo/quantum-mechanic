@@ -23,7 +23,7 @@ export class BitbucketConfiguration {
         return Promise.all([
             this.owners.map(owner => this.addAdminProjectPermission(bitbucketProjectKey, owner)),
             this.teamMembers.map(teamMember => this.addWriteProjectPermission(bitbucketProjectKey, teamMember)),
-            this.addBranchPermissions(bitbucketProjectKey, this.owners),
+            this.addBranchPermissions(bitbucketProjectKey, this.owners, [QMConfig.subatomic.bitbucket.auth.username]),
             this.addHooks(bitbucketProjectKey),
 
             _.zipWith(this.owners, this.teamMembers, (owner, member) => {
@@ -48,7 +48,8 @@ export class BitbucketConfiguration {
             {});
     }
 
-    private addBranchPermissions(bitbucketProjectKey: string, owners: string[]): Promise<[any]> {
+    private addBranchPermissions(bitbucketProjectKey: string, owners: string[], additional: string[] = []): Promise<[any]> {
+        const allUsers = owners.concat(additional);
         return Promise.all([
             this.axios.post(`${QMConfig.subatomic.bitbucket.restUrl}/branch-permissions/2.0/projects/${bitbucketProjectKey}/restrictions`,
                 {
@@ -61,7 +62,7 @@ export class BitbucketConfiguration {
                             name: "Branch",
                         },
                     },
-                    users: owners,
+                    users: allUsers,
                 }),
             this.axios.post(`${QMConfig.subatomic.bitbucket.restUrl}/branch-permissions/2.0/projects/${bitbucketProjectKey}/restrictions`,
                 {
@@ -74,7 +75,7 @@ export class BitbucketConfiguration {
                             name: "Branch",
                         },
                     },
-                    users: owners,
+                    users: allUsers,
                 }),
             this.axios.post(`${QMConfig.subatomic.bitbucket.restUrl}/branch-permissions/2.0/projects/${bitbucketProjectKey}/restrictions`,
                 {
@@ -87,7 +88,7 @@ export class BitbucketConfiguration {
                             name: "Branch",
                         },
                     },
-                    users: owners,
+                    users: allUsers,
                 }),
         ]);
     }
