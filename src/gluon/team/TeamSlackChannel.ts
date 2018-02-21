@@ -16,6 +16,7 @@ import {
     menuForCommand,
 } from "@atomist/automation-client/spi/message/MessageClient";
 import {addBotToSlackChannel} from "@atomist/lifecycle-automation/handlers/command/slack/AddBotToChannel";
+import {inviteUserToSlackChannel} from "@atomist/lifecycle-automation/handlers/command/slack/AssociateRepo";
 import {createChannel} from "@atomist/lifecycle-automation/handlers/command/slack/CreateChannel";
 import {SlackMessage, url} from "@atomist/slack-messages";
 import axios from "axios";
@@ -197,7 +198,22 @@ function linkSlackChannelToGluonTeam(ctx: HandlerContext,
                         return createChannel(ctx, slackTeamId, kebabbedTeamChannel)
                             .then(channel => {
                                 if (channel && channel.createSlackChannel) {
-                                    return addBotToSlackChannel(ctx, slackTeamId, channel.createSlackChannel.id);
+                                    return addBotToSlackChannel(ctx, slackTeamId, channel.createSlackChannel.id)
+                                        .then(() => {
+                                                const members: Array<Promise<any>> = [];
+                                                for (const member of team.data._embedded.teamResources[0].members) {
+                                                    members.push(
+                                                        tryInviteGluonMemberToChannel(ctx, member.memberId, slackTeamId, channel.createSlackChannel.id),
+                                                    );
+                                                }
+                                                for (const owner of team.data._embedded.teamResources[0].owners) {
+                                                    members.push(
+                                                        tryInviteGluonMemberToChannel(ctx, owner.memberId, slackTeamId, channel.createSlackChannel.id),
+                                                    );
+                                                }
+                                                return Promise.all(members);
+                                            },
+                                        );
                                 } else {
                                     return Promise.reject(`Error creating or finding slack channel: ${JSON.stringify(channel)}`);
                                 }
@@ -243,7 +259,10 @@ If you haven't already, you might want to:
                                 // TODO respond back after creating team channel and now offer
                                 // opportunity to create OpenShift Dev environment?
                             })
-                            .catch(err => failure(err));
+                            .catch(err => {
+                                logger.error(`An error occurred configuring the team slack channel: ${JSON.stringify(err)}`);
+                                return failure(err);
+                            });
                     });
             } else {
                 const msg: SlackMessage = {
@@ -271,4 +290,22 @@ To create a team channel you must first create a team. Click the button below to
             }
         })
         .catch(e => failure(e));
+}
+
+function tryInviteGluonMemberToChannel(ctx: HandlerContext,
+                                       gluonMemberId: string,
+                                       slackTeamId: string,
+                                       slackChannelId: string): Promise<any> {
+    logger.info("Creating promise to find and add member: " + gluonMemberId);
+    return axios.get(`${QMConfig.subatomic.gluon.baseUrl}/members/${gluonMemberId}`).then(memberResponse => {
+        if (!_.isEmpty(memberResponse.data)) {
+            const memberResource = memberResponse.data;
+            if (memberResource.slack !== null) {
+                logger.info(`Inviting member: ${memberResource.firstName}`);
+                return inviteUserToSlackChannel(ctx, slackTeamId, slackChannelId, memberResource.slack.userId)
+                    .then(() => success());
+            }
+        }
+        return success();
+    });
 }
