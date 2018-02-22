@@ -79,6 +79,13 @@ export const ApplicationCreatedEvent: Ingester = {
                         name: "String",
                     },
                 },
+                {
+                    name: "applicationType",
+                    type: {
+                        kind: "SCALAR",
+                        name: "String",
+                    },
+                },
             ],
         },
         {
