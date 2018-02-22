@@ -26,7 +26,7 @@ export class OCCommand implements CommandLineElement {
         const command = this.build();
 
         return new Promise((resolve, reject) => {
-            logger.debug(`Executing oc command: ${command}`);
+            logger.verbose(`Executing oc command: ${command}`);
             try {
                 const execution: any = require("child_process").execSync(command);
                 // exec(command, (error: any, inherit: string) => {
@@ -54,7 +54,7 @@ export class OCCommand implements CommandLineElement {
         let commandString = this.buildBaseCommand();
         for (const option of this.options) {
             if (option) {
-                commandString += `${option.buildDisplayCommand()} `;
+                commandString += `${option.build()} `;
             }
         }
 
