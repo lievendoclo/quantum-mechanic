@@ -6,6 +6,12 @@ import * as _ from "lodash";
 import {QMConfig} from "../../config/QMConfig";
 import {CreateApplication} from "./CreateApplication";
 
+export enum ApplicationType {
+
+    DEPLOYABLE = "DEPLOYABLE",
+    LIBRARY = "LIBRARY",
+}
+
 export function gluonApplicationsLinkedToGluonProject(ctx: HandlerContext, gluonProjectName: string): Promise<any[]> {
     return axios.get(`${QMConfig.subatomic.gluon.baseUrl}/applications?projectName=${gluonProjectName}`)
         .then(applications => {

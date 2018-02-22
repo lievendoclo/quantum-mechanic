@@ -21,6 +21,7 @@ import {
     CreateApplication,
     LinkExistingApplication,
 } from "./gluon/packages/CreateApplication";
+import {LinkExistingLibrary} from "./gluon/packages/CreateLibrary";
 import {CreateProject} from "./gluon/project/CreateProject";
 import {ProjectCreated} from "./gluon/project/ProjectCreated";
 import {NewProjectEnvironments} from "./gluon/project/ProjectEnvironments";
@@ -79,6 +80,7 @@ export const configuration: any = {
         MembershipRequestClosed,
         ListExistingBitbucketProject,
         LinkExistingApplication,
+        LinkExistingLibrary,
         KickOffJenkinsBuild,
     ],
     events: [

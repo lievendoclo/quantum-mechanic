@@ -10,15 +10,16 @@ import {
 } from "@atomist/automation-client";
 import {buttonForCommand} from "@atomist/automation-client/spi/message/MessageClient";
 import {SlackMessage, url} from "@atomist/slack-messages";
-import axios from "axios";
-import * as https from "https";
 import * as _ from "lodash";
 import {timeout, TimeoutError} from "promise-timeout";
-import * as qs from "query-string";
 import {QMConfig} from "../../config/QMConfig";
 import {SimpleOption} from "../../openshift/base/options/SimpleOption";
 import {OCClient} from "../../openshift/OCClient";
 import {OCCommon} from "../../openshift/OCCommon";
+import {
+    createGlobalCredentials,
+    createGlobalCredentialsWithFile,
+} from "../jenkins/Jenkins";
 import {CreateProject} from "../project/CreateProject";
 
 @EventHandler("Receive DevOpsEnvironmentRequestedEvent events", `
@@ -276,41 +277,55 @@ export class DevOpsEnvironmentRequested implements HandleEvent<any> {
                                     .then(jenkinsHost => {
                                         logger.debug(`Using Jenkins Route host [${jenkinsHost.output}] to add Bitbucket credentials`);
 
-                                        const jenkinsAxios = axios.create({
-                                            httpsAgent: new https.Agent({
-                                                rejectUnauthorized: false,
-                                            }),
-                                        });
-
-                                        jenkinsAxios.interceptors.request.use(request => {
-                                            if (request.data && (request.headers["Content-Type"].indexOf("application/x-www-form-urlencoded") !== -1)) {
-                                                logger.debug(`Stringifying URL encoded data: ${qs.stringify(request.data)}`);
-                                                request.data = qs.stringify(request.data);
-                                            }
-                                            return request;
-                                        });
-
-                                        const jenkinsCredentials = {
-                                            "": "0",
-                                            "credentials": {
-                                                scope: "GLOBAL",
-                                                id: `${projectId}-bitbucket`,
-                                                username: QMConfig.subatomic.bitbucket.auth.username,
-                                                password: QMConfig.subatomic.bitbucket.auth.password,
-                                                description: `${projectId}-bitbucket`,
-                                                $class: "com.cloudbees.plugins.credentials.impl.UsernamePasswordCredentialsImpl",
-                                            },
-                                        };
-
-                                        return jenkinsAxios.post(`https://${jenkinsHost.output}/credentials/store/system/domain/_/createCredentials`,
+                                        return createGlobalCredentials(
+                                            jenkinsHost.output,
+                                            token.output,
+                                            projectId,
                                             {
-                                                json: `${JSON.stringify(jenkinsCredentials)}`,
-                                            },
-                                            {
-                                                headers: {
-                                                    "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
-                                                    "Authorization": `Bearer ${token.output}`,
+                                                "": "0",
+                                                "credentials": {
+                                                    scope: "GLOBAL",
+                                                    id: `${projectId}-bitbucket`,
+                                                    username: QMConfig.subatomic.bitbucket.auth.username,
+                                                    password: QMConfig.subatomic.bitbucket.auth.password,
+                                                    description: `${projectId}-bitbucket`,
+                                                    $class: "com.cloudbees.plugins.credentials.impl.UsernamePasswordCredentialsImpl",
                                                 },
+                                            })
+                                            .then(() => {
+                                                return createGlobalCredentials(
+                                                    jenkinsHost.output,
+                                                    token.output,
+                                                    projectId,
+                                                    {
+                                                        "": "0",
+                                                        "credentials": {
+                                                            scope: "GLOBAL",
+                                                            id: "nexus-base-url",
+                                                            secret: QMConfig.subatomic.nexus.baseUrl,
+                                                            description: "Nexus base URL",
+                                                            $class: "org.jenkinsci.plugins.plaincredentials.impl.StringCredentialsImpl",
+                                                        },
+                                                    })
+                                                    .then(() => {
+                                                        return createGlobalCredentialsWithFile(
+                                                            jenkinsHost.output,
+                                                            token.output,
+                                                            projectId,
+                                                            {
+                                                                "": "0",
+                                                                "credentials": {
+                                                                    scope: "GLOBAL",
+                                                                    id: "maven-settings",
+                                                                    file: "file",
+                                                                    fileName: "settings.xml",
+                                                                    description: "Maven settings.xml",
+                                                                    $class: "org.jenkinsci.plugins.plaincredentials.impl.FileCredentialsImpl",
+                                                                },
+                                                            },
+                                                            QMConfig.subatomic.maven.settingsPath,
+                                                            "settings.xml");
+                                                    });
                                             });
                                     });
                             })

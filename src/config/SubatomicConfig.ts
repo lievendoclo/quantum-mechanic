@@ -1,6 +1,8 @@
 import {BitbucketConfig} from "./BitbucketConfig";
 import {DocsConfig} from "./DocsConfig";
 import {GluonConfig} from "./GluonConfig";
+import {MavenConfig} from "./MavenConfig";
+import {NexusConfig} from "./NexusConfig";
 import {OpenShiftConfig} from "./OpenShiftConfig";
 
 export interface SubatomicConfig {
@@ -9,4 +11,6 @@ export interface SubatomicConfig {
     docs: DocsConfig;
     gluon: GluonConfig;
     openshift: OpenShiftConfig;
+    nexus: NexusConfig;
+    maven: MavenConfig;
 }

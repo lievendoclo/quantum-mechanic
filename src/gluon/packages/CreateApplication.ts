@@ -28,6 +28,7 @@ import {
     gluonTeamForSlackTeamChannel,
     gluonTeamsWhoSlackScreenNameBelongsTo,
 } from "../team/Teams";
+import {ApplicationType} from "./Applications";
 
 @CommandHandler("Create a new Bitbucket project", QMConfig.subatomic.commandPrefix + " create bitbucket project")
 export class CreateApplication implements HandleCommand<HandlerResult> {
@@ -79,6 +80,7 @@ export class CreateApplication implements HandleCommand<HandlerResult> {
                             {
                                 name: this.name,
                                 description: this.description,
+                                applicationType: ApplicationType.DEPLOYABLE,
                                 projectId: project.projectId,
                                 createdBy: member.memberId,
                             })
@@ -508,6 +510,7 @@ node('maven') {
                                     {
                                         name: applicationName,
                                         description: applicationDescription,
+                                        applicationType: ApplicationType.DEPLOYABLE,
                                         projectId: gluonProjectId,
                                         createdBy: member.memberId,
                                     })

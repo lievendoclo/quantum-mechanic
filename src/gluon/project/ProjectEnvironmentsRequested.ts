@@ -20,6 +20,7 @@ import {SimpleOption} from "../../openshift/base/options/SimpleOption";
 import {OCClient} from "../../openshift/OCClient";
 import {OCCommon} from "../../openshift/OCCommon";
 import {LinkExistingApplication} from "../packages/CreateApplication";
+import {LinkExistingLibrary} from "../packages/CreateLibrary";
 
 @EventHandler("Receive ProjectEnvironmentsRequestedEvent events", `
 subscription ProjectEnvironmentsRequestedEvent {
@@ -337,7 +338,7 @@ export class ProjectEnvironmentsRequested implements HandleEvent<any> {
                 const msg: SlackMessage = {
                     text: `
 Since you have Subatomic project environments ready, you can now add packages.
-A package is either an application or a shared library, click the button below to create an application now.`,
+A package is either an application or a library, click the button below to create an application now.`,
                     attachments: [{
                         fallback: "Create or link existing package",
                         footer: `For more information, please read the ${this.docs()}`, // TODO use actual icon
@@ -351,15 +352,19 @@ A package is either an application or a shared library, click the button below t
                             buttonForCommand(
                                 {text: "Link existing application"},
                                 new LinkExistingApplication(),
-                                {}),
+                                {
+                                    projectName: environmentsRequestedEvent.project.name,
+                                }),
                             // buttonForCommand(
                             //     {text: "Create shared library"},
                             //     this,
                             //     {}),
-                            // buttonForCommand(
-                            //     {text: "Link existing shared library"},
-                            //     this,
-                            //     {}),
+                            buttonForCommand(
+                                {text: "Link existing library"},
+                                new LinkExistingLibrary(),
+                                {
+                                    projectName: environmentsRequestedEvent.project.name,
+                                }),
                         ],
                     }],
                 };
