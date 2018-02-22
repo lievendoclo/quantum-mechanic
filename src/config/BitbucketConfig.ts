@@ -4,6 +4,7 @@ export interface BitbucketConfig {
     baseUrl: string;
     restUrl: string;
     caPath: string;
+    cicdPrivateKeyPath: string;
     cicdKey: string;
     auth: SubatomicAuthCredentials;
 }

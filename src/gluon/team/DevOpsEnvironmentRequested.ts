@@ -169,13 +169,13 @@ export class DevOpsEnvironmentRequested implements HandleEvent<any> {
                     [],
                     [
                         new SimpleOption("p", `NAMESPACE=${projectId}`),
-                        new SimpleOption("p", `JENKINS_IMAGE_STREAM_TAG=jenkins-subatomic:2.0`),
-                        new SimpleOption("p", `BITBUCKET_NAME=ABSA Bitbucket`),
+                        new SimpleOption("p", "JENKINS_IMAGE_STREAM_TAG=jenkins-subatomic:2.0"),
+                        new SimpleOption("p", "BITBUCKET_NAME=Subatomic Bitbucket"),
                         new SimpleOption("p", `BITBUCKET_URL=${QMConfig.subatomic.bitbucket.baseUrl}`),
                         new SimpleOption("p", `BITBUCKET_CREDENTIALS_ID=${projectId}-bitbucket`),
                         // TODO this should be a property on Team. I.e. teamEmail
                         // If no team email then the address of the createdBy member
-                        new SimpleOption("p", `JENKINS_ADMIN_EMAIL=test@absa.co.za`),
+                        new SimpleOption("p", "JENKINS_ADMIN_EMAIL=subatomic@local"),
                         // TODO the registry Cluster IP we will have to get by introspecting the registry Service
                         new SimpleOption("p", `MAVEN_SLAVE_IMAGE=172.30.1.1:5000/${projectId}/jenkins-slave-maven-subatomic:2.0`),
                         new SimpleOption("-namespace", projectId),
@@ -350,7 +350,7 @@ export class DevOpsEnvironmentRequested implements HandleEvent<any> {
                                     "bitbucket-ssh",
                                     [],
                                     [
-                                        new SimpleOption("-ssh-privatekey", QMConfig.subatomic.bitbucket.cicdKey),
+                                        new SimpleOption("-ssh-privatekey", QMConfig.subatomic.bitbucket.cicdPrivateKeyPath),
                                         new SimpleOption("-ca-cert", QMConfig.subatomic.bitbucket.caPath),
                                         new SimpleOption("-namespace", projectId),
                                     ]);
