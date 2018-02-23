@@ -182,7 +182,7 @@ You can only invite a new member to your team from a team channel that you belon
                                         text: `
 It appears ${this.slackName} is not onboarded onto Subatomic.
 
-They must first be onboarded onto Subatomic _before_ they can be added to a team. Please ask them to onboard by asking them to type \`@atomist subatomic onboard me\`
+They must first be onboarded onto Subatomic _before_ they can be added to a team. Please ask them to onboard by asking them to type \`@atomist ${QMConfig.subatomic.commandPrefix} onboard me\`
                             `,
                                         fallback: `${this.slackName} is not onboarded onto Subatomic`,
                                         footer: `For more information, please read the ${this.docs()}`, // TODO use actual icon
@@ -206,7 +206,7 @@ Adding a team member from Slack requires typing their \`@mention\` name or using
                             color: "#D94649",
                             mrkdwn_in: ["text"],
                         }, {
-                            text: "Tip: You can get your Slack screen name by typing `@atomist subatomic whoami`",
+                            text: `Tip: You can get your Slack screen name by typing \`@atomist ${QMConfig.subatomic.commandPrefix} whoami\``,
                             color: "#00a5ff",
                             mrkdwn_in: ["text"],
                         }],
