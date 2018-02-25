@@ -136,7 +136,7 @@ export class DevOpsEnvironmentRequested implements HandleEvent<any> {
                 return OCCommon.commonCommand("get", "templates",
                     ["jenkins-persistent-subatomic"],
                     [
-                        new SimpleOption("-namespace", "openshift"),
+                        new SimpleOption("-namespace", "subatomic"),
                         new SimpleOption("-output", "json"),
                     ],
                 )
@@ -152,13 +152,13 @@ export class DevOpsEnvironmentRequested implements HandleEvent<any> {
             }).then(() => {
                 return Promise.all([OCCommon.commonCommand("tag",
                     // TODO Fix: abusing the commonCommand here a bit...
-                    "openshift/jenkins-subatomic:2.0",
+                    "subatomic/jenkins-subatomic:2.0",
                     [`${projectId}/jenkins-subatomic:2.0`],
                 ), OCCommon.commonCommand("tag",
-                    "openshift/jenkins-slave-maven-subatomic:2.0",
+                    "subatomic/jenkins-slave-maven-subatomic:2.0",
                     [`${projectId}/jenkins-slave-maven-subatomic:2.0`],
                 ), OCCommon.commonCommand("tag",
-                    "openshift/jdk8-maven3-newrelic-subatomic:2.0",
+                    "subatomic/jdk8-maven3-newrelic-subatomic:2.0",
                     [`${projectId}/jdk8-maven3-newrelic-subatomic:2.0`],
                 )]);
             })

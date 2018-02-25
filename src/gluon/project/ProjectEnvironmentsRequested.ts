@@ -152,7 +152,7 @@ export class ProjectEnvironmentsRequested implements HandleEvent<any> {
                         return OCCommon.commonCommand("get", "templates",
                             ["subatomic-app-template"],
                             [
-                                new SimpleOption("-namespace", "openshift"),
+                                new SimpleOption("-namespace", "subatomic"),
                                 new SimpleOption("-output", "json"),
                             ],
                         )
