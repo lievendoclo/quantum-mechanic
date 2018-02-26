@@ -12,6 +12,7 @@ export class OCClient {
         const loginCommand = new OCCommand("login", [host],
             [
                 new StandardOption("token", token, true),
+                new StandardOption("insecure-skip-tls-verify", "true"),
             ],
             )
         ;
