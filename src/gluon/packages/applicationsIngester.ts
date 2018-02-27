@@ -36,6 +36,13 @@ export const ApplicationCreatedEvent: Ingester = {
                     },
                 },
                 {
+                    name: "owningTeam",
+                    type: {
+                        kind: "OBJECT",
+                        name: "Team",
+                    },
+                },
+                {
                     name: "teams",
                     type: {
                         kind: "LIST",

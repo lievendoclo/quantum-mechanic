@@ -48,6 +48,13 @@ subscription ApplicationCreatedEvent {
       description
       url
     }
+    owningTeam {
+      teamId
+      name
+      slackIdentity {
+        teamChannel
+      }
+    }
     teams {
       teamId
       name
@@ -71,9 +78,7 @@ export class ApplicationCreated implements HandleEvent<any> {
 
         const applicationCreatedEvent = event.data.ApplicationCreatedEvent[0];
 
-        // TODO a project should have an owning team
-        // that owning team's Jenkins instance in their DevOps environment should be used for the project folder etc.
-        const teamDevOpsProjectId = `${_.kebabCase(applicationCreatedEvent.teams[0].name).toLowerCase()}-devops`;
+        const teamDevOpsProjectId = `${_.kebabCase(applicationCreatedEvent.owningTeam.name).toLowerCase()}-devops`;
         logger.debug(`Using owning team DevOps project: ${teamDevOpsProjectId}`);
 
         const jenkinsPromise: Promise<HandlerResult> = this.createJenkinsJob(
