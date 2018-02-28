@@ -20,6 +20,7 @@ import {
     createGlobalCredentials,
     createGlobalCredentialsWithFile,
 } from "../jenkins/Jenkins";
+import {AddConfigServer} from "../project/AddConfigServer";
 import {CreateProject} from "../project/CreateProject";
 
 @EventHandler("Receive DevOpsEnvironmentRequestedEvent events", `
@@ -361,16 +362,30 @@ export class DevOpsEnvironmentRequested implements HandleEvent<any> {
                 const msg: SlackMessage = {
                     text: `Your DevOps environment has been provisioned successfully`,
                     attachments: [{
-                        fallback: `Your DevOps environment has been provisioned successfully`,
-                        footer: `For more information, please read the ${this.docs()}`, // TODO use actual icon
+                        fallback: `Create a project`,
+                        footer: `For more information, please read the ${this.docs()}`,
                         text: `
 If you haven't already, you might want to create a Project for your team to work on.`,
                         mrkdwn_in: ["text"],
+                        thumb_url: "https://raw.githubusercontent.com/absa-subatomic/subatomic-documentation/gh-pages/images/subatomic-logo-colour.png",
                         actions: [
                             buttonForCommand(
                                 {text: "Create project"},
                                 new CreateProject(),
                                 {teamName: devOpsRequestedEvent.team.teamId}),
+                        ],
+                    }, {
+                        fallback: `Add a Subatomic Config Server`,
+                        footer: `For more information, please read the ${this.docs()}`,
+                        text: `
+If your applications will require a Spring Cloud Config Server, you can add a Subatomic Config Server to your DevOps project now`,
+                        mrkdwn_in: ["text"],
+                        thumb_url: "https://docs.spring.io/spring-cloud-dataflow/docs/current-SNAPSHOT/reference/html/images/logo.png",
+                        actions: [
+                            buttonForCommand(
+                                {text: "Add Config Server"},
+                                new AddConfigServer(),
+                                {gluonTeamName: devOpsRequestedEvent.team.teamId}),
                         ],
                     }],
                 };
