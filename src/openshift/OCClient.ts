@@ -1,5 +1,6 @@
 import {OCCommand} from "./base/OCCommand";
 import {OCCommandResult} from "./base/OCCommandResult";
+import {SimpleOption} from "./base/options/SimpleOption";
 import {StandardOption} from "./base/options/StandardOption";
 import {OCCommon} from "./OCCommon";
 import {OCPolicy} from "./OCPolicy";
@@ -43,5 +44,25 @@ export class OCClient {
 
     public static createServiceAccount(serviceAccountName: string) {
         return OCCommon.createStdIn("serviceaccount", [serviceAccountName]);
+    }
+
+    public static createPvc(pvcName: string, project: string, size: string = "10Gi", accessModes: string[] = ["ReadWriteMany"]) {
+        return OCCommon.createFromData({
+            kind: "PersistentVolumeClaim",
+            apiVersion: "v1",
+            metadata: {
+                name: pvcName,
+            },
+            spec: {
+                accessModes,
+                resources: {
+                    requests: {
+                        storage: size,
+                    },
+                },
+            },
+        }, [
+            new SimpleOption("-namespace", project),
+        ]);
     }
 }
