@@ -27,10 +27,23 @@ export class BitbucketConfiguration {
             this.addHooks(bitbucketProjectKey),
 
             _.zipWith(this.owners, this.teamMembers, (owner, member) => {
-                return Promise.all([
-                    this.addDefaultReviewers(bitbucketProjectKey, owner),
-                    this.addDefaultReviewers(bitbucketProjectKey, member),
-                ]);
+                this.axios.get(`${QMConfig.subatomic.bitbucket.restUrl}/default-reviewers/1.0/projects/${bitbucketProjectKey}/conditions`)
+                    .then(reviewers => {
+                        const jsonLength = reviewers.data.length;
+                        let reviewerExists = false;
+
+                        for ( let i = 0; i < jsonLength; i++) {
+                            if (reviewers.data[i].reviewers[0].name === owner) {
+                                reviewerExists = true; break;
+                            }
+                        }
+                        if (reviewerExists !== true ) {
+                            return Promise.all([
+                                this.addDefaultReviewers(bitbucketProjectKey, owner),
+                                this.addDefaultReviewers(bitbucketProjectKey, member),
+                            ]);
+                        }
+                    });
             }),
         ]);
     }
