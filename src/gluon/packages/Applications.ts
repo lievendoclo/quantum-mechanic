@@ -36,10 +36,11 @@ export function gluonApplicationsLinkedToGluonProject(ctx: HandlerContext, gluon
         });
 }
 
-export function gluonApplicationForName(ctx: HandlerContext,
-                                        applicationName: string,
-                                        message: string = "This command requires an existing application"): Promise<any> {
-    return axios.get(`${QMConfig.subatomic.gluon.baseUrl}/applications?name=${applicationName}`)
+export function gluonApplicationForNameAndProjectName(ctx: HandlerContext,
+                                                      applicationName: string,
+                                                      projectName: string,
+                                                      message: string = "This command requires an existing application"): Promise<any> {
+    return axios.get(`${QMConfig.subatomic.gluon.baseUrl}/applications?name=${applicationName}&projectName=${projectName}`)
         .then(applications => {
             if (!_.isEmpty(applications.data._embedded)) {
                 return Promise.resolve(applications.data._embedded.applicationResources[0]);
