@@ -27,7 +27,7 @@ export const BitbucketProjectRequestedEvent: Ingester = {
                         kind: "LIST",
                         ofType: {
                             kind: "OBJECT",
-                            name: "Team",
+                            name: "GluonTeam",
                         },
                     },
                 },
@@ -35,34 +35,7 @@ export const BitbucketProjectRequestedEvent: Ingester = {
                     name: "requestedBy",
                     type: {
                         kind: "OBJECT",
-                        name: "RequestedBy",
-                    },
-                },
-            ],
-        },
-        {
-            kind: "OBJECT",
-            name: "Project",
-            fields: [
-                {
-                    name: "projectId",
-                    type: {
-                        kind: "SCALAR",
-                        name: "String",
-                    },
-                },
-                {
-                    name: "name",
-                    type: {
-                        kind: "SCALAR",
-                        name: "String",
-                    },
-                },
-                {
-                    name: "description",
-                    type: {
-                        kind: "SCALAR",
-                        name: "String",
+                        name: "ActionedBy",
                     },
                 },
             ],
@@ -90,47 +63,6 @@ export const BitbucketProjectRequestedEvent: Ingester = {
                     type: {
                         kind: "SCALAR",
                         name: "String",
-                    },
-                },
-            ],
-        },
-        {
-            kind: "OBJECT",
-            name: "RequestedBy",
-            fields: [
-                {
-                    name: "firstName",
-                    type: {
-                        kind: "SCALAR",
-                        name: "String",
-                    },
-                },
-                {
-                    name: "lastName",
-                    type: {
-                        kind: "SCALAR",
-                        name: "String",
-                    },
-                },
-                {
-                    name: "email",
-                    type: {
-                        kind: "SCALAR",
-                        name: "String",
-                    },
-                },
-                {
-                    name: "domainUsername",
-                    type: {
-                        kind: "SCALAR",
-                        name: "String",
-                    },
-                },
-                {
-                    name: "slackIdentity",
-                    type: {
-                        kind: "OBJECT",
-                        name: "SlackIdentity",
                     },
                 },
             ],
@@ -165,7 +97,7 @@ export const BitbucketProjectAddedEvent: Ingester = {
                         kind: "LIST",
                         ofType: {
                             kind: "OBJECT",
-                            name: "Team",
+                            name: "GluonTeam",
                         },
                     },
                 },
@@ -173,116 +105,7 @@ export const BitbucketProjectAddedEvent: Ingester = {
                     name: "createdBy",
                     type: {
                         kind: "OBJECT",
-                        name: "CreatedBy",
-                    },
-                },
-            ],
-        },
-        {
-            kind: "OBJECT",
-            name: "Project",
-            fields: [
-                {
-                    name: "projectId",
-                    type: {
-                        kind: "SCALAR",
-                        name: "String",
-                    },
-                },
-                {
-                    name: "name",
-                    type: {
-                        kind: "SCALAR",
-                        name: "String",
-                    },
-                },
-                {
-                    name: "description",
-                    type: {
-                        kind: "SCALAR",
-                        name: "String",
-                    },
-                },
-            ],
-        },
-        {
-            kind: "OBJECT",
-            name: "BitbucketProject",
-            fields: [
-                {
-                    name: "id",
-                    type: {
-                        kind: "SCALAR",
-                        name: "String",
-                    },
-                },
-                {
-                    name: "key",
-                    type: {
-                        kind: "SCALAR",
-                        name: "String",
-                    },
-                },
-                {
-                    name: "name",
-                    type: {
-                        kind: "SCALAR",
-                        name: "String",
-                    },
-                },
-                {
-                    name: "description",
-                    type: {
-                        kind: "SCALAR",
-                        name: "String",
-                    },
-                },
-                {
-                    name: "url",
-                    type: {
-                        kind: "SCALAR",
-                        name: "String",
-                    },
-                },
-            ],
-        },
-        {
-            kind: "OBJECT",
-            name: "CreatedBy",
-            fields: [
-                {
-                    name: "firstName",
-                    type: {
-                        kind: "SCALAR",
-                        name: "String",
-                    },
-                },
-                {
-                    name: "lastName",
-                    type: {
-                        kind: "SCALAR",
-                        name: "String",
-                    },
-                },
-                {
-                    name: "email",
-                    type: {
-                        kind: "SCALAR",
-                        name: "String",
-                    },
-                },
-                {
-                    name: "domainUsername",
-                    type: {
-                        kind: "SCALAR",
-                        name: "String",
-                    },
-                },
-                {
-                    name: "slackIdentity",
-                    type: {
-                        kind: "OBJECT",
-                        name: "SlackIdentity",
+                        name: "ActionedBy",
                     },
                 },
             ],

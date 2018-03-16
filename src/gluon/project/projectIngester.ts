@@ -18,82 +18,14 @@ export const ProjectCreatedEvent: Ingester = {
                     name: "team",
                     type: {
                         kind: "OBJECT",
-                        name: "Team",
+                        name: "GluonTeam",
                     },
                 },
                 {
                     name: "createdBy",
                     type: {
                         kind: "OBJECT",
-                        name: "CreatedBy",
-                    },
-                },
-            ],
-        },
-        {
-            kind: "OBJECT",
-            name: "Project",
-            fields: [
-                {
-                    name: "projectId",
-                    type: {
-                        kind: "SCALAR",
-                        name: "String",
-                    },
-                },
-                {
-                    name: "name",
-                    type: {
-                        kind: "SCALAR",
-                        name: "String",
-                    },
-                },
-                {
-                    name: "description",
-                    type: {
-                        kind: "SCALAR",
-                        name: "String",
-                    },
-                },
-            ],
-        },
-        {
-            kind: "OBJECT",
-            name: "CreatedBy",
-            fields: [
-                {
-                    name: "firstName",
-                    type: {
-                        kind: "SCALAR",
-                        name: "String",
-                    },
-                },
-                {
-                    name: "lastName",
-                    type: {
-                        kind: "SCALAR",
-                        name: "String",
-                    },
-                },
-                {
-                    name: "email",
-                    type: {
-                        kind: "SCALAR",
-                        name: "String",
-                    },
-                },
-                {
-                    name: "domainUsername",
-                    type: {
-                        kind: "SCALAR",
-                        name: "String",
-                    },
-                },
-                {
-                    name: "slackIdentity",
-                    type: {
-                        kind: "OBJECT",
-                        name: "SlackIdentity",
+                        name: "ActionedBy",
                     },
                 },
             ],
@@ -121,7 +53,7 @@ export const ProjectEnvironmentsRequestedEvent: Ingester = {
                         kind: "LIST",
                         ofType: {
                             kind: "OBJECT",
-                            name: "Team",
+                            name: "GluonTeam",
                         },
                     },
                 },
@@ -129,75 +61,7 @@ export const ProjectEnvironmentsRequestedEvent: Ingester = {
                     name: "requestedBy",
                     type: {
                         kind: "OBJECT",
-                        name: "RequestedBy",
-                    },
-                },
-            ],
-        },
-        {
-            kind: "OBJECT",
-            name: "Project",
-            fields: [
-                {
-                    name: "projectId",
-                    type: {
-                        kind: "SCALAR",
-                        name: "String",
-                    },
-                },
-                {
-                    name: "name",
-                    type: {
-                        kind: "SCALAR",
-                        name: "String",
-                    },
-                },
-                {
-                    name: "description",
-                    type: {
-                        kind: "SCALAR",
-                        name: "String",
-                    },
-                },
-            ],
-        },
-        {
-            kind: "OBJECT",
-            name: "RequestedBy",
-            fields: [
-                {
-                    name: "firstName",
-                    type: {
-                        kind: "SCALAR",
-                        name: "String",
-                    },
-                },
-                {
-                    name: "lastName",
-                    type: {
-                        kind: "SCALAR",
-                        name: "String",
-                    },
-                },
-                {
-                    name: "email",
-                    type: {
-                        kind: "SCALAR",
-                        name: "String",
-                    },
-                },
-                {
-                    name: "domainUsername",
-                    type: {
-                        kind: "SCALAR",
-                        name: "String",
-                    },
-                },
-                {
-                    name: "slackIdentity",
-                    type: {
-                        kind: "OBJECT",
-                        name: "SlackIdentity",
+                        name: "ActionedBy",
                     },
                 },
             ],

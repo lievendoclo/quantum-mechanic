@@ -33,12 +33,92 @@ export const SlackIdentity: Ingester = {
     ],
 };
 
-export const Team: Ingester = {
-    root_type: "Team",
+export const Project: Ingester = {
+    root_type: "Project",
     types: [
         {
             kind: "OBJECT",
-            name: "Team",
+            name: "Project",
+            fields: [
+                {
+                    name: "projectId",
+                    type: {
+                        kind: "SCALAR",
+                        name: "String",
+                    },
+                },
+                {
+                    name: "name",
+                    type: {
+                        kind: "SCALAR",
+                        name: "String",
+                    },
+                },
+                {
+                    name: "description",
+                    type: {
+                        kind: "SCALAR",
+                        name: "String",
+                    },
+                },
+            ],
+        },
+    ],
+};
+
+export const BitbucketProject: Ingester = {
+    root_type: "BitbucketProject",
+    types: [
+        {
+            kind: "OBJECT",
+            name: "BitbucketProject",
+            fields: [
+                {
+                    name: "id",
+                    type: {
+                        kind: "SCALAR",
+                        name: "String",
+                    },
+                },
+                {
+                    name: "key",
+                    type: {
+                        kind: "SCALAR",
+                        name: "String",
+                    },
+                },
+                {
+                    name: "name",
+                    type: {
+                        kind: "SCALAR",
+                        name: "String",
+                    },
+                },
+                {
+                    name: "description",
+                    type: {
+                        kind: "SCALAR",
+                        name: "String",
+                    },
+                },
+                {
+                    name: "url",
+                    type: {
+                        kind: "SCALAR",
+                        name: "String",
+                    },
+                },
+            ],
+        },
+    ],
+};
+
+export const GluonTeam: Ingester = {
+    root_type: "GluonTeam",
+    types: [
+        {
+            kind: "OBJECT",
+            name: "GluonTeam",
             fields: [
                 {
                     name: "teamId",
@@ -123,6 +203,53 @@ export const Team: Ingester = {
             fields: [
                 {
                     name: "firstName",
+                    type: {
+                        kind: "SCALAR",
+                        name: "String",
+                    },
+                },
+                {
+                    name: "domainUsername",
+                    type: {
+                        kind: "SCALAR",
+                        name: "String",
+                    },
+                },
+                {
+                    name: "slackIdentity",
+                    type: {
+                        kind: "OBJECT",
+                        name: "SlackIdentity",
+                    },
+                },
+            ],
+        },
+    ],
+};
+
+export const ActionedBy: Ingester = {
+    root_type: "ActionedBy",
+    types: [
+        {
+            kind: "OBJECT",
+            name: "ActionedBy",
+            fields: [
+                {
+                    name: "firstName",
+                    type: {
+                        kind: "SCALAR",
+                        name: "String",
+                    },
+                },
+                {
+                    name: "lastName",
+                    type: {
+                        kind: "SCALAR",
+                        name: "String",
+                    },
+                },
+                {
+                    name: "email",
                     type: {
                         kind: "SCALAR",
                         name: "String",

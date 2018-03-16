@@ -32,7 +32,11 @@ import {
     ProjectCreatedEvent,
     ProjectEnvironmentsRequestedEvent,
 } from "./gluon/project/projectIngester";
-import {SlackIdentity, Team} from "./gluon/shared/sharedIngester";
+import {
+    ActionedBy,
+    BitbucketProject, GluonTeam, Project,
+    SlackIdentity,
+} from "./gluon/shared/sharedIngester";
 import {CreateTeam} from "./gluon/team/CreateTeam";
 import {NewDevOpsEnvironment} from "./gluon/team/DevOpsEnvironment";
 import {DevOpsEnvironmentRequested} from "./gluon/team/DevOpsEnvironmentRequested";
@@ -100,7 +104,7 @@ export const configuration: any = {
     ],
     ingesters: [
         SlackIdentity,
-        Team,
+        GluonTeam,
         TeamCreatedEvent,
         TeamMemberCreatedEvent,
         ProjectCreatedEvent,
@@ -110,6 +114,9 @@ export const configuration: any = {
         ProjectEnvironmentsRequestedEvent,
         ApplicationCreatedEvent,
         MembershipRequestCreatedEvent,
+        Project,
+        BitbucketProject,
+        ActionedBy,
     ],
     token,
     http: {
