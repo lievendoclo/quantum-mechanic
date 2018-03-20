@@ -108,7 +108,7 @@ export class NewTeamSlackChannel implements HandleCommand {
         // and have an event handler actually create the channel
 
         this.teamChannel = _.isEmpty(this.teamChannel) ? this.teamName : this.teamChannel;
-        return linkSlackChannelToGluonTeam(ctx, this.teamName, this.teamId, this.teamChannel, this.docs());
+        return linkSlackChannelToGluonTeam(ctx, this.teamName, this.teamId, this.teamChannel, this.docs(), true);
     }
 
     private docs(): string {
@@ -168,7 +168,7 @@ export class LinkExistingTeamSlackChannel implements HandleCommand {
                         .then(success);
                 });
         } else {
-            return linkSlackChannelToGluonTeam(ctx, this.teamName, this.teamId, this.teamChannel, this.docs());
+            return linkSlackChannelToGluonTeam(ctx, this.teamName, this.teamId, this.teamChannel, this.docs(), false);
         }
     }
 
@@ -182,20 +182,24 @@ function linkSlackChannelToGluonTeam(ctx: HandlerContext,
                                      gluonTeamName: string,
                                      slackTeamId: string,
                                      slackChannelName: string,
-                                     documentationLink: string): Promise<HandlerResult> {
-    const kebabbedTeamChannel: string = _.kebabCase(slackChannelName);
+                                     documentationLink: string,
+                                     isNewChannel: boolean): Promise<HandlerResult> {
+    let finalisedSlackChannelName: string = slackChannelName;
+    if (isNewChannel) {
+        finalisedSlackChannelName = _.kebabCase(slackChannelName);
+    }
     return axios.get(`${QMConfig.subatomic.gluon.baseUrl}/teams?name=${gluonTeamName}`)
         .then(team => {
             if (!_.isEmpty(team.data._embedded)) {
-                logger.info(`Updating team channel [${kebabbedTeamChannel}]: ${team.data._embedded.teamResources[0].teamId}`);
+                logger.info(`Updating team channel [${finalisedSlackChannelName}]: ${team.data._embedded.teamResources[0].teamId}`);
                 return axios.put(`${QMConfig.subatomic.gluon.baseUrl}/teams/${team.data._embedded.teamResources[0].teamId}`,
                     {
                         slack: {
-                            teamChannel: kebabbedTeamChannel,
+                            teamChannel: finalisedSlackChannelName,
                         },
                     })
                     .then(() => {
-                        return createChannel(ctx, slackTeamId, kebabbedTeamChannel)
+                        return createChannel(ctx, slackTeamId, finalisedSlackChannelName)
                             .then(channel => {
                                 if (channel && channel.createSlackChannel) {
                                     return addBotToSlackChannel(ctx, slackTeamId, channel.createSlackChannel.id)
@@ -249,12 +253,12 @@ If you haven't already, you might want to:
                                             buttonForCommand(
                                                 {text: "Add team members"},
                                                 new AddMemberToTeam(),
-                                                {teamChannel: kebabbedTeamChannel}),
+                                                {teamChannel: finalisedSlackChannelName}),
                                         ],
                                     }],
                                 };
 
-                                return ctx.messageClient.addressChannels(msg, kebabbedTeamChannel);
+                                return ctx.messageClient.addressChannels(msg, finalisedSlackChannelName);
 
                                 // TODO respond back after creating team channel and now offer
                                 // opportunity to create OpenShift Dev environment?
