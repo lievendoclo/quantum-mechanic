@@ -37,6 +37,7 @@ import {
     BitbucketProject, GluonTeam, Project,
     SlackIdentity,
 } from "./gluon/shared/sharedIngester";
+import {BotJoinedChannel} from "./gluon/team/BotJoinedChannel";
 import {CreateTeam} from "./gluon/team/CreateTeam";
 import {NewDevOpsEnvironment} from "./gluon/team/DevOpsEnvironment";
 import {DevOpsEnvironmentRequested} from "./gluon/team/DevOpsEnvironmentRequested";
@@ -101,6 +102,7 @@ export const configuration: any = {
         ProjectEnvironmentsRequested,
         ApplicationCreated,
         MembershipRequestCreated,
+        BotJoinedChannel,
     ],
     ingesters: [
         SlackIdentity,

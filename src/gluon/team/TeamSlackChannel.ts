@@ -23,8 +23,6 @@ import axios from "axios";
 import * as _ from "lodash";
 import {QMConfig} from "../../config/QMConfig";
 import {CreateTeam} from "./CreateTeam";
-import {NewDevOpsEnvironment} from "./DevOpsEnvironment";
-import {AddMemberToTeam} from "./JoinTeam";
 import {gluonTeamsWhoSlackScreenNameBelongsTo} from "./Teams";
 
 @CommandHandler("Check whether to create a new team channel or use an existing channel")
@@ -219,12 +217,12 @@ function linkSlackChannelToGluonTeam(ctx: HandlerContext,
                                             },
                                         );
                                 } else {
-                                    //return Promise.reject("Error creating or finding slack channel: " + JSON.stringify(channel));
-
+                                    return Promise.reject("Error creating or finding slack channel: " + JSON.stringify(channel));
                                 }
-                            },err=>{
-                                if(err.networkError.response.status === 400){
-                                    return ctx.messageClient.respond("`/invite @atomist` to your channel "+kebabbedTeamChannel);
+                            }, err => {
+                                if (err.networkError.response.status === 400) {
+                                    return ctx.messageClient.respond(`The channel has been successfully linked to your team but the since that channel "${finalisedSlackChannelName}" is private` +
+                                        `the atomist bot cannot be automatically invited. Please manually invite the atomist bot using the \`/invite @atomist\` command in the "${finalisedSlackChannelName}" slack channel.`);
                                 }
                                 return failure(err);
                             })
