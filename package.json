@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "Subatomic automation client",
   "author": "Bison Core",
-  "license": "Apache 2.0",
+  "license": "Apache-2.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/absa-subatomic/quantum-mechanic.git"
@@ -13,8 +13,8 @@
     "url": "https://github.com/absa-subatomic/quantum-mechanic/issues"
   },
   "dependencies": {
-    "@atomist/automation-client": "^0.6.6",
-    "@atomist/lifecycle-automation": "https://r.atomist.com/Sk45u9GG8M",
+    "@atomist/automation-client": "https://r.atomist.com/rJVfmZO6Kz",
+    "@atomist/lifecycle-automation": "https://r.atomist.com/ryNj6btAKM",
     "@atomist/slack-messages": "^0.12.1",
     "app-root-path": "^2.0.1",
     "axios-https-proxy-fix": "^0.17.1",
