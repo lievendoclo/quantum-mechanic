@@ -3,7 +3,7 @@ import {
     EventHandler,
     HandleEvent,
     HandlerContext,
-    HandlerResult,
+    HandlerResult, logger,
     MappedParameter,
     MappedParameters,
     success,
@@ -11,7 +11,6 @@ import {
 } from "@atomist/automation-client";
 import {buttonForCommand} from "@atomist/automation-client/spi/message/MessageClient";
 import {SlackMessage, url} from "@atomist/slack-messages";
-import * as graphql from "../../typings/types";
 import {NewDevOpsEnvironment} from "./DevOpsEnvironment";
 import {AddMemberToTeam} from "./JoinTeam";
 
@@ -61,11 +60,17 @@ export class BotJoinedChannel implements HandleEvent<any> {
 
     public handle(event: EventFired<any>, ctx: HandlerContext): Promise<HandlerResult> {
         const botJoinedChannel = event.data.UserJoinedChannel[0];
+        logger.info(`BotJoinedChannelEvent: ${JSON.stringify(botJoinedChannel)}`);
         if (botJoinedChannel.user.isAtomistBot === "true") {
+            let channelNameString = "your";
+            if (botJoinedChannel.channel.name !== null) {
+                // necessary because channel.name is null for private channels
+                channelNameString = `the ${botJoinedChannel.channel.name}`;
+            }
             const msg: SlackMessage = {
-                text: `Welcome to the ${botJoinedChannel.channel.name} team channel!`,
+                text: `Welcome to ${channelNameString} team channel!`,
                 attachments: [{
-                    fallback: `Welcome to the ${botJoinedChannel.channel.name} team channel!`,
+                    fallback: `Welcome to the ${channelNameString} team channel!`,
                     footer: `For more information, please read the ${this.docs()}`, // TODO use actual icon
                     text: `
 If you haven't already, you might want to:
@@ -80,8 +85,7 @@ If you haven't already, you might want to:
                             new NewDevOpsEnvironment()),
                         buttonForCommand(
                             {text: "Add team members"},
-                            new AddMemberToTeam(),
-                            {teamChannel: botJoinedChannel.channel.name}),
+                            new AddMemberToTeam()),
                     ],
                 }],
             };

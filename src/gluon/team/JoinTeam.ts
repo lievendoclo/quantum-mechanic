@@ -84,11 +84,6 @@ export class AddMemberToTeam implements HandleCommand<HandlerResult> {
     })
     public slackName: string;
 
-    @Parameter({
-        description: "the role this member should have in the team",
-    })
-    public role: string;
-
     public handle(ctx: HandlerContext): Promise<HandlerResult> {
         logger.info(`Adding member [${this.slackName}] to team: ${this.teamChannel}`);
 
@@ -111,7 +106,7 @@ export class AddMemberToTeam implements HandleCommand<HandlerResult> {
                                     .then(member => {
                                         if (!_.isEmpty(member.data._embedded)) {
                                             const you = member.data._embedded.teamMemberResources[0];
-                                            logger.info(`Got member's teams you belong too: ${JSON.stringify(you)}`);
+                                            logger.info(`Got member's teams you belong to: ${JSON.stringify(you)}`);
 
                                             const teamSlackChannel = _.find(you.teams,
                                                 (team: any) => team.slack.teamChannel === this.teamChannel);
@@ -125,6 +120,7 @@ export class AddMemberToTeam implements HandleCommand<HandlerResult> {
                                                         members: [{
                                                             memberId: newMemberId,
                                                         }],
+                                                        createdBy: you.memberId,
                                                     })
                                                     .then(() => {
                                                         logger.info(`Added team member! Inviting to channel [${this.channelId}] -> member [${screenName}]`);
@@ -152,12 +148,15 @@ Click the button below to become familiar with the projects this team is involve
                                                                 };
 
                                                                 return ctx.messageClient.addressChannels(msg, this.teamChannel);
-                                                            }, reason => logger.error(reason));
+                                                            }, () => {
+                                                                return ctx.messageClient.addressChannels(`User ${this.slackName} successfully added to your gluon team. Private channels do not currently support automatic user invitation.` +
+                                                                    " Please invite the user to this slack channel manually.", this.teamChannel);
+                                                            });
                                                     })
                                                     .catch(err => failure(err));
                                             } else {
                                                 return ctx.messageClient.respond({
-                                                    text: "This is not a team channel or not a team channel you belong too",
+                                                    text: "This is not a team channel or not a team channel you belong to",
                                                     attachments: [{
                                                         text: `
 This channel (*${this.teamChannel}*) is not a team channel for a team that you belong too.
