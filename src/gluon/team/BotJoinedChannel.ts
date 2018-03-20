@@ -54,12 +54,12 @@ import {AddMemberToTeam} from "./JoinTeam";
   }
 }`)
 @Tags("atomist", "channel")
-export class BotJoinedChannel implements HandleEvent<graphql.BotJoinedChannel.Subscription> {
+export class BotJoinedChannel implements HandleEvent<any> {
 
     @MappedParameter(MappedParameters.SlackChannelName)
     public slackChannelName: string;
 
-    public handle(event: EventFired<graphql.BotJoinedChannel.Subscription>, ctx: HandlerContext): Promise<HandlerResult> {
+    public handle(event: EventFired<any>, ctx: HandlerContext): Promise<HandlerResult> {
         const botJoinedChannel = event.data.UserJoinedChannel[0];
         if (botJoinedChannel.user.isAtomistBot === "true") {
             const msg: SlackMessage = {
