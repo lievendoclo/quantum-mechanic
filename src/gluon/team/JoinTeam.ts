@@ -63,7 +63,7 @@ export class JoinTeam implements HandleCommand<HandlerResult> {
     }
 }
 
-@CommandHandler("Add a member to a team")
+@CommandHandler("Add a member to a team", QMConfig.subatomic.commandPrefix + " add team member")
 @Tags("subatomic", "team", "member")
 export class AddMemberToTeam implements HandleCommand<HandlerResult> {
 
