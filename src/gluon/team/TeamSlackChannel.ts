@@ -221,8 +221,8 @@ function linkSlackChannelToGluonTeam(ctx: HandlerContext,
                                 }
                             }, err => {
                                 if (err.networkError.response.status === 400) {
-                                    return ctx.messageClient.respond(`The channel has been successfully linked to your team but the since that channel "${finalisedSlackChannelName}" is private` +
-                                        `the atomist bot cannot be automatically invited. Please manually invite the atomist bot using the \`/invite @atomist\` command in the "${finalisedSlackChannelName}" slack channel.`);
+                                    return ctx.messageClient.respond(`The channel has been successfully linked to your team but since the channel "${finalisedSlackChannelName}" is private` +
+                                        ` the atomist bot cannot be automatically invited. Please manually invite the atomist bot using the \`/invite @atomist\` command in the "${finalisedSlackChannelName}" slack channel.`);
                                 }
                                 return failure(err);
                             })
