@@ -1,4 +1,4 @@
-import { QMConfig } from "./config/QMConfig";
+import {QMConfig} from "./config/QMConfig";
 import {
     BitbucketProjectAddedEvent,
     BitbucketProjectRequestedEvent,
@@ -38,9 +38,10 @@ import {
     Project,
     SlackIdentity,
 } from "./gluon/shared/sharedIngester";
-import { CreateTeam } from "./gluon/team/CreateTeam";
-import { NewDevOpsEnvironment } from "./gluon/team/DevOpsEnvironment";
-import { DevOpsEnvironmentRequested } from "./gluon/team/DevOpsEnvironmentRequested";
+import {BotJoinedChannel} from "./gluon/team/BotJoinedChannel";
+import {CreateTeam} from "./gluon/team/CreateTeam";
+import {NewDevOpsEnvironment} from "./gluon/team/DevOpsEnvironment";
+import {DevOpsEnvironmentRequested} from "./gluon/team/DevOpsEnvironmentRequested";
 import {
     AddMemberToTeam,
     CreateMembershipRequestToTeam,
@@ -101,6 +102,7 @@ export const configuration: any = {
         ProjectEnvironmentsRequested,
         ApplicationCreated,
         MembershipRequestCreated,
+        BotJoinedChannel,
     ],
     ingesters: [
         SlackIdentity,

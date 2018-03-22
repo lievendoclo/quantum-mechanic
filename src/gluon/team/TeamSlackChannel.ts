@@ -23,8 +23,6 @@ import axios from "axios";
 import * as _ from "lodash";
 import {QMConfig} from "../../config/QMConfig";
 import {CreateTeam} from "./CreateTeam";
-import {NewDevOpsEnvironment} from "./DevOpsEnvironment";
-import {AddMemberToTeam} from "./JoinTeam";
 import {gluonTeamsWhoSlackScreenNameBelongsTo} from "./Teams";
 
 @CommandHandler("Check whether to create a new team channel or use an existing channel")
@@ -219,54 +217,16 @@ function linkSlackChannelToGluonTeam(ctx: HandlerContext,
                                             },
                                         );
                                 } else {
-                                    return Promise.reject(`Error creating or finding slack channel: ${JSON.stringify(channel)}`);
+                                    return Promise.reject("Error creating or finding slack channel: " + JSON.stringify(channel));
                                 }
-                            }, error => {
-                                logger.error(`Error creating Slack channel: ${JSON.stringify(error)}`);
-
-                                if (error.networkError.response.status === 400) {
-                                    logger.warn(`Most likely trying to link a private Slack channel: ${error.message}. This is currently NOT SUPPORTED`);
-                                } else {
-                                    return Promise.reject(`Slack channel could not be created: ${error.message}`);
+                            }, err => {
+                                if (err.networkError.response.status === 400) {
+                                    return ctx.messageClient.respond(`The channel has been successfully linked to your team but since the channel "${finalisedSlackChannelName}" is private` +
+                                        ` the atomist bot cannot be automatically invited. Please manually invite the atomist bot using the \`/invite @atomist\` command in the "${finalisedSlackChannelName}" slack channel.`);
                                 }
-                            }).then(() => {
-
-                                // TODO add all existing team members to the team
-                                // Slack channel just created
-
-                                const msg: SlackMessage = {
-                                    text: `Welcome to the ${slackChannelName} team channel!`,
-                                    attachments: [{
-                                        fallback: `Welcome to the ${slackChannelName} team channel!`,
-                                        footer: `For more information, please read the ${documentationLink}`,
-                                        text: `
-If you haven't already, you might want to:
-
-• create an OpenShift DevOps environment
-• add new team members
-                                                          `,
-                                        mrkdwn_in: ["text"],
-                                        actions: [
-                                            buttonForCommand(
-                                                {text: "Create DevOps environment"},
-                                                new NewDevOpsEnvironment()),
-                                            buttonForCommand(
-                                                {text: "Add team members"},
-                                                new AddMemberToTeam(),
-                                                {teamChannel: finalisedSlackChannelName}),
-                                        ],
-                                    }],
-                                };
-
-                                return ctx.messageClient.addressChannels(msg, finalisedSlackChannelName);
-
-                                // TODO respond back after creating team channel and now offer
-                                // opportunity to create OpenShift Dev environment?
-                            })
-                            .catch(err => {
-                                logger.error(`An error occurred configuring the team slack channel: ${JSON.stringify(err)}`);
                                 return failure(err);
-                            });
+                            })
+                            .catch(err => failure(err));
                     });
             } else {
                 const msg: SlackMessage = {
