@@ -130,6 +130,7 @@ export class ListExistingBitbucketProject implements HandleCommand<HandlerResult
                                             bitbucketProject: {
                                                 name: project.data.name,
                                                 description: project.data.description,
+                                                key: this.bitbucketProjectKey,
                                             },
                                             createdBy: member.memberId,
                                         });
