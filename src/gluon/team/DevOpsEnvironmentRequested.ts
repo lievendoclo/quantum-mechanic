@@ -74,14 +74,14 @@ export class DevOpsEnvironmentRequested implements HandleEvent<any> {
                     `DevOps environment for ${devOpsRequestedEvent.team.name} [managed by Subatomic]`);
             })
             .then(() => {
-                return this.addMembershipPermissions(projectId,
+                return addOpenshiftMembershipPermissions(projectId,
                     devOpsRequestedEvent.team);
             }, err => {
                 logger.warn(err);
                 // TODO what do we do with existing projects?
                 // We should probably make sure the name, display name etc. is consistent
 
-                return this.addMembershipPermissions(projectId,
+                return addOpenshiftMembershipPermissions(projectId,
                     devOpsRequestedEvent.team);
             })
             .then(() => {
@@ -397,29 +397,29 @@ If your applications will require a Spring Cloud Config Server, you can add a Su
             });
     }
 
-    private addMembershipPermissions(projectId: string, team: any): Promise<any> {
-        return Promise.all(
-            team.owners.map(owner => {
-                const ownerUsername = /[^\\]*$/.exec(owner.domainUsername)[0];
-                logger.info(`Adding role to project [${projectId}] and owner [${owner.domainUsername}]: ${ownerUsername}`);
-                return OCClient.policy.addRoleToUser(ownerUsername,
-                    "admin",
-                    projectId);
-            }))
-            .then(() => {
-                return Promise.all(
-                    team.members.map(member => {
-                        const memberUsername = /[^\\]*$/.exec(member.domainUsername)[0];
-                        logger.info(`Adding role to project [${projectId}] and member [${member.domainUsername}]: ${memberUsername}`);
-                        return OCClient.policy.addRoleToUser(memberUsername,
-                            "view",
-                            projectId);
-                    }));
-            });
-    }
-
     private docs(): string {
         return `${url(`${QMConfig.subatomic.docs.baseUrl}/devops`,
             "documentation")}`;
     }
+}
+
+export function addOpenshiftMembershipPermissions(projectId: string, team: { owners: Array<{ domainUsername }>, members: Array<{ domainUsername }> }): Promise<any> {
+    return Promise.all(
+        team.owners.map(owner => {
+            const ownerUsername = /[^\\]*$/.exec(owner.domainUsername)[0];
+            logger.info(`Adding role to project [${projectId}] and owner [${owner.domainUsername}]: ${ownerUsername}`);
+            return OCClient.policy.addRoleToUser(ownerUsername,
+                "admin",
+                projectId);
+        }))
+        .then(() => {
+            return Promise.all(
+                team.members.map(member => {
+                    const memberUsername = /[^\\]*$/.exec(member.domainUsername)[0];
+                    logger.info(`Adding role to project [${projectId}] and member [${member.domainUsername}]: ${memberUsername}`);
+                    return OCClient.policy.addRoleToUser(memberUsername,
+                        "view",
+                        projectId);
+                }));
+        });
 }
