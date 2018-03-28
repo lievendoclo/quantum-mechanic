@@ -196,7 +196,7 @@ export class LinkExistingLibrary implements HandleCommand<HandlerResult> {
                 } else {
                     return bitbucketRepositoriesForProjectKey(project.bitbucketProject.key)
                         .then(bitbucketRepos => {
-                            logger.debug(`Bitbucket project [${project.bitbucketProject.name}] has repositories: ${JSON.stringify(bitbucketRepos.values)}`);
+                            logger.debug(`Bitbucket project [${project.bitbucketProject.name}] has repositories: ${JSON.stringify(bitbucketRepos)}`);
                             return ctx.messageClient.respond({
                                 text: "Please select the Bitbucket repository which contains the library you want to link",
                                 attachments: [{
@@ -205,7 +205,7 @@ export class LinkExistingLibrary implements HandleCommand<HandlerResult> {
                                         menuForCommand({
                                                 text: "Select Bitbucket repository",
                                                 options:
-                                                    bitbucketRepos.values.map(bitbucketRepo => {
+                                                    bitbucketRepos.map(bitbucketRepo => {
                                                         return {
                                                             value: bitbucketRepo.name,
                                                             text: bitbucketRepo.name,
