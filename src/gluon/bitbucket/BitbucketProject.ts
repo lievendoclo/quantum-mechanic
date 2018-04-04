@@ -123,14 +123,17 @@ export class ListExistingBitbucketProject implements HandleCommand<HandlerResult
                     return gluonProjectFromProjectName(ctx, this.projectName)
                         .then(gluonProject => {
                             // get the selected project's details
-                            return bitbucketAxios().get(`${QMConfig.subatomic.bitbucket.restUrl}/api/1.0/projects/${this.bitbucketProjectKey}`)
+                            const projectUrl = `${QMConfig.subatomic.bitbucket.restUrl}/api/1.0/projects/${this.bitbucketProjectKey}`;
+                            return bitbucketAxios().get(projectUrl)
                                 .then(project => {
                                     return axios.put(`${QMConfig.subatomic.gluon.baseUrl}/projects/${gluonProject.projectId}`,
                                         {
                                             bitbucketProject: {
+                                                bitbucketProjectId: project.data.id,
                                                 name: project.data.name,
                                                 description: project.data.description,
                                                 key: this.bitbucketProjectKey,
+                                                url: projectUrl,
                                             },
                                             createdBy: member.memberId,
                                         });
