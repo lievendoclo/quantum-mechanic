@@ -21,6 +21,7 @@ import axios from "axios";
 import * as _ from "lodash";
 import {QMConfig} from "../../config/QMConfig";
 import * as graphql from "../../typings/types";
+import {ListTeamProjects} from "../project/ProjectDetails";
 
 @CommandHandler("Apply to join an existing team", QMConfig.subatomic.commandPrefix + " apply to team")
 @Tags("subatomic", "team")
@@ -142,7 +143,7 @@ Click the button below to become familiar with the projects this team is involve
                                                                         actions: [
                                                                             buttonForCommand(
                                                                                 {text: "Show team projects"},
-                                                                                this),
+                                                                                new ListTeamProjects()),
                                                                         ],
                                                                     }],
                                                                 };

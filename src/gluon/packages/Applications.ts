@@ -75,3 +75,13 @@ Consider creating a new application called ${applicationName}. Click the button 
             }
         });
 }
+
+export function gluonApplicationsLinkedToGluonProjectId(gluonProjectId: string): Promise<any[]> {
+    return axios.get(`${QMConfig.subatomic.gluon.baseUrl}/applications?projectId=${gluonProjectId}`)
+        .then(applications => {
+            if (!_.isEmpty(applications.data._embedded)) {
+                return Promise.resolve(applications.data._embedded.applicationResources);
+            }
+            return [];
+        });
+}

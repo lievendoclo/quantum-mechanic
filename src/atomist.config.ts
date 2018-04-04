@@ -25,6 +25,10 @@ import {AddConfigServer} from "./gluon/project/AddConfigServer";
 import {CreateOpenShiftPvc} from "./gluon/project/CreateOpenShiftPvc";
 import {CreateProject} from "./gluon/project/CreateProject";
 import {ProjectCreated} from "./gluon/project/ProjectCreated";
+import {
+    ListProjectDetails,
+    ListTeamProjects,
+} from "./gluon/project/ProjectDetails";
 import {NewProjectEnvironments} from "./gluon/project/ProjectEnvironments";
 import {ProjectEnvironmentsRequested} from "./gluon/project/ProjectEnvironmentsRequested";
 import {
@@ -93,6 +97,8 @@ export const configuration: any = {
         KickOffJenkinsBuild,
         CreateOpenShiftPvc,
         AddConfigServer,
+        ListTeamProjects,
+        ListProjectDetails,
     ],
     events: [
         TeamCreated,
