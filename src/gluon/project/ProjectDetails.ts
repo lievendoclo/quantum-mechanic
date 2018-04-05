@@ -93,7 +93,7 @@ export class ListTeamProjects implements HandleCommand<HandlerResult> {
                         projectBitbucketKey: null,
                     };
 
-                    if (project.hasOwnProperty("bitbucketProject")) {
+                    if (project.bitbucketProject !== null) {
                         parameters.projectBitbucketKey = project.bitbucketProject.key;
                     }
 
@@ -165,7 +165,7 @@ export class ListProjectDetails implements HandleCommand<HandlerResult> {
             const attachments = [];
             for (const application of applications) {
                 let applicationBitbucketUrl = "None";
-                if (application.hasOwnProperty("bitbucketRepository")) {
+                if (application.bitbucketRepository !== null) {
                     applicationBitbucketUrl = application.bitbucketRepository.repoUrl;
                 }
                 attachments.push(
@@ -175,8 +175,17 @@ export class ListProjectDetails implements HandleCommand<HandlerResult> {
                     },
                 );
             }
+
+            let headerMessage = `The current details of the project *${this.projectName}* are are as follows.\n*Description:* ${this.projectDescription}\n*Bitbucket URL:* ${bitbucketURL}\n`;
+
+            if (attachments.length > 0) {
+                headerMessage += "The below applications belong to the project:";
+            } else {
+                headerMessage += "There are no applications that belong to this project yet";
+            }
+
             const msg: SlackMessage = {
-                text: `The current details of the project *${this.projectName}* are are as follows.\n*Description:* ${this.projectDescription}\n*Bitbucket URL:* ${bitbucketURL}\nThe below applications belong to the project:`,
+                text: headerMessage,
                 attachments,
             };
             return ctx.messageClient.respond(msg);
