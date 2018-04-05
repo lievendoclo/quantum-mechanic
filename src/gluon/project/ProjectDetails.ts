@@ -120,6 +120,9 @@ export class ListTeamProjects implements HandleCommand<HandlerResult> {
                 };
 
                 return ctx.messageClient.respond(msg);
+            }).catch(() => {
+                // Don't display the error - gluonProjectsWhichBelongToGluonTeam already handles it.
+                return success();
             });
     }
 
