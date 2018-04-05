@@ -45,7 +45,7 @@ export class OnboardMember implements HandleCommand<HandlerResult> {
 
     @Parameter({
         description: "your username",
-        validInput: "Domain username in the following format: domain\\usernmae",
+        validInput: "Domain username in the following format: domain\\username",
     })
     public domainUsername: string;
 

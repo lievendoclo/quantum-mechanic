@@ -255,7 +255,7 @@ export class DevOpsEnvironmentRequested implements HandleEvent<any> {
                             [],
                             [
                                 new SimpleOption("-namespace", projectId),
-                            ])
+                            ], true)
                             , 60000) // TODO configurable
                             .then(() => {
                                 return OCCommon.commonCommand("annotate route",

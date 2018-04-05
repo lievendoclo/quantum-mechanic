@@ -22,13 +22,18 @@ export class OCCommand implements CommandLineElement {
         return commandString;
     }
 
-    public execute(): Promise<OCCommandResult> {
+    public execute(useAsync = false): Promise<OCCommandResult> {
         const command = this.build();
 
         return new Promise((resolve, reject) => {
             logger.verbose(`Executing oc command: ${command}`);
             try {
-                const execution: any = require("child_process").execSync(command);
+                let execution: any;
+                if (useAsync) {
+                    execution = require("child_process").exec(command);
+                } else {
+                    execution = require("child_process").execSync(command);
+                }
                 // exec(command, (error: any, inherit: string) => {
                 const response = new OCCommandResult();
                 response.command = this.buildDisplayCommand();

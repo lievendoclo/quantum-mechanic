@@ -1,3 +1,4 @@
+import {logger} from "@atomist/automation-client";
 import axios from "axios";
 import {AxiosInstance} from "axios-https-proxy-fix";
 import * as fs from "fs";
@@ -7,13 +8,35 @@ import {QMConfig} from "../../config/QMConfig";
 
 export function bitbucketAxios(): AxiosInstance {
     const caFile = path.resolve(__dirname, QMConfig.subatomic.bitbucket.caPath);
-    return axios.create({
+    const instance = axios.create({
         httpsAgent: new https.Agent({
             rejectUnauthorized: true,
             ca: fs.readFileSync(caFile),
         }),
         auth: QMConfig.subatomic.bitbucket.auth,
+        timeout: 30000,
+        proxy: false,
     });
+    instance.interceptors.request.use(request => {
+        if (request.proxy !== false) {
+            logger.debug("Proxy: " + request.proxy);
+        }
+        logger.debug(`=> Bitbucket ${request.method} ${request.url} ${JSON.stringify(request.data)}`);
+        return request;
+    });
+
+    instance.interceptors.response.use(response => {
+        logger.debug(`<= Bitbucket ${response.status} ${response.request.url} ${JSON.stringify(response.data)}`);
+        return response;
+    }, error => {
+        if (error && error.response) {
+            logger.debug(`<= Bitbucket ${error.response.status} ${error.response.request.url} ${JSON.stringify(error.response.data)}`);
+        } else {
+            logger.debug(`<= Bitbucket ${error}`);
+        }
+        return error;
+    });
+    return instance;
 }
 
 export function bitbucketUserFromUsername(username: string): Promise<any> {
