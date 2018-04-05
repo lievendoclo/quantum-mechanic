@@ -34,7 +34,7 @@ export function bitbucketAxios(): AxiosInstance {
         } else {
             logger.debug(`<= Bitbucket ${error}`);
         }
-        return error;
+        throw error;
     });
     return instance;
 }

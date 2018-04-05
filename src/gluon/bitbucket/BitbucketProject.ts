@@ -81,70 +81,49 @@ export class ListExistingBitbucketProject implements HandleCommand<HandlerResult
     public projectName: string;
 
     @Parameter({
-        description: "bitbucket project name",
-        required: false,
+        description: "bitbucket project key",
     })
     public bitbucketProjectKey: string;
 
     public handle(ctx: HandlerContext): Promise<HandlerResult> {
-        if (_.isEmpty(this.bitbucketProjectKey)) {
-            // then get a list of projects that the member has access too
-            return bitbucketProjects()
-                .then(projects => {
-                    logger.info(`Got Bitbucket projects: ${JSON.stringify(projects)}`);
-
-                    const msg: SlackMessage = {
-                        text: `Please select the Bitbucket project to link to ${this.projectName}`,
-                        attachments: [{
-                            fallback: "Link Bitbucket project",
-                            actions: [
-                                menuForCommand({
-                                        text: "Select Bitbucket project", options:
-                                            projects.map(bitbucketProject => {
-                                                return {
-                                                    value: bitbucketProject.key,
-                                                    text: bitbucketProject.name,
-                                                };
-                                            }),
-                                    },
-                                    "ListExistingBitbucketProject", "bitbucketProjectKey",
-                                    {projectName: this.projectName}),
-                            ],
-                        }],
-                    };
-
-                    return ctx.messageClient.respond(msg)
-                        .then(success);
-                });
-        } else {
-            // get memberId for createdBy
-            return gluonMemberFromScreenName(ctx, this.screenName)
-                .then(member => {
-                    return gluonProjectFromProjectName(ctx, this.projectName)
-                        .then(gluonProject => {
-                            // get the selected project's details
-                            const projectUrl = `${QMConfig.subatomic.bitbucket.restUrl}/api/1.0/projects/${this.bitbucketProjectKey}`;
-                            return bitbucketAxios().get(projectUrl)
-                                .then(project => {
-                                    return axios.put(`${QMConfig.subatomic.gluon.baseUrl}/projects/${gluonProject.projectId}`,
-                                        {
-                                            bitbucketProject: {
-                                                bitbucketProjectId: project.data.id,
-                                                name: project.data.name,
-                                                description: project.data.description,
-                                                key: this.bitbucketProjectKey,
-                                                url: projectUrl,
-                                            },
-                                            createdBy: member.memberId,
-                                        });
-                                });
-                        });
-                })
-                .then(() => {
-                    return ctx.messageClient.addressChannels({
-                        text: `🚀 The Bitbucket project with key ${this.bitbucketProjectKey} is being configured...`,
-                    }, this.teamChannel);
-                });
-        }
+        // get memberId for createdBy
+        return gluonMemberFromScreenName(ctx, this.screenName)
+            .then(member => {
+                return gluonProjectFromProjectName(ctx, this.projectName)
+                    .then(gluonProject => {
+                        // get the selected project's details
+                        const projectRestUrl = `${QMConfig.subatomic.bitbucket.restUrl}/api/1.0/projects/${this.bitbucketProjectKey}`;
+                        const projectUiUrl = `${QMConfig.subatomic.bitbucket.baseUrl}/projects/${this.bitbucketProjectKey}`;
+                        return bitbucketAxios().get(projectRestUrl)
+                            .then(project => {
+                                return axios.put(`${QMConfig.subatomic.gluon.baseUrl}/projects/${gluonProject.projectId}`,
+                                    {
+                                        bitbucketProject: {
+                                            bitbucketProjectId: project.data.id,
+                                            name: project.data.name,
+                                            description: project.data.description,
+                                            key: this.bitbucketProjectKey,
+                                            url: projectUiUrl,
+                                        },
+                                        createdBy: member.memberId,
+                                    });
+                            })
+                            .then(() => {
+                                return ctx.messageClient.addressChannels({
+                                    text: `🚀 The Bitbucket project with key ${this.bitbucketProjectKey} is being configured...`,
+                                }, this.teamChannel);
+                            })
+                            .catch(error => {
+                                if (error.response && error.response.status === 404) {
+                                    return ctx.messageClient.addressChannels({
+                                        text: `⚠️ The Bitbucket project with key ${this.bitbucketProjectKey} was not found`,
+                                    }, this.teamChannel)
+                                        .then(failure);
+                                } else {
+                                    return failure(error);
+                                }
+                            });
+                    });
+            });
     }
 }

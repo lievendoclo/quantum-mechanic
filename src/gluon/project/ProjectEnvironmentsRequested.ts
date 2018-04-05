@@ -264,7 +264,7 @@ export class ProjectEnvironmentsRequested implements HandleEvent<any> {
                                         },
                                     })
                                     .then(success, error => {
-                                        if (error.response.status === 400) {
+                                        if (error.response && error.response.status === 400) {
                                             logger.warn(`Folder for [${environmentsRequestedEvent.project.name}] probably already created`);
                                             return SuccessPromise;
                                         } else {
