@@ -11,14 +11,13 @@ import {
 } from "@atomist/automation-client";
 import {buttonForCommand} from "@atomist/automation-client/spi/message/MessageClient";
 import {SlackMessage, url} from "@atomist/slack-messages";
-import axios from "axios";
-import * as https from "https";
 import * as _ from "lodash";
 import * as qs from "query-string";
 import {QMConfig} from "../../config/QMConfig";
 import {SimpleOption} from "../../openshift/base/options/SimpleOption";
 import {OCClient} from "../../openshift/OCClient";
 import {OCCommon} from "../../openshift/OCCommon";
+import {jenkinsAxios} from "../jenkins/Jenkins";
 import {LinkExistingApplication} from "../packages/CreateApplication";
 import {LinkExistingLibrary} from "../packages/CreateLibrary";
 
@@ -203,13 +202,8 @@ export class ProjectEnvironmentsRequested implements HandleEvent<any> {
                             .then(jenkinsHost => {
                                 logger.debug(`Using Jenkins Route host [${jenkinsHost.output}] to add Bitbucket credentials`);
 
-                                const jenkinsAxios = axios.create({
-                                    httpsAgent: new https.Agent({
-                                        rejectUnauthorized: false,
-                                    }),
-                                });
-
-                                return jenkinsAxios.post(`https://${jenkinsHost.output}/createItem?name=${_.kebabCase(environmentsRequestedEvent.project.name).toLowerCase()}`,
+                                const axios = jenkinsAxios();
+                                return axios.post(`https://${jenkinsHost.output}/createItem?name=${_.kebabCase(environmentsRequestedEvent.project.name).toLowerCase()}`,
                                     `
 <com.cloudbees.hudson.plugins.folder.Folder plugin="cloudbees-folder@6.0.4">
   <description>Folder for ${environmentsRequestedEvent.project.name} project [[managed by Subatomic](${QMConfig.subatomic.docs.baseUrl}/projects/${environmentsRequestedEvent.project.name})]</description>
@@ -307,13 +301,8 @@ export class ProjectEnvironmentsRequested implements HandleEvent<any> {
                             },
                         };
 
-                        const jenkinsAxios = axios.create({
-                            httpsAgent: new https.Agent({
-                                rejectUnauthorized: false,
-                            }),
-                        });
-
-                        jenkinsAxios.interceptors.request.use(request => {
+                        const axios = jenkinsAxios();
+                        axios.interceptors.request.use(request => {
                             if (request.data && (request.headers["Content-Type"].indexOf("application/x-www-form-urlencoded") !== -1)) {
                                 logger.debug(`Stringifying URL encoded data: ${qs.stringify(request.data)}`);
                                 request.data = qs.stringify(request.data);
@@ -321,7 +310,7 @@ export class ProjectEnvironmentsRequested implements HandleEvent<any> {
                             return request;
                         });
 
-                        return jenkinsAxios.post(`https://${jenkinsHost.output}/credentials/store/system/domain/_/createCredentials`,
+                        return axios.post(`https://${jenkinsHost.output}/credentials/store/system/domain/_/createCredentials`,
                             {
                                 json: `${JSON.stringify(jenkinsCredentials)}`,
                             },

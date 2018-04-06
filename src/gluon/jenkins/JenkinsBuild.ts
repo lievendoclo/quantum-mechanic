@@ -168,7 +168,7 @@ export class KickOffJenkinsBuild implements HandleCommand<HandlerResult> {
                                         text: `🚀 *${gluonApplicationName}* is being built...`,
                                     });
                                 }, error => {
-                                    if (error.response.status === 404) {
+                                    if (error.response && error.response.status === 404) {
                                         logger.warn(`This is probably the first build and therefore a master branch job does not exist`);
                                         return kickOffFirstBuild(
                                             jenkinsHost.output,

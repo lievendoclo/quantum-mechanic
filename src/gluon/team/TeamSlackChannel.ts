@@ -220,7 +220,7 @@ function linkSlackChannelToGluonTeam(ctx: HandlerContext,
                                     return Promise.reject("Error creating or finding slack channel: " + JSON.stringify(channel));
                                 }
                             }, err => {
-                                if (err.networkError.response.status === 400) {
+                                if (err.networkError && err.networkError.response && err.networkError.response.status === 400) {
                                     return ctx.messageClient.respond(`The channel has been successfully linked to your team but since the channel "${finalisedSlackChannelName}" is private` +
                                         ` the atomist bot cannot be automatically invited. Please manually invite the atomist bot using the \`/invite @atomist\` command in the "${finalisedSlackChannelName}" slack channel.`);
                                 }

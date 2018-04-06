@@ -11,12 +11,11 @@ import {
 } from "@atomist/automation-client";
 import {buttonForCommand} from "@atomist/automation-client/spi/message/MessageClient";
 import {url} from "@atomist/slack-messages";
-import axios from "axios";
-import * as https from "https";
 import * as _ from "lodash";
 import {QMConfig} from "../../config/QMConfig";
 import {SimpleOption} from "../../openshift/base/options/SimpleOption";
 import {OCCommon} from "../../openshift/OCCommon";
+import {jenkinsAxios} from "../jenkins/Jenkins";
 import {KickOffJenkinsBuild} from "../jenkins/JenkinsBuild";
 import {ApplicationType} from "./Applications";
 
@@ -283,13 +282,8 @@ You can kick off the build pipeline for your library by clicking the button belo
                     .then(jenkinsHost => {
                         logger.debug(`Using Jenkins Route host [${jenkinsHost.output}] to add Bitbucket credentials`);
 
-                        const jenkinsAxios = axios.create({
-                            httpsAgent: new https.Agent({
-                                rejectUnauthorized: false,
-                            }),
-                        });
-
-                        return jenkinsAxios.post(`https://${jenkinsHost.output}/job/${_.kebabCase(gluonProjectName).toLowerCase()}/createItem?name=${_.kebabCase(gluonApplicationName).toLowerCase()}`,
+                        const axios = jenkinsAxios();
+                        return axios.post(`https://${jenkinsHost.output}/job/${_.kebabCase(gluonProjectName).toLowerCase()}/createItem?name=${_.kebabCase(gluonApplicationName).toLowerCase()}`,
                             `
 <org.jenkinsci.plugins.workflow.multibranch.WorkflowMultiBranchProject plugin="workflow-multibranch@2.14">
   <description>${gluonApplicationName} pipelines [[managed by Subatomic](${QMConfig.subatomic.docs.baseUrl}/projects/${encodeURI(gluonProjectName)})]</description>
@@ -342,7 +336,7 @@ You can kick off the build pipeline for your library by clicking the button belo
                                 },
                             })
                             .then(success, error => {
-                                if (error.response.status === 400) {
+                                if (error.response && error.response.status === 400) {
                                     logger.warn(`Multibranch job for [${gluonApplicationName}] probably already created`);
                                     return SuccessPromise;
                                 } else {

@@ -7,6 +7,9 @@ ENV DUMB_INIT_VERSION=1.2.1
 
 USER root
 
+# Add cert
+RUN git config --global http.sslCAInfo /opt/app/config/subatomic-ca-chain.pem
+
 ## Install dumb-init
 RUN wget -O /usr/local/bin/dumb-init https://github.com/Yelp/dumb-init/releases/download/v$DUMB_INIT_VERSION/dumb-init_${DUMB_INIT_VERSION}_amd64
 
