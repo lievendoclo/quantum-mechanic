@@ -19,6 +19,7 @@
     "app-root-path": "^2.0.1",
     "axios-https-proxy-fix": "^0.17.1",
     "graphql": "^0.8.2",
+    "promise-retry": "^1.1.1",
     "promise-timeout": "^1.1.1",
     "query-string": "^5.0.1"
   },

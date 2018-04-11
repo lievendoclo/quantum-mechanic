@@ -13,7 +13,11 @@ export class OCCommon {
         const commandCommandInstance = new OCCommand(`${command} ${type}`, parameters,
             options,
         );
-        return commandCommandInstance.execute(useAsync);
+        if (useAsync === true) {
+            return commandCommandInstance.executeAsync();
+        } else {
+            return commandCommandInstance.execute();
+        }
     }
 
     public static createStdIn(type: string, parameters: string[] = [],

@@ -257,7 +257,11 @@ node('maven') {
             checkout(scm)
 
             try {
-                sh ': Maven build && ./mvnw --batch-mode verify --settings $MVN_SETTINGS'
+                sh ': Maven build &&' +
+                     ' ./mvnw --batch-mode verify --settings $MVN_SETTINGS' +
+                     ' || mvn --batch-mode verify --settings $MVN_SETTINGS' +
+                     ' -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn' +
+                     ' -Dmaven.test.redirectTestOutputToFile=true'
             } finally {
                 junit 'target/surefire-reports/*.xml'
             }
@@ -271,9 +275,12 @@ node('maven') {
                     repository = 'snapshots'
                 }
 
-                sh ': Maven deploy && ./mvnw --batch-mode deploy -DskipTests ' +
-                        "-DaltDeploymentRepository=nexus::default::\${env.NEXUS_BASE_URL}/\${repository}/ " +
-                        '--settings $MVN_SETTINGS'
+                sh ': Maven deploy &&' +
+                     ' ./mvnw --batch-mode deploy --settings $MVN_SETTINGS -DskipTests' +
+                     ' -DaltDeploymentRepository=nexus::default::\${env.NEXUS_BASE_URL}/\${repository}/' +
+                     ' || mvn --batch-mode deploy --settings $MVN_SETTINGS -DskipTests' +
+                     ' -DaltDeploymentRepository=nexus::default::\${env.NEXUS_BASE_URL}/\${repository}/' +
+                     ' -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn'
             }
         }
     }
