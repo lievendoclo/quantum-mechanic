@@ -178,7 +178,7 @@ export class DevOpsEnvironmentRequested implements HandleEvent<any> {
                         // If no team email then the address of the createdBy member
                         new SimpleOption("p", "JENKINS_ADMIN_EMAIL=subatomic@local"),
                         // TODO the registry Cluster IP we will have to get by introspecting the registry Service
-                        new SimpleOption("p", `MAVEN_SLAVE_IMAGE=172.30.1.1:5000/${projectId}/jenkins-slave-maven-subatomic:2.0`),
+                        new SimpleOption("p", `MAVEN_SLAVE_IMAGE=${QMConfig.subatomic.openshift.dockerRepoUrl}/${projectId}/jenkins-slave-maven-subatomic:2.0`),
                         new SimpleOption("-namespace", projectId),
                     ],
                 )

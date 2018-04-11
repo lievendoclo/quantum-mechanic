@@ -25,6 +25,7 @@ Here is an example `local.json`:
       "baseUrl": "http://localhost:8080"
     },
     "openshift": {
+      "dockerRepoUrl": "172.30.1.1:5000"
       "masterUrl": "<minishift ip>",
       "auth": {
         "token": "<subatomic service account token>"
