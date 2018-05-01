@@ -131,7 +131,7 @@ export class ProjectEnvironmentsRequested implements HandleEvent<any> {
                                             },
                                             default: {
                                                 cpu: "4",
-                                                memory: "512Mi",
+                                                memory: "1024Mi",
                                             },
                                             defaultRequest: {
                                                 cpu: "0",

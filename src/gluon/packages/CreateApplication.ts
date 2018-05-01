@@ -341,9 +341,7 @@ node('maven') {
       string(credentialsId: 'devops-project', variable: 'DEVOPS_PROJECT_ID'),
       string(credentialsId: 'dev-project', variable: 'DEV_PROJECT_ID'),
       string(credentialsId: 'sit-project', variable: 'SIT_PROJECT_ID'),
-      string(credentialsId: 'uat-project', variable: 'UAT_PROJECT_ID'),
-      string(credentialsId: 'nexus-base-url', variable: 'NEXUS_BASE_URL'),
-      file(credentialsId: 'maven-settings', variable: 'MVN_SETTINGS'),
+      string(credentialsId: 'uat-project', variable: 'UAT_PROJECT_ID')
     ]) {
     teamDevOpsProject = "\${env.DEVOPS_PROJECT_ID}"
     projectDevProject = "\${env.DEV_PROJECT_ID}"
@@ -366,11 +364,15 @@ node('maven') {
     echo "Building application \${app}:\${tag} from commit \${scmVars} with BuildConfig \${appBuildConfig}"
 
     try {
-      sh ': Maven build &&' +
-         ' ./mvnw --batch-mode test --settings $MVN_SETTINGS' +
-         ' || mvn --batch-mode test --settings $MVN_SETTINGS' +
-         ' -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn' +
-         ' -Dmaven.test.redirectTestOutputToFile=true'
+      withCredentials([
+        file(credentialsId: 'maven-settings', variable: 'MVN_SETTINGS')
+      ]) {
+        sh ': Maven build &&' +
+           " ./mvnw --batch-mode test --settings $MVN_SETTINGS" +
+           " || mvn --batch-mode test --settings $MVN_SETTINGS" +
+           ' -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn' +
+           ' -Dmaven.test.redirectTestOutputToFile=true'
+      }
     } finally {
       junit 'target/surefire-reports/*.xml'
     }
@@ -392,7 +394,10 @@ node('maven') {
         // GIT_PREVIOUS_SUCCESSFUL_COMMIT:5fb1ae6d0fbc67fb437cdaafca2f485ef22855fe,
         // GIT_URL:https://bitbucket.subatomic.local/scm/TEST/full-test.git] with BuildConfig test-project-full-test
 
-        bc.patch("\\'{ \\"spec\\": { \\"output\\": { \\"to\\": { \\"name\\": \\"\${appBuildConfig}:\${tag}\\" } } } }\\'")
+        if (buildConfig.spec.output.to.name != "\${appBuildConfig}:\${tag}") {
+            bc.patch("\\'{ \\"spec\\": { \\"output\\": { \\"to\\": { \\"name\\": \\"\${appBuildConfig}:\${tag}\\" } } } }\\'")
+        }
+
         def build = bc.startBuild();
 
         timeout(5) {
