@@ -1,8 +1,8 @@
 import {
-    CommandHandler,
+    CommandHandler, failure,
     HandleCommand,
     HandlerContext,
-    HandlerResult,
+    HandlerResult, logger,
     MappedParameter,
     MappedParameters,
     Parameter,
@@ -50,7 +50,6 @@ export class CreateProject implements HandleCommand<HandlerResult> {
                     ctx,
                     this.screenName,
                     team.name,
-                    team.slack.teamChannel,
                 );
             }, () => {
                 if (!_.isEmpty(this.teamName)) {
@@ -58,7 +57,6 @@ export class CreateProject implements HandleCommand<HandlerResult> {
                         ctx,
                         this.screenName,
                         this.teamName,
-                        this.teamChannel,
                     );
                 } else {
                     return gluonTeamsWhoSlackScreenNameBelongsTo(ctx, this.screenName)
@@ -87,12 +85,13 @@ export class CreateProject implements HandleCommand<HandlerResult> {
                             });
                         });
                 }
+            }).catch(rejectedReason => {
+                return ctx.messageClient.respond(`Failed to create project with error: ${JSON.stringify(rejectedReason)}`);
             });
     }
 
     private requestNewProject(ctx: HandlerContext, screenName: string,
-                              teamName: string,
-                              teamChannel: string): Promise<any> {
+                              teamName: string): Promise<any> {
         return gluonMemberFromScreenName(ctx, screenName)
             .then(member => {
                 axios.get(`${QMConfig.subatomic.gluon.baseUrl}/teams?name=${teamName}`)
@@ -106,7 +105,13 @@ export class CreateProject implements HandleCommand<HandlerResult> {
                                     teams: [{
                                         teamId: team.data._embedded.teamResources[0].teamId,
                                     }],
-                                });
+                                }).catch(error => {
+                                if (error.response.status === 409) {
+                                    return ctx.messageClient.respond(`❗Failed to create project since the project name is already in use. Please retry using a different project name.`);
+                                } else {
+                                    return ctx.messageClient.respond(`❗Failed to create project with error: ${JSON.stringify(error.response.data)}`);
+                                }
+                            });
                         }
                     });
             });
