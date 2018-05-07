@@ -1,0 +1,58 @@
+{
+  "subatomic": {
+    "commandPrefix" : "sub",
+    "openshift" : {
+      "dockerRepoUrl": "123.123.0.0:5000",
+      "masterUrl": "https://000.000.00.0:8443",
+      "auth": {
+        "token": "6kbO2PM3SbH9XrjQ3tw8crWq2_lduOnp-_tvq_VNy0c"
+      }
+    },
+    "gluon": {
+      "baseUrl": "http://localhost:8080"
+    },
+    "bitbucket": {
+      "baseUrl": "https://bitbucket.subatomic.local",
+      "restUrl": "https://bitbucket.subatomic.local/rest",
+      "caPath": "/path/to/ca",
+      "auth": {
+        "username": "subatomic",
+        "password": "subatomic",
+        "email": "subatomic@local"
+      },
+      "cicdPrivateKeyPath": "/path/to/key",
+      "cicdKey": "ssh-rsa somesecret"
+    },
+    "docs": {
+      "baseUrl": "http://localhost:8080"
+    }
+  },
+  "teamId": "F7E6GGR63A",
+  "token": "88agdfgdf8afg7f7d88g9aeadga8sd89cj",
+  "lifecycles": {
+    "push": {
+      "configuration": {
+        "emoji-style": "default",
+        "show-statuses-on-push": true,
+        "build": {
+          "style": "decorator"
+        },
+        "fingerprints": {
+          "about-hint": false,
+          "render-unchanged": true,
+          "style": "fingerprint-inline"
+        }
+      }
+    },
+    "pull_request": {
+      "configuration": {
+        "emoji-style": "default"
+      }
+    }
+  },
+  "fingerprints": {
+    "data": {
+
+    }
+  }
+}

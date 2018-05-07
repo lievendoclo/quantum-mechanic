@@ -97,10 +97,11 @@ Next steps are to either join an existing team or create a new one.
                         ],
                     }],
                 };
-
                 return ctx.messageClient.addressUsers(msg, this.userId);
             })
-            .catch(err => failure(err));
+            .catch(err => {
+                return failure(err);
+            });
     }
 
     private docs(): string {

@@ -251,7 +251,7 @@ export class DevOpsEnvironmentRequested implements HandleEvent<any> {
                     .then(token => {
                         logger.info(`Using Service Account token: ${token.output}`);
 
-                        return promiseRetry( (retryFunction, attemptCount: number) => {
+                        return promiseRetry((retryFunction, attemptCount: number) => {
                             logger.debug(`Jenkins rollout status check attempt number ${attemptCount}`);
 
                             return OCCommon.commonCommand(
@@ -262,19 +262,19 @@ export class DevOpsEnvironmentRequested implements HandleEvent<any> {
                                     new SimpleOption("-namespace", projectId),
                                     new SimpleOption("-watch=false"),
                                 ], true)
-                                .then( rolloutStatus => {
+                                .then(rolloutStatus => {
                                     logger.debug(JSON.stringify(rolloutStatus.output));
 
                                     if (rolloutStatus.output.indexOf("successfully rolled out") === -1) {
                                         retryFunction();
                                     }
                                 });
-                            }, {
-                                // Retry for up to 3 mins
-                                factor : 1,
-                                retries : 9,
-                                minTimeout : 20000,
-                            })
+                        }, {
+                            // Retry for up to 3 mins
+                            factor: 1,
+                            retries: 9,
+                            minTimeout: 20000,
+                        })
                             .then(() => {
                                 return OCCommon.commonCommand("annotate route",
                                     "jenkins",

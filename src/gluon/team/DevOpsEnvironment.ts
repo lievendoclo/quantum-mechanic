@@ -18,7 +18,7 @@ import {
     gluonTeamsWhoSlackScreenNameBelongsTo,
 } from "./Teams";
 
-@CommandHandler("Check whether to create a new OpenShift DevOps environment or use and existing one", QMConfig.subatomic.commandPrefix + " request devops environment")
+@CommandHandler("Check whether to create a new OpenShift DevOps environment or use an existing one", QMConfig.subatomic.commandPrefix + " request devops environment")
 @Tags("subatomic", "slack", "team", "openshift", "devops")
 export class NewDevOpsEnvironment implements HandleCommand {
 

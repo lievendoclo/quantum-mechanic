@@ -8,8 +8,48 @@ import {StandardOption} from "./base/options/StandardOption";
 
 export class OCCommon {
 
+    public static getInstance(): OCCommon {
+        if (this.instance === null) {
+            this.instance = new OCCommon();
+        }
+        return this.instance;
+    }
+
+    public static setInstance(newInstance: OCCommon): void {
+        this.instance = newInstance;
+    }
+
     public static commonCommand(command: string, type: string, parameters: string[] = [],
                                 options: AbstractOption[] = [], useAsync = false): Promise<OCCommandResult> {
+        return OCCommon.getInstance().commonCommand(command, type, parameters, options, useAsync);
+    }
+
+    public static createStdIn(type: string, parameters: string[] = [],
+                              options: AbstractOption[] = []) {
+        return OCCommon.getInstance().createStdIn(type, parameters, options);
+    }
+
+    public static createFromFile(fileName: string,
+                                 options: AbstractOption[] = [],
+                                 applyNotReplace: boolean = false): Promise<OCCommandResult> {
+        return OCCommon.getInstance().createFromFile(fileName, options, applyNotReplace);
+    }
+
+    public static createFromData(data: any,
+                                 options: AbstractOption[] = [],
+                                 applyNotReplace: boolean = false): Promise<OCCommandResult> {
+        return OCCommon.getInstance().createFromData(data, options, applyNotReplace);
+    }
+
+    public static deleteCommand(type: string, parameters: string[] = [],
+                                options: AbstractOption[] = []): Promise<OCCommandResult> {
+        return this.commonCommand("delete", type, parameters, options);
+    }
+
+    private static instance: OCCommon;
+
+    public commonCommand(command: string, type: string, parameters: string[] = [],
+                         options: AbstractOption[] = [], useAsync = false): Promise<OCCommandResult> {
         const commandCommandInstance = new OCCommand(`${command} ${type}`, parameters,
             options,
         );
@@ -20,14 +60,14 @@ export class OCCommon {
         }
     }
 
-    public static createStdIn(type: string, parameters: string[] = [],
-                              options: AbstractOption[] = []) {
+    public createStdIn(type: string, parameters: string[] = [],
+                       options: AbstractOption[] = []) {
         return this.commonCommand("apply", type, parameters, options);
     }
 
-    public static createFromFile(fileName: string,
-                                 options: AbstractOption[] = [],
-                                 applyNotReplace: boolean = false): Promise<OCCommandResult> {
+    public createFromFile(fileName: string,
+                          options: AbstractOption[] = [],
+                          applyNotReplace: boolean = false): Promise<OCCommandResult> {
         const createFromFileCommand = new OCCommand(
             applyNotReplace ? "apply" : "replace",
             [],
@@ -39,9 +79,9 @@ export class OCCommon {
         return createFromFileCommand.execute();
     }
 
-    public static createFromData(data: any,
-                                 options: AbstractOption[] = [],
-                                 applyNotReplace: boolean = false): Promise<OCCommandResult> {
+    public createFromData(data: any,
+                          options: AbstractOption[] = [],
+                          applyNotReplace: boolean = false): Promise<OCCommandResult> {
         const fileName = Date.now() + ".json";
         fs.writeFileSync(`/tmp/${fileName}`, JSON.stringify(data));
         return OCCommon.createFromFile(`/tmp/${fileName}`, options, applyNotReplace).then(
@@ -56,10 +96,5 @@ export class OCCommon {
                 return Promise.reject(result);
             },
         );
-    }
-
-    public static deleteCommand(type: string, parameters: string[] = [],
-                                options: AbstractOption[] = []): Promise<OCCommandResult> {
-        return this.commonCommand("delete", type, parameters, options);
     }
 }

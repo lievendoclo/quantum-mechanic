@@ -62,7 +62,7 @@ export class AddConfigServer implements HandleCommand<HandlerResult> {
                     return gluonTeamsWhoSlackScreenNameBelongsTo(ctx, this.screenName)
                         .then(teams => {
                             return ctx.messageClient.respond({
-                                text: "Please select a team, whose DevOps project the Subatomic Config Server will be added too",
+                                text: "Please select a team, whose DevOps project the Subatomic Config Server will be added to",
                                 attachments: [{
                                     fallback: "Please select a team",
                                     actions: [

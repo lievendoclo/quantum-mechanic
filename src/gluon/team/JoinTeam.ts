@@ -269,7 +269,7 @@ export class CreateMembershipRequestToTeam implements HandleCommand<HandlerResul
                                             },
                                         }],
                                 }).then(() => {
-                                return success();
+                                    return success();
                             });
 
                         });

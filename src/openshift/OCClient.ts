@@ -9,15 +9,19 @@ export class OCClient {
 
     public static policy = OCPolicy;
 
+    public static getInstance(): OCClient {
+        if (this.instance === null) {
+            this.instance = new OCClient();
+        }
+        return this.instance;
+    }
+
+    public static setInstance(newInstance: OCClient): void {
+        this.instance = newInstance;
+    }
+
     public static login(host: string, token: string): Promise<OCCommandResult> {
-        const loginCommand = new OCCommand("login", [host],
-            [
-                new StandardOption("token", token, true),
-                new StandardOption("insecure-skip-tls-verify", "true"),
-            ],
-            )
-        ;
-        return loginCommand.execute();
+        return OCClient.getInstance().login(host, token);
     }
 
     public static logout(): Promise<OCCommandResult> {
@@ -26,14 +30,7 @@ export class OCClient {
     }
 
     public static newProject(projectName: string, displayName: string, description: string = ""): Promise<OCCommandResult> {
-        const newProjectCommand = new OCCommand("new-project", [projectName],
-            [
-                new StandardOption("display-name", displayName),
-                new StandardOption("description", description),
-            ],
-        );
-
-        return newProjectCommand.execute();
+        return OCClient.getInstance().newProject(projectName, displayName, description);
     }
 
     public static selectProject(projectName: string): Promise<OCCommandResult> {
@@ -64,5 +61,29 @@ export class OCClient {
         }, [
             new SimpleOption("-namespace", project),
         ]);
+    }
+
+    private static instance: OCClient;
+
+    public login(host: string, token: string): Promise<OCCommandResult> {
+        const loginCommand = new OCCommand("login", [host],
+            [
+                new StandardOption("token", token, true),
+                new StandardOption("insecure-skip-tls-verify", "true"),
+            ],
+            )
+        ;
+        return loginCommand.execute();
+    }
+
+    public newProject(projectName: string, displayName: string, description: string = ""): Promise<OCCommandResult> {
+        const newProjectCommand = new OCCommand("new-project", [projectName],
+            [
+                new StandardOption("display-name", displayName),
+                new StandardOption("description", description),
+            ],
+        );
+
+        return newProjectCommand.execute();
     }
 }
