@@ -332,6 +332,7 @@ A package is either an application or a library, click the button below to creat
                         fallback: "Create or link existing package",
                         footer: `For more information, please read the ${this.docs() + "#link-library"}`, // TODO use actual icon
                         color: "#45B254",
+                        thumb_url: "https://raw.githubusercontent.com/absa-subatomic/subatomic-documentation/gh-pages/images/subatomic-logo-colour.png",
                         actions: [
                             // TODO see https://github.com/absa-subatomic/quantum-mechanic/issues/9
                             // buttonForCommand(

@@ -26,6 +26,7 @@ To create a team you must first onboard yourself. Click the button below to do t
                             "documentation")}`, // TODO use actual icon
                         color: "#ffcc00",
                         mrkdwn_in: ["text"],
+                        thumb_url: "https://raw.githubusercontent.com/absa-subatomic/subatomic-documentation/gh-pages/images/subatomic-logo-colour.png",
                         actions: [
                             buttonForCommand(
                                 {

@@ -82,7 +82,8 @@ Next steps are to either join an existing team or create a new one.
                     text,
                     attachments: [{
                         fallback: "Welcome to the Subatomic environment",
-                        footer: `For more information, please read the ${this.docs()}`, // TODO use actual icon
+                        footer: `For more information, please read the ${this.docs()}`,
+                        thumb_url: "https://raw.githubusercontent.com/absa-subatomic/subatomic-documentation/gh-pages/images/subatomic-logo-colour.png",
                         actions: [
                             // TODO add support for this later
                             buttonForCommand(

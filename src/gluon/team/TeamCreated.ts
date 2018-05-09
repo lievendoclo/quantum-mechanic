@@ -50,7 +50,8 @@ Next you should configure your team Slack channel and OpenShift DevOps environme
             text,
             attachments: [{
                 fallback: "Next you should configure your team Slack channel and OpenShift DevOps environment",
-                footer: `For more information, please read the ${this.docs()}`, // TODO use actual icon
+                footer: `For more information, please read the ${this.docs()}`,
+                thumb_url: "https://raw.githubusercontent.com/absa-subatomic/subatomic-documentation/gh-pages/images/subatomic-logo-colour.png",
                 actions: [
                     buttonForCommand(
                         {text: "Team Slack channel"},

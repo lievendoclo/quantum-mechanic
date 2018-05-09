@@ -140,6 +140,7 @@ Click the button below to become familiar with the projects this team is involve
                                                                         fallback: `Welcome to the team ${newTeamMember.firstName}`,
                                                                         footer: `For more information, please read the ${this.docs() + "#list-projects"}`, // TODO use actual icon
                                                                         mrkdwn_in: ["text"],
+                                                                        thumb_url: "https://raw.githubusercontent.com/absa-subatomic/subatomic-documentation/gh-pages/images/subatomic-logo-colour.png",
                                                                         actions: [
                                                                             buttonForCommand(
                                                                                 {text: "Show team projects"},
@@ -188,6 +189,7 @@ They must first be onboarded onto Subatomic _before_ they can be added to a team
                                         footer: `For more information, please read the ${this.docs() + "#onboard-me"}`, // TODO use actual icon
                                         color: "#D94649",
                                         mrkdwn_in: ["text"],
+                                        thumb_url: "https://raw.githubusercontent.com/absa-subatomic/subatomic-documentation/gh-pages/images/subatomic-logo-colour.png",
                                     }],
                                 };
 
@@ -205,6 +207,7 @@ Adding a team member from Slack requires typing their \`@mention\` name or using
                             footer: `For more information, please read the ${this.docs() + "#onboard-me"}`, // TODO use actual icon
                             color: "#D94649",
                             mrkdwn_in: ["text"],
+                            thumb_url: "https://raw.githubusercontent.com/absa-subatomic/subatomic-documentation/gh-pages/images/subatomic-logo-colour.png",
                         }, {
                             text: `Tip: You can get your Slack screen name by typing \`@atomist ${QMConfig.subatomic.commandPrefix} whoami\``,
                             color: "#00a5ff",

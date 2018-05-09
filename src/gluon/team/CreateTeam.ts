@@ -57,6 +57,7 @@ To create a team you must first onboard yourself. Click the button below to do t
                             footer: `For more information, please read the ${this.docs() + "#onboard-me"}`, // TODO use actual icon
                             color: "#D94649",
                             mrkdwn_in: ["text"],
+                            thumb_url: "https://raw.githubusercontent.com/absa-subatomic/subatomic-documentation/gh-pages/images/subatomic-logo-colour.png",
                             actions: [
                                 buttonForCommand(
                                     {
