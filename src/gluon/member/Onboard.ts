@@ -105,7 +105,7 @@ Next steps are to either join an existing team or create a new one.
     }
 
     private docs(): string {
-        return `${url("https://subatomic.bison.absa.co.za/docs/members#joinTeam",
+        return `${url(`${QMConfig.subatomic.docs.baseUrl}/quantum-mechanic/command-reference#joinTeam`,
             "documentation")}`;
     }
 }

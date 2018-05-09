@@ -179,7 +179,7 @@ export class ListProjectDetails implements HandleCommand<HandlerResult> {
                 );
             }
 
-            let headerMessage = `The current details of the project *${this.projectName}* are are as follows.\n*Description:* ${this.projectDescription}\n*Bitbucket URL:* ${bitbucketURL}\n`;
+            let headerMessage = `The current details of the project *${this.projectName}* are as follows.\n*Description:* ${this.projectDescription}\n*Bitbucket URL:* ${bitbucketURL}\n`;
 
             if (attachments.length > 0) {
                 headerMessage += "The below applications belong to the project:";

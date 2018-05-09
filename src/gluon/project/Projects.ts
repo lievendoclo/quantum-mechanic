@@ -23,7 +23,7 @@ Unfortunately Subatomic does not manage this project.
 Consider creating a new project called ${projectName}. Click the button below to do that now.
                             `,
                         fallback: "Project not managed by Subatomic",
-                        footer: `For more information, please read the ${url(`${QMConfig.subatomic.docs.baseUrl}/projects`,
+                        footer: `For more information, please read the ${url(`${QMConfig.subatomic.docs.baseUrl}/quantum-mechanic/command-reference#create-project`,
                             "documentation")}`,
                         color: "#ffcc00",
                         mrkdwn_in: ["text"],

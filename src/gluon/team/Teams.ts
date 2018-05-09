@@ -15,7 +15,7 @@ export function gluonTeamsWhoSlackScreenNameBelongsTo(ctx: HandlerContext, scree
 
             return ctx.messageClient.respond({
                 // TODO this message should be customisable, as this function is used elsewhere
-                text: "Unfortunately, you are not a member of any teams. You must be a member of at least one team to associate this new project too.",
+                text: "Unfortunately, you are not a member of any team. To associate this project you need to be a member of at least one team.",
                 attachments: [{
                     text: "You can either create a new team or apply to join an existing team",
                     actions: [
@@ -32,7 +32,7 @@ export function gluonTeamsWhoSlackScreenNameBelongsTo(ctx: HandlerContext, scree
                     ],
                 }],
             })
-                .then(() => Promise.reject(`${screenName} does not belong to any teams`));
+                .then(() => Promise.reject(`${screenName} does not belong to any team`));
         });
 }
 
@@ -46,7 +46,7 @@ export function gluonTeamForSlackTeamChannel(teamChannel: string): Promise<any> 
                     throw new RangeError("Multiple teams associated with the same Slack team channel is not expected");
                 }
             } else {
-                return Promise.reject(`No teams associated with Slack team channel: ${teamChannel}`);
+                return Promise.reject(`No team associated with Slack team channel: ${teamChannel}`);
             }
         });
 }

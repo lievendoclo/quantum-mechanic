@@ -72,7 +72,7 @@ Next you should configure your team Slack channel and OpenShift DevOps environme
     }
 
     private docs(): string {
-        return `${url("https://subatomic.bison.absa.co.za/docs/teams#new",
+        return `${url(`${QMConfig.subatomic.docs.baseUrl}/user-guide/create-a-team#associate-a-slack-channel`,
             "documentation")}`;
     }
 }

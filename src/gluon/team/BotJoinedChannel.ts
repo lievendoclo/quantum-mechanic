@@ -11,6 +11,7 @@ import {
 } from "@atomist/automation-client";
 import {buttonForCommand} from "@atomist/automation-client/spi/message/MessageClient";
 import {SlackMessage, url} from "@atomist/slack-messages";
+import {QMConfig} from "../../config/QMConfig";
 import {NewDevOpsEnvironment} from "./DevOpsEnvironment";
 import {AddMemberToTeam} from "./JoinTeam";
 
@@ -97,7 +98,7 @@ If you haven't already, you might want to:
     }
 
     private docs(): string {
-        return `${url("https://subatomic.bison.absa.co.za/docs/teams#slack",
+        return `${url(`${QMConfig.subatomic.docs.baseUrl}/new-to-subatomic`,
             "documentation")}`;
     }
 }

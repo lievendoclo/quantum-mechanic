@@ -75,7 +75,7 @@ rather use that instead?\
     }
 
     private docs(): string {
-        return `${url(`${QMConfig.subatomic.docs.baseUrl}/teams#slack`,
+        return `${url(`${QMConfig.subatomic.docs.baseUrl}/user-guide/create-a-team#associate-a-slack-channel`,
             "documentation")}`;
     }
 }
@@ -110,7 +110,7 @@ export class NewTeamSlackChannel implements HandleCommand {
     }
 
     private docs(): string {
-        return `${url(`${QMConfig.subatomic.docs.baseUrl}/teams`,
+        return `${url(`${QMConfig.subatomic.docs.baseUrl}/quantum-mechanic/command-reference#create-team-channel`,
             "documentation")}`;
     }
 }
@@ -171,7 +171,7 @@ export class LinkExistingTeamSlackChannel implements HandleCommand {
     }
 
     private docs(): string {
-        return `${url(`${QMConfig.subatomic.docs.baseUrl}/teams`,
+        return `${url(`${QMConfig.subatomic.docs.baseUrl}/quantum-mechanic/command-reference#link-team-channel`,
             "documentation")}`;
     }
 }

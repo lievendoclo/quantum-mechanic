@@ -22,7 +22,7 @@ Unfortunately you do not seem to have been onboarded to Subatomic.
 To create a team you must first onboard yourself. Click the button below to do that now.
                             `,
                         fallback: "You are not onboarded to Subatomic",
-                        footer: `For more information, please read the ${url("https://subatomic.bison.absa.co.za/docs/teams",
+                        footer: `For more information, please read the ${url(`${QMConfig.subatomic.docs.baseUrl}/teams`,
                             "documentation")}`, // TODO use actual icon
                         color: "#ffcc00",
                         mrkdwn_in: ["text"],

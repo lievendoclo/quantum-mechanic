@@ -53,7 +53,7 @@ Unfortunately Subatomic does not manage this project.
 Consider creating a new application called ${applicationName}. Click the button below to do that now.
                             `,
                         fallback: "Application not managed by Subatomic",
-                        footer: `For more information, please read the ${url(`${QMConfig.subatomic.docs.baseUrl}/applications`,
+                        footer: `For more information, please read the ${url(`${QMConfig.subatomic.docs.baseUrl}/quantum-mechanic/command-reference#create-bitbucket-project`,
                             "documentation")}`,
                         color: "#ffcc00",
                         mrkdwn_in: ["text"],

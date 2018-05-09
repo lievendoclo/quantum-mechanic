@@ -330,7 +330,7 @@ Since you have Subatomic project environments ready, you can now add packages.
 A package is either an application or a library, click the button below to create an application now.`,
                     attachments: [{
                         fallback: "Create or link existing package",
-                        footer: `For more information, please read the ${this.docs()}`, // TODO use actual icon
+                        footer: `For more information, please read the ${this.docs() + "#link-library"}`, // TODO use actual icon
                         color: "#45B254",
                         actions: [
                             // TODO see https://github.com/absa-subatomic/quantum-mechanic/issues/9
@@ -391,7 +391,7 @@ A package is either an application or a library, click the button below to creat
     }
 
     private docs(): string {
-        return `${url(`${QMConfig.subatomic.docs.baseUrl}/projects`,
+        return `${url(`${QMConfig.subatomic.docs.baseUrl}/quantum-mechanic/command-reference`,
             "documentation")}`;
     }
 }
