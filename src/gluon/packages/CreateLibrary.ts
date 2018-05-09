@@ -201,6 +201,7 @@ export class LinkExistingLibrary implements HandleCommand<HandlerResult> {
                                 text: "Please select the Bitbucket repository which contains the library you want to link",
                                 attachments: [{
                                     fallback: "Please select the Bitbucket repository which contains the library you want to link",
+                                    thumb_url: "https://raw.githubusercontent.com/absa-subatomic/subatomic-documentation/gh-pages/images/atlassian-bitbucket-logo.png",
                                     actions: [
                                         menuForCommand({
                                                 text: "Select Bitbucket repository",

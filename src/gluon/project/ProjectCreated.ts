@@ -55,6 +55,7 @@ This can be a new Bitbucket project that will be created and configured accordin
                 fallback: "Create or link Bitbucket project",
                 footer: `For more information, please read the ${this.docs() + "#create-bitbucket-project"}`,
                 color: "#45B254",
+                thumb_url: "https://raw.githubusercontent.com/absa-subatomic/subatomic-documentation/gh-pages/images/atlassian-bitbucket-logo.png",
                 actions: [
                     buttonForCommand(
                         {text: "Create Bitbucket project"},
@@ -76,6 +77,7 @@ These environments are realised as OpenShift projects and need to be created or 
                 fallback: "Create or link existing OpenShift environments",
                 footer: `For more information, please read the ${this.docs() + "#request-project-environments"}`,
                 color: "#45B254",
+                thumb_url: "https://raw.githubusercontent.com/absa-subatomic/subatomic-documentation/gh-pages/images/openshift-logo.png",
                 actions: [
                     buttonForCommand(
                         {text: "Create OpenShift environments"},

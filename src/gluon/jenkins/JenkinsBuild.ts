@@ -75,6 +75,7 @@ export class KickOffJenkinsBuild implements HandleCommand<HandlerResult> {
                                 text: "Please select a team linked to a project with the application you want to build",
                                 attachments: [{
                                     fallback: "Please select a team linked to a project with the application you want to build",
+                                    thumb_url: "https://raw.githubusercontent.com/absa-subatomic/subatomic-documentation/gh-pages/images/jenkins-logo.png",
                                     actions: [
                                         menuForCommand({
                                                 text: "Select Team", options:
