@@ -22,6 +22,13 @@ export const ProjectCreatedEvent: Ingester = {
                     },
                 },
                 {
+                    name: "tenant",
+                    type: {
+                        kind: "OBJECT",
+                        name: "GluonTenant",
+                    },
+                },
+                {
                     name: "createdBy",
                     type: {
                         kind: "OBJECT",
@@ -55,6 +62,13 @@ export const ProjectEnvironmentsRequestedEvent: Ingester = {
                             kind: "OBJECT",
                             name: "GluonTeam",
                         },
+                    },
+                },
+                {
+                    name: "owningTenant",
+                    type: {
+                        kind: "OBJECT",
+                        name: "GluonTenant",
                     },
                 },
                 {

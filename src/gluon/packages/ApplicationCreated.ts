@@ -17,6 +17,9 @@ import {SimpleOption} from "../../openshift/base/options/SimpleOption";
 import {OCCommon} from "../../openshift/OCCommon";
 import {jenkinsAxios} from "../jenkins/Jenkins";
 import {KickOffJenkinsBuild} from "../jenkins/JenkinsBuild";
+import {getProjectId} from "../project/Project";
+import {gluonProjectFromProjectName} from "../project/Projects";
+import {gluonTenantFromTenantId} from "../shared/Tenant";
 import {ApplicationType} from "./Applications";
 
 @EventHandler("Receive ApplicationCreatedEvent events", `
@@ -146,59 +149,14 @@ export class ApplicationCreated implements HandleEvent<any> {
                                 ], true); // TODO clean up this hack - cannot be a boolean (magic)
                         })
                         .then(() => {
-                            return Promise.all([["dev"],
-                                ["sit"],
-                                ["uat"]]
-                                .map(environment => {
-                                    const projectId = `${_.kebabCase(applicationCreatedEvent.project.name).toLowerCase()}-${environment}`;
-                                    const appName = `${_.kebabCase(applicationCreatedEvent.application.name).toLowerCase()}`;
-                                    logger.info(`Processing app [${appName}] Template for: ${projectId}`);
+                            return gluonProjectFromProjectName(ctx, applicationCreatedEvent.project.name).then(project => {
+                                logger.info(`Trying to find tenant: ${project.owningTenant}`);
+                                return gluonTenantFromTenantId(project.owningTenant).then(tenant => {
+                                    logger.info(`Found tenant: ${tenant}`);
+                                    return this.createApplicationOpenshiftResources(tenant.name, project.name, applicationCreatedEvent.application.name);
+                                });
+                            });
 
-                                    return OCCommon.commonCommand("get", "templates",
-                                        ["subatomic-app-template"],
-                                        [
-                                            new SimpleOption("-namespace", "subatomic"),
-                                            new SimpleOption("-output", "json"),
-                                        ],
-                                    )
-                                        .then(template => {
-                                            const appTemplate: any = JSON.parse(template.output);
-                                            appTemplate.metadata.namespace = projectId;
-                                            return OCCommon.createFromData(appTemplate,
-                                                [
-                                                    new SimpleOption("-namespace", projectId),
-                                                ]
-                                                , );
-                                        })
-                                        .then(() => {
-                                            return OCCommon.commonCommand("process",
-                                                "subatomic-app-template",
-                                                [],
-                                                [
-                                                    new SimpleOption("p", `APP_NAME=${appName}`),
-                                                    new SimpleOption("p", `IMAGE_STREAM_PROJECT=${projectId}`),
-                                                    new SimpleOption("-namespace", projectId),
-                                                ],
-                                            )
-                                                .then(appTemplate => {
-                                                    logger.debug(`Processed app [${appName}] Template: ${appTemplate.output}`);
-
-                                                    return OCCommon.commonCommand("get", `dc/${appName}`, [],
-                                                        [
-                                                            new SimpleOption("-namespace", projectId),
-                                                        ])
-                                                        .then(() => {
-                                                            logger.warn(`App [${appName}] Template has already been processed, deployment exists`);
-                                                            return SuccessPromise;
-                                                        }, () => {
-                                                            return OCCommon.createFromData(JSON.parse(appTemplate.output),
-                                                                [
-                                                                    new SimpleOption("-namespace", projectId),
-                                                                ]);
-                                                        });
-                                                });
-                                        });
-                                }));
                         });
                 })
                 .then(() => {
@@ -256,6 +214,62 @@ You can kick off the build pipeline for your library by clicking the button belo
                     },
                 );
         }
+    }
+
+    private createApplicationOpenshiftResources(tenantName: string, projectName: string, applicationName: string): Promise<any[]> {
+        return Promise.all([["dev"],
+            ["sit"],
+            ["uat"]]
+            .map(environment => {
+                const projectId = getProjectId(tenantName, projectName, environment[0]);
+                const appName = `${_.kebabCase(applicationName).toLowerCase()}`;
+                logger.info(`Processing app [${appName}] Template for: ${projectId}`);
+
+                return OCCommon.commonCommand("get", "templates",
+                    ["subatomic-app-template"],
+                    [
+                        new SimpleOption("-namespace", "subatomic"),
+                        new SimpleOption("-output", "json"),
+                    ],
+                )
+                    .then(template => {
+                        const appTemplate: any = JSON.parse(template.output);
+                        appTemplate.metadata.namespace = projectId;
+                        return OCCommon.createFromData(appTemplate,
+                            [
+                                new SimpleOption("-namespace", projectId),
+                            ]
+                            , );
+                    })
+                    .then(() => {
+                        return OCCommon.commonCommand("process",
+                            "subatomic-app-template",
+                            [],
+                            [
+                                new SimpleOption("p", `APP_NAME=${appName}`),
+                                new SimpleOption("p", `IMAGE_STREAM_PROJECT=${projectId}`),
+                                new SimpleOption("-namespace", projectId),
+                            ],
+                        )
+                            .then(appTemplate => {
+                                logger.debug(`Processed app [${appName}] Template: ${appTemplate.output}`);
+
+                                return OCCommon.commonCommand("get", `dc/${appName}`, [],
+                                    [
+                                        new SimpleOption("-namespace", projectId),
+                                    ])
+                                    .then(() => {
+                                        logger.warn(`App [${appName}] Template has already been processed, deployment exists`);
+                                        return SuccessPromise;
+                                    }, () => {
+                                        return OCCommon.createFromData(JSON.parse(appTemplate.output),
+                                            [
+                                                new SimpleOption("-namespace", projectId),
+                                            ]);
+                                    });
+                            });
+                    });
+            }));
     }
 
     private createJenkinsJob(teamDevOpsProjectId: string,

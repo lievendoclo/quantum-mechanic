@@ -12,6 +12,7 @@ import axios from "axios";
 import * as _ from "lodash";
 import {QMConfig} from "../../config/QMConfig";
 import {gluonMemberFromScreenName} from "../member/Members";
+import {gluonTenantFromTenantName, gluonTenantList} from "../shared/Tenant";
 import {
     gluonTeamForSlackTeamChannel,
     gluonTeamsWhoSlackScreenNameBelongsTo,
@@ -43,20 +44,29 @@ export class CreateProject implements HandleCommand<HandlerResult> {
     })
     public teamName: string;
 
+    @Parameter({
+        description: "tenant name",
+        required: false,
+        displayable: false,
+    })
+    public tenantName: string = null;
+
     public handle(ctx: HandlerContext): Promise<HandlerResult> {
         return gluonTeamForSlackTeamChannel(this.teamChannel)
             .then(team => {
-                return this.requestNewProject(
+                return this.requestNewProjectForTeam(
                     ctx,
                     this.screenName,
                     team.name,
+                    this.tenantName,
                 );
             }, () => {
                 if (!_.isEmpty(this.teamName)) {
-                    return this.requestNewProject(
+                    return this.requestNewProjectForTeam(
                         ctx,
                         this.screenName,
                         this.teamName,
+                        this.tenantName,
                     );
                 } else {
                     return gluonTeamsWhoSlackScreenNameBelongsTo(ctx, this.screenName)
@@ -90,8 +100,45 @@ export class CreateProject implements HandleCommand<HandlerResult> {
             });
     }
 
-    private requestNewProject(ctx: HandlerContext, screenName: string,
-                              teamName: string): Promise<any> {
+    private requestNewProjectForTeam(ctx: HandlerContext, screenName: string,
+                                     teamName: string, tenantName: string): Promise<any> {
+
+        if (tenantName === null) {
+            return gluonTenantList().then(tenants => {
+                return ctx.messageClient.respond({
+                    text: "Please select a tenant you would like to associate this project with. Choose Default if you have no tenant specified for this project.",
+                    attachments: [{
+                        fallback: "Select a tenant to associate this new project with. Choose Default if you have no tenant specified for this project.",
+                        actions: [
+                            menuForCommand({
+                                    text: "Select Tenant", options:
+                                        tenants.map(tenant => {
+                                            return {
+                                                value: tenant.name,
+                                                text: tenant.name,
+                                            };
+                                        }),
+                                },
+                                new CreateProject(), "tenantName",
+                                {
+                                    name: this.name,
+                                    description: this.description,
+                                    teamName: this.tenantName,
+                                }),
+                        ],
+                    }],
+                });
+            });
+        } else {
+            return gluonTenantFromTenantName(tenantName).then(tenant => {
+                return this.requestNewProjectForTeamAndTenant(ctx, screenName, teamName, tenant.tenantId);
+            });
+        }
+    }
+
+    private requestNewProjectForTeamAndTenant(ctx: HandlerContext, screenName: string,
+                                              teamName: string, tenantId: string): Promise<any> {
+
         return gluonMemberFromScreenName(ctx, screenName)
             .then(member => {
                 axios.get(`${QMConfig.subatomic.gluon.baseUrl}/teams?name=${teamName}`)
@@ -102,6 +149,7 @@ export class CreateProject implements HandleCommand<HandlerResult> {
                                     name: this.name,
                                     description: this.description,
                                     createdBy: member.memberId,
+                                    owningTenant: tenantId,
                                     teams: [{
                                         teamId: team.data._embedded.teamResources[0].teamId,
                                     }],

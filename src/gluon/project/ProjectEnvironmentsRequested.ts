@@ -20,6 +20,7 @@ import {OCCommon} from "../../openshift/OCCommon";
 import {jenkinsAxios} from "../jenkins/Jenkins";
 import {LinkExistingApplication} from "../packages/CreateApplication";
 import {LinkExistingLibrary} from "../packages/CreateLibrary";
+import {getProjectDisplayName, getProjectId} from "./Project";
 
 @EventHandler("Receive ProjectEnvironmentsRequestedEvent events", `
 subscription ProjectEnvironmentsRequestedEvent {
@@ -51,6 +52,11 @@ subscription ProjectEnvironmentsRequestedEvent {
         }
       }
     }
+    owningTenant {
+      tenantId,
+      name,
+      description
+    }
     requestedBy {
       firstName
       slackIdentity {
@@ -74,13 +80,13 @@ export class ProjectEnvironmentsRequested implements HandleEvent<any> {
             ["sit", "Integration testing"],
             ["uat", "User acceptance"]]
             .map(environment => {
-                const projectId = `${_.kebabCase(environmentsRequestedEvent.project.name).toLowerCase()}-${environment[0]}`;
+                const projectId = getProjectId(environmentsRequestedEvent.owningTenant.name, environmentsRequestedEvent.project.name, environment[0]);
                 logger.info(`Working with OpenShift project Id: ${projectId}`);
 
                 return OCClient.login(QMConfig.subatomic.openshift.masterUrl, QMConfig.subatomic.openshift.auth.token)
                     .then(() => {
                         return OCClient.newProject(projectId,
-                            `${environmentsRequestedEvent.project.name} ${environment[0].toUpperCase()}`,
+                            getProjectDisplayName(environmentsRequestedEvent.owningTenant.name, environmentsRequestedEvent.project.name, environment[0]),
                             `${environment[1]} environment for ${environmentsRequestedEvent.project.name} [managed by Subatomic]`);
                     })
                     .then(() => {
@@ -233,17 +239,17 @@ export class ProjectEnvironmentsRequested implements HandleEvent<any> {
             <org.jenkinsci.plugins.plaincredentials.impl.StringCredentialsImpl plugin="plain-credentials@1.4">
               <id>dev-project</id>
               <description>DEV OpenShift project Id</description>
-              <secret>${_.kebabCase(environmentsRequestedEvent.project.name).toLowerCase()}-dev</secret>
+              <secret>${getProjectId(environmentsRequestedEvent.owningTenant.name, environmentsRequestedEvent.project.name, "dev")}</secret>
             </org.jenkinsci.plugins.plaincredentials.impl.StringCredentialsImpl>
             <org.jenkinsci.plugins.plaincredentials.impl.StringCredentialsImpl plugin="plain-credentials@1.4">
               <id>sit-project</id>
               <description>SIT OpenShift project Id</description>
-              <secret>${_.kebabCase(environmentsRequestedEvent.project.name).toLowerCase()}-sit</secret>
+              <secret>${getProjectId(environmentsRequestedEvent.owningTenant.name, environmentsRequestedEvent.project.name, "sit")}</secret>
             </org.jenkinsci.plugins.plaincredentials.impl.StringCredentialsImpl>
             <org.jenkinsci.plugins.plaincredentials.impl.StringCredentialsImpl plugin="plain-credentials@1.4">
               <id>uat-project</id>
               <description>UAT OpenShift project Id</description>
-              <secret>${_.kebabCase(environmentsRequestedEvent.project.name).toLowerCase()}-uat</secret>
+              <secret>${getProjectId(environmentsRequestedEvent.owningTenant.name, environmentsRequestedEvent.project.name, "uat")}</secret>
             </org.jenkinsci.plugins.plaincredentials.impl.StringCredentialsImpl>
           </list>
         </entry>

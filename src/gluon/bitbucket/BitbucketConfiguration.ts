@@ -1,4 +1,4 @@
-import {logger} from "@atomist/automation-client";
+import {logger, SuccessPromise} from "@atomist/automation-client";
 import {AxiosInstance, AxiosPromise} from "axios-https-proxy-fix";
 import * as _ from "lodash";
 import {QMConfig} from "../../config/QMConfig";
@@ -17,7 +17,7 @@ export class BitbucketConfiguration {
         this.teamMembers = this.teamMembers.map(member => usernameFromDomainUsername(member));
     }
 
-    public configureBitbucketProject(bitbucketProjectKey: string): Promise<[any]> {
+    public configureBitbucketProject(bitbucketProjectKey: string): Promise<any[]> {
         logger.info(`Configuring project for key: ${bitbucketProjectKey}`);
 
         return Promise.all([
@@ -32,12 +32,13 @@ export class BitbucketConfiguration {
                         const jsonLength = reviewers.data.length;
                         let reviewerExists = false;
 
-                        for ( let i = 0; i < jsonLength; i++) {
+                        for (let i = 0; i < jsonLength; i++) {
                             if (reviewers.data[i].reviewers[0].name === owner) {
-                                reviewerExists = true; break;
+                                reviewerExists = true;
+                                break;
                             }
                         }
-                        if (reviewerExists !== true ) {
+                        if (reviewerExists !== true) {
                             return Promise.all([
                                 this.addDefaultReviewers(bitbucketProjectKey, owner),
                                 this.addDefaultReviewers(bitbucketProjectKey, member),
@@ -61,7 +62,7 @@ export class BitbucketConfiguration {
             {});
     }
 
-    private addBranchPermissions(bitbucketProjectKey: string, owners: string[], additional: string[] = []): Promise<[any]> {
+    private addBranchPermissions(bitbucketProjectKey: string, owners: string[], additional: string[] = []): Promise<any[]> {
         const allUsers = owners.concat(additional);
         return Promise.all([
             this.axios.post(`${QMConfig.subatomic.bitbucket.restUrl}/branch-permissions/2.0/projects/${bitbucketProjectKey}/restrictions`,
@@ -106,7 +107,7 @@ export class BitbucketConfiguration {
         ]);
     }
 
-    private addHooks(bitbucketProjectKey: string): Promise<[any]> {
+    private addHooks(bitbucketProjectKey: string): Promise<any[]> {
         // Enable and configure hooks
         return Promise.all([
             this.axios.put(`${QMConfig.subatomic.bitbucket.restUrl}/api/1.0/projects/${bitbucketProjectKey}/settings/hooks/com.atlassian.bitbucket.server.bitbucket-bundled-hooks:verify-committer-hook/enabled`,
@@ -159,4 +160,24 @@ export class BitbucketConfiguration {
                 });
         }
     }
+}
+
+export function addBitbucketProjectAccessKeys(bitbucketProjectKey: string): Promise<any> {
+
+    return bitbucketAxios().post(`${QMConfig.subatomic.bitbucket.restUrl}/keys/1.0/projects/${bitbucketProjectKey}/ssh`,
+        {
+            key: {
+                text: QMConfig.subatomic.bitbucket.cicdKey,
+            },
+            permission: "PROJECT_READ",
+        }).catch(error => {
+        logger.warn(`Could not add SSH keys to Bitbucket project: [${error.response.status}-${JSON.stringify(error.response.data)}]`);
+        if (error.response && error.response.status === 409) {
+            // it's ok, it's already done 👍
+            logger.warn(`Probably failed due to keys already existing.`);
+            return SuccessPromise;
+        }
+        return Promise.reject(error);
+    });
+
 }

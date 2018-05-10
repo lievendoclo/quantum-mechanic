@@ -31,6 +31,11 @@ subscription ProjectCreatedEvent {
         teamChannel
       }
     }
+    tenant {
+      tenantId
+      name
+      description
+    }
     createdBy {
       firstName
       slackIdentity {

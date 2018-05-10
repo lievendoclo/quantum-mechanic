@@ -4,20 +4,16 @@ import {
     HandleCommand,
     HandlerContext,
     HandlerResult,
-    logger,
     MappedParameter,
     MappedParameters,
     Parameter,
     success,
 } from "@atomist/automation-client";
-import {menuForCommand} from "@atomist/automation-client/spi/message/MessageClient";
-import {SlackMessage} from "@atomist/slack-messages";
 import axios from "axios";
-import * as _ from "lodash";
 import {QMConfig} from "../../config/QMConfig";
 import {gluonMemberFromScreenName} from "../member/Members";
 import {gluonProjectFromProjectName} from "../project/Projects";
-import {bitbucketAxios, bitbucketProjects} from "./Bitbucket";
+import {bitbucketAxios} from "./Bitbucket";
 
 @CommandHandler("Create a new Bitbucket project", QMConfig.subatomic.commandPrefix + " create bitbucket project")
 export class NewBitbucketProject implements HandleCommand<HandlerResult> {
@@ -91,37 +87,37 @@ export class ListExistingBitbucketProject implements HandleCommand<HandlerResult
             .then(member => {
                 return gluonProjectFromProjectName(ctx, this.projectName)
                     .then(gluonProject => {
-                        // get the selected project's details
-                        const projectRestUrl = `${QMConfig.subatomic.bitbucket.restUrl}/api/1.0/projects/${this.bitbucketProjectKey}`;
-                        const projectUiUrl = `${QMConfig.subatomic.bitbucket.baseUrl}/projects/${this.bitbucketProjectKey}`;
-                        return bitbucketAxios().get(projectRestUrl)
-                            .then(project => {
-                                return axios.put(`${QMConfig.subatomic.gluon.baseUrl}/projects/${gluonProject.projectId}`,
-                                    {
-                                        bitbucketProject: {
-                                            bitbucketProjectId: project.data.id,
-                                            name: project.data.name,
-                                            description: project.data.description,
-                                            key: this.bitbucketProjectKey,
-                                            url: projectUiUrl,
-                                        },
-                                        createdBy: member.memberId,
-                                    });
-                            })
+                        return ctx.messageClient.addressChannels({
+                            text: `🚀 The Bitbucket project with key ${this.bitbucketProjectKey} is being configured...`,
+                        }, this.teamChannel)
                             .then(() => {
-                                return ctx.messageClient.addressChannels({
-                                    text: `🚀 The Bitbucket project with key ${this.bitbucketProjectKey} is being configured...`,
-                                }, this.teamChannel);
-                            })
-                            .catch(error => {
-                                if (error.response && error.response.status === 404) {
-                                    return ctx.messageClient.addressChannels({
-                                        text: `⚠️ The Bitbucket project with key ${this.bitbucketProjectKey} was not found`,
-                                    }, this.teamChannel)
-                                        .then(failure);
-                                } else {
-                                    return failure(error);
-                                }
+                                // get the selected project's details
+                                const projectRestUrl = `${QMConfig.subatomic.bitbucket.restUrl}/api/1.0/projects/${this.bitbucketProjectKey}`;
+                                const projectUiUrl = `${QMConfig.subatomic.bitbucket.baseUrl}/projects/${this.bitbucketProjectKey}`;
+                                return bitbucketAxios().get(projectRestUrl)
+                                    .then(project => {
+                                        return axios.put(`${QMConfig.subatomic.gluon.baseUrl}/projects/${gluonProject.projectId}`,
+                                            {
+                                                bitbucketProject: {
+                                                    bitbucketProjectId: project.data.id,
+                                                    name: project.data.name,
+                                                    description: project.data.description,
+                                                    key: this.bitbucketProjectKey,
+                                                    url: projectUiUrl,
+                                                },
+                                                createdBy: member.memberId,
+                                            }).then(success);
+                                    })
+                                    .catch(error => {
+                                        if (error.response && error.response.status === 404) {
+                                            return ctx.messageClient.addressChannels({
+                                                text: `⚠️ The Bitbucket project with key ${this.bitbucketProjectKey} was not found`,
+                                            }, this.teamChannel)
+                                                .then(failure);
+                                        } else {
+                                            return failure(error);
+                                        }
+                                    });
                             });
                     });
             });

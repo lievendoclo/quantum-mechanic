@@ -13,7 +13,10 @@ import axios from "axios";
 import * as _ from "lodash";
 import {QMConfig} from "../../config/QMConfig";
 import {bitbucketAxios, bitbucketProjectFromKey} from "./Bitbucket";
-import {BitbucketConfiguration} from "./BitbucketConfiguration";
+import {
+    addBitbucketProjectAccessKeys,
+    BitbucketConfiguration,
+} from "./BitbucketConfiguration";
 
 @EventHandler("Receive BitbucketProjectRequestedEvent events", `
 subscription BitbucketProjectRequestedEvent {
@@ -115,21 +118,10 @@ export class BitbucketProjectRequested implements HandleEvent<any> {
                 }
             })
             .then(() => {
-                return bitbucketAxios().post(`${QMConfig.subatomic.bitbucket.restUrl}/keys/1.0/projects/${key}/ssh`,
-                    {
-                        key: {
-                            text: QMConfig.subatomic.bitbucket.cicdKey,
-                        },
-                        permission: "PROJECT_READ",
-                    });
+                return addBitbucketProjectAccessKeys(key);
             })
             .catch(error => {
-                logger.warn(`Could not add SSH keys to Bitbucket project: [${error.response.status}-${JSON.stringify(error.response.data)}]`);
-                if (error.response && error.response.status === 409) {
-                    // it's ok, it's already done 👍
-                    return SuccessPromise;
-                }
-
+                logger.error(`Failed to configure Bitbucket Project ${bitbucketProjectRequestedEvent.project.name} with error: ${JSON.stringify(error)}`);
                 return ctx.messageClient.addressUsers({
                     text: `There was an error adding SSH keys for ${bitbucketProjectRequestedEvent.project.name} Bitbucket project`,
                 }, bitbucketProjectRequestedEvent.requestedBy.slackIdentity.screenName);
