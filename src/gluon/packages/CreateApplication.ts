@@ -319,180 +319,154 @@ export class LinkExistingApplication implements HandleCommand<HandlerResult> {
                                 logger.warn("Doesn't exist, add it!");
                                 return project.addFile("Jenkinsfile",
                                     `
-// Could parametize like this
-// properties([
-//   parameters([
-//     string(description: "The OpenShift project Id of the team's DevOps project", name: 'devOpsProject'),
-//     string(description: "The OpenShift project Id of project's DEV environment", name: 'devProject'),
-//     string(description: "The OpenShift project Id of project's SIT environment", name: 'sitProject'),
-//     string(description: "The OpenShift project Id of project's UAT environment", name: 'uatProject'),
-//   ])
-// ])
+/**
+ * Jenkins pipeline to build an application with the GitHub flow in mind (https://guides.github.com/introduction/flow/).
+ *
+ * This pipeline requires the following credentials:
+ * ---
+ * Type          | ID                | Description
+ * Secret text   | devops-project    | The OpenShift project Id of the DevOps project that this Jenkins instance is running in
+ * Secret text   | dev-project       | The OpenShift project Id of the project's development environment
+ * Secret text   | sit-project       | The OpenShift project Id of the project's sit environment
+ * Secret text   | uat-project       | The OpenShift project Id of the project's uat environment
+ *
+ */
 
-// TODO extract common stuff into shared libraries: https://jenkins.io/doc/book/pipeline/shared-libraries/
+def deploy(project, app, tag) {
+    openshift.withProject(project) {
+        def dc = openshift.selector('dc', app);
+        for (trigger in dc.object().spec.triggers) {
+            if (trigger.type == "ImageChange") {
+                def imageStreamName = trigger.imageChangeParams.from.name
+                echo "Current ImageStream tag: \${imageStreamName}"
+                echo "New ImageStream tag: \${app}:\${tag}"
+                if (imageStreamName != "\${app}:\${tag}") {
+                    openshift.selector('dc', app).patch("\\'{ \\"spec\\": { \\"triggers\\": [{ \\"type\\": \\"ImageChange\\", \\"imageChangeParams\\": { \\"automatic\\": false, \\"containerNames\\": [\\"\${app}\\"], \\"from\\": { \\"kind\\": \\"ImageStreamTag\\", \\"name\\": \\"\${app}:\${tag}\\" } } }] } }\\'")
+                }
+                break
+            }
+            openshift.selector('dc', app).rollout().latest()
+
+            timeout(5) {
+                def deploymentObject = openshift.selector('dc', "\${app}").object()
+                if (deploymentObject.spec.replicas > 0) {
+                    def latestDeploymentVersion = deploymentObject.status.latestVersion
+                    def replicationController = openshift.selector('rc', "\${app}-\${latestDeploymentVersion}")
+                    replicationController.untilEach(1) {
+                        def replicationControllerMap = it.object()
+                        echo "Replicas: \${replicationControllerMap.status.readyReplicas}"
+                        return (replicationControllerMap.status.replicas.equals(replicationControllerMap.status.readyReplicas))
+                    }
+                } else {
+                    echo "Deployment has a replica count of 0. Not waiting for Pods to become healthy..."
+                }
+            }
+        }
+    }
+}
 
 node('maven') {
 
-  def teamDevOpsProject
-  def projectDevProject
-  def projectSitProject
-  def projectUatProject
+    def teamDevOpsProject
+    def projectDevProject
+    def projectSitProject
+    def projectUatProject
 
-  withCredentials([
-      string(credentialsId: 'devops-project', variable: 'DEVOPS_PROJECT_ID'),
-      string(credentialsId: 'dev-project', variable: 'DEV_PROJECT_ID'),
-      string(credentialsId: 'sit-project', variable: 'SIT_PROJECT_ID'),
-      string(credentialsId: 'uat-project', variable: 'UAT_PROJECT_ID')
+    withCredentials([
+            string(credentialsId: 'devops-project', variable: 'DEVOPS_PROJECT_ID'),
+            string(credentialsId: 'dev-project', variable: 'DEV_PROJECT_ID'),
+            string(credentialsId: 'sit-project', variable: 'SIT_PROJECT_ID'),
+            string(credentialsId: 'uat-project', variable: 'UAT_PROJECT_ID')
     ]) {
-    teamDevOpsProject = "\${env.DEVOPS_PROJECT_ID}"
-    projectDevProject = "\${env.DEV_PROJECT_ID}"
-    projectSitProject = "\${env.SIT_PROJECT_ID}"
-    projectUatProject = "\${env.UAT_PROJECT_ID}"
-  }
-
-  def project = "\${env.JOB_NAME.split('/')[0]}"
-  def app = "\${env.JOB_NAME.split('/')[1]}"
-  def appBuildConfig = "\${project}-\${app}"
-
-  def tag
-
-  stage ('Checks and Tests') {
-    final scmVars = checkout(scm)
-
-    def shortGitCommit = scmVars.GIT_COMMIT[0..6]
-    pom = readMavenPom file: 'pom.xml'
-    tag = "\${pom.version}-\${shortGitCommit}"
-    echo "Building application \${app}:\${tag} from commit \${scmVars} with BuildConfig \${appBuildConfig}"
-
-    try {
-      withCredentials([
-        file(credentialsId: 'maven-settings', variable: 'MVN_SETTINGS')
-      ]) {
-        sh ': Maven build &&' +
-           " ./mvnw --batch-mode test --settings $MVN_SETTINGS" +
-           " || mvn --batch-mode test --settings $MVN_SETTINGS" +
-           ' -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn' +
-           ' -Dmaven.test.redirectTestOutputToFile=true'
-      }
-    } finally {
-      junit 'target/surefire-reports/*.xml'
+        teamDevOpsProject = "\${env.DEVOPS_PROJECT_ID}"
+        projectDevProject = "\${env.DEV_PROJECT_ID}"
+        projectSitProject = "\${env.SIT_PROJECT_ID}"
+        projectUatProject = "\${env.UAT_PROJECT_ID}"
     }
 
-    // TODO split unit and integration tests
-  }
+    def project = "\${env.JOB_NAME.split('/')[0]}"
+    def app = "\${env.JOB_NAME.split('/')[1]}"
+    def appBuildConfig = "\${project}-\${app}"
 
-  if (env.BRANCH_NAME == 'master' || !env.BRANCH_NAME) {
-    stage('OpenShift Build') {
-      openshift.withProject(teamDevOpsProject) {
-        def bc = openshift.selector("bc/\${appBuildConfig}")
+    def tag
 
-        // TODO rebuilds will fail because you can't patch a unchanged patch :(
-        // need to check if rebuild or if patched values are !=
-        // OR check that the previous commit does not match the current commit:
-        // Building application full-test:0.1.0.BUILD-SNAPSHOT-0f641cf from commit
-        // [GIT_BRANCH:master, GIT_COMMIT:0f641cf6c8d1fa1e5b15aeedeed5ce2c40bb9a73,
-        // GIT_PREVIOUS_COMMIT:5fb1ae6d0fbc67fb437cdaafca2f485ef22855fe,
-        // GIT_PREVIOUS_SUCCESSFUL_COMMIT:5fb1ae6d0fbc67fb437cdaafca2f485ef22855fe,
-        // GIT_URL:https://bitbucket.subatomic.local/scm/TEST/full-test.git] with BuildConfig test-project-full-test
+    stage('Checks and Tests') {
+        final scmVars = checkout(scm)
 
-        if (buildConfig.spec.output.to.name != "\${appBuildConfig}:\${tag}") {
-            bc.patch("\\'{ \\"spec\\": { \\"output\\": { \\"to\\": { \\"name\\": \\"\${appBuildConfig}:\${tag}\\" } } } }\\'")
-        }
+        def shortGitCommit = scmVars.GIT_COMMIT[0..6]
+        def pom = readMavenPom file: 'pom.xml'
+        tag = "\${pom.version}-\${shortGitCommit}"
+        echo "Building application \${app}:\${tag} from commit \${scmVars} with BuildConfig \${appBuildConfig}"
 
-        def build = bc.startBuild();
-
-        timeout(5) {
-          build.untilEach(1) {
-              return it.object().status.phase == "Complete"
-          }
-        }
-      }
-    }
-
-    stage('Deploy to DEV') {
-      sh ': Deploying to DEV...'
-
-      openshift.withProject(teamDevOpsProject) {
-        openshift.tag("\${teamDevOpsProject}/\${appBuildConfig}:\${tag}", "\${projectDevProject}/\${app}:\${tag}")
-      }
-
-      openshift.withProject(projectDevProject) {
-        openshift.selector('dc', app).patch("\\'{ \\"spec\\": { \\"triggers\\": [{ \\"type\\": \\"ImageChange\\", \\"imageChangeParams\\": { \\"automatic\\": false, \\"containerNames\\": [\\"\${app}\\"], \\"from\\": { \\"kind\\": \\"ImageStreamTag\\", \\"name\\": \\"\${app}:\${tag}\\" } } }] } }\\'")
-
-        timeout(5) {
-          openshift.selector('dc', app).rollout().latest()
-
-          // TODO if the replicas is zero, then don't wait
-          def deploymentObject = openshift.selector('dc', app).object()
-          if (deploymentObject.spec.replicas > 0) {
-            def podSelector = openshift.selector('pod', [deployment: "\${app}-\${deploymentObject.status.latestVersion}"])
-            podSelector.untilEach {
-              echo "Deployment [\${deploymentObject.status.latestVersion}] with Pod [\${it.object().metadata.name}] is ready?: \${it.object().status.containerStatuses[0].ready}"
-              return it.object().status.containerStatuses[0].ready
+        try {
+            withCredentials([
+                    file(credentialsId: 'maven-settings', variable: 'MVN_SETTINGS')
+            ]) {
+                sh ': Maven build &&' +
+                        " ./mvnw --batch-mode test --settings $MVN_SETTINGS" +
+                        " || mvn --batch-mode test --settings $MVN_SETTINGS" +
+                        ' -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn' +
+                        ' -Dmaven.test.redirectTestOutputToFile=true'
             }
-          } else {
-              echo "Deployment has a replica count of 0. Not waiting for Pods to become healthy..."
-          }
+        } finally {
+            junit 'target/surefire-reports/*.xml'
         }
-      }
+
+        // TODO split unit and integration tests
     }
 
-    stage('Deploy to SIT') {
-      sh ': Deploying to SIT...'
+    if (env.BRANCH_NAME == 'master' || !env.BRANCH_NAME) {
+        stage('OpenShift Build') {
+            openshift.withProject(teamDevOpsProject) {
+                def bc = openshift.selector("bc/\${appBuildConfig}")
 
-      openshift.withProject(projectDevProject) {
-        openshift.tag("\${projectDevProject}/\${app}:\${tag}", "\${projectSitProject}/\${app}:\${tag}")
-      }
-
-      openshift.withProject(projectSitProject) {
-        openshift.selector('dc', app).patch("\\'{ \\"spec\\": { \\"triggers\\": [{ \\"type\\": \\"ImageChange\\", \\"imageChangeParams\\": { \\"automatic\\": false, \\"containerNames\\": [\\"\${app}\\"], \\"from\\": { \\"kind\\": \\"ImageStreamTag\\", \\"name\\": \\"\${app}:\${tag}\\" } } }] } }\\'")
-
-        timeout(5) {
-          openshift.selector('dc', app).rollout().latest()
-
-          def deploymentObject = openshift.selector('dc', app).object()
-          if (deploymentObject.spec.replicas > 0) {
-            def podSelector = openshift.selector('pod', [deployment: "\${app}-\${deploymentObject.status.latestVersion}"])
-            podSelector.untilEach {
-              echo "Deployment [\${deploymentObject.status.latestVersion}] with Pod [\${it.object().metadata.name}] is ready?: \${it.object().status.containerStatuses[0].ready}"
-              return it.object().status.containerStatuses[0].ready
+                def buildConfig = bc.object()
+                def outputImage = buildConfig.spec.output.to.name
+                echo "Current tag: \${outputImage}"
+                if (outputImage != "\${appBuildConfig}:\${tag}") {
+                    bc.patch("\\'{ \\"spec\\": { \\"output\\": { \\"to\\": { \\"name\\": \\"\${appBuildConfig}:\${tag}\\" } } } }\\'")
+                    def build = bc.startBuild();
+                    timeout(5) {
+                        build.untilEach(1) {
+                            return it.object().status.phase == "Complete"
+                        }
+                    }
+                }
             }
-          } else {
-              echo "Deployment has a replica count of 0. Not waiting for Pods to become healthy..."
-          }
         }
-      }
-    }
 
-    stage('Deploy to UAT') {
-      sh ': Deploying to UAT...'
+        stage('Deploy to DEV') {
+            sh ': Deploying to DEV...'
 
-      input "Confirm deployment to UAT"
-
-      openshift.withProject(projectSitProject) {
-        openshift.tag("\${projectSitProject}/\${app}:\${tag}", "\${projectUatProject}/\${app}:\${tag}")
-      }
-
-      openshift.withProject(projectUatProject) {
-        openshift.selector('dc', app).patch("\\'{ \\"spec\\": { \\"triggers\\": [{ \\"type\\": \\"ImageChange\\", \\"imageChangeParams\\": { \\"automatic\\": false, \\"containerNames\\": [\\"\${app}\\"], \\"from\\": { \\"kind\\": \\"ImageStreamTag\\", \\"name\\": \\"\${app}:\${tag}\\" } } }] } }\\'")
-
-        timeout(5) {
-          openshift.selector('dc', app).rollout().latest()
-
-          def deploymentObject = openshift.selector('dc', app).object()
-          if (deploymentObject.spec.replicas > 0) {
-            def podSelector = openshift.selector('pod', [deployment: "\${app}-\${deploymentObject.status.latestVersion}"])
-            podSelector.untilEach {
-              echo "Deployment [\${deploymentObject.status.latestVersion}] with Pod [\${it.object().metadata.name}] is ready?: \${it.object().status.containerStatuses[0].ready}"
-              return it.object().status.containerStatuses[0].ready
+            openshift.withProject(teamDevOpsProject) {
+                openshift.tag("\${teamDevOpsProject}/\${appBuildConfig}:\${tag}", "\${projectDevProject}/\${app}:\${tag}")
             }
-          } else {
-              echo "Deployment has a replica count of 0. Not waiting for Pods to become healthy..."
-          }
+
+            deploy(projectDevProject, app, tag);
         }
-      }
+
+        stage('Deploy to SIT') {
+            sh ': Deploying to SIT...'
+
+            openshift.withProject(projectDevProject) {
+                openshift.tag("\${projectDevProject}/\${app}:\${tag}", "\${projectSitProject}/\${app}:\${tag}")
+            }
+
+            deploy(projectSitProject, app, tag)
+        }
+
+        stage('Deploy to UAT') {
+            sh ': Deploying to UAT...'
+
+            input "Confirm deployment to UAT"
+
+            openshift.withProject(projectSitProject) {
+                openshift.tag("\${projectSitProject}/\${app}:\${tag}", "\${projectUatProject}/\${app}:\${tag}")
+            }
+
+            deploy(projectUatProject, app, tag);
+        }
     }
-  }
 }
 `);
                             })

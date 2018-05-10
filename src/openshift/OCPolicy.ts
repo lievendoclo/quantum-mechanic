@@ -36,7 +36,7 @@ export class OCPolicy {
             role, namespace, parameters, options);
     }
 
-    private static instance: OCPolicy;
+    private static instance: OCPolicy = null;
 
     public policyCommand(command: string, parameters: string[] = [],
                          options: AbstractOption[] = []): Promise<OCCommandResult> {

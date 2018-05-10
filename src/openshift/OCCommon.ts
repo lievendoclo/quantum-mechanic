@@ -46,7 +46,7 @@ export class OCCommon {
         return this.commonCommand("delete", type, parameters, options);
     }
 
-    private static instance: OCCommon;
+    private static instance: OCCommon = null;
 
     public commonCommand(command: string, type: string, parameters: string[] = [],
                          options: AbstractOption[] = [], useAsync = false): Promise<OCCommandResult> {

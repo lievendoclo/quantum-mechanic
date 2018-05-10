@@ -63,7 +63,7 @@ export class OCClient {
         ]);
     }
 
-    private static instance: OCClient;
+    private static instance: OCClient = null;
 
     public login(host: string, token: string): Promise<OCCommandResult> {
         const loginCommand = new OCCommand("login", [host],
