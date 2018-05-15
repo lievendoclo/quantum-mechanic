@@ -160,8 +160,10 @@ export class ApplicationCreated implements HandleEvent<any> {
                         });
                 })
                 .then(() => {
+                    const applicationName = applicationCreatedEvent.application.name;
+                    const projectName = applicationCreatedEvent.project.name;
                     return ctx.messageClient.addressChannels({
-                        text: "Your application has been provisioned successfully " +
+                        text: `Your application *${applicationName}*, in project *${projectName}*, has been provisioned successfully ` +
                         "and is ready to build and deploy to your project environments",
                         attachments: [{
                             fallback: `Your application has been provisioned successfully`,
@@ -177,8 +179,8 @@ You can kick off the build pipeline for your application by clicking the button 
                                     },
                                     new KickOffJenkinsBuild(),
                                     {
-                                        projectName: applicationCreatedEvent.project.name,
-                                        applicationName: applicationCreatedEvent.application.name,
+                                        projectName,
+                                        applicationName,
                                     }),
                             ],
                         }],
