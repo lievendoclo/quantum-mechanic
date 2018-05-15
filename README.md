@@ -80,6 +80,19 @@ Here is an example `local.json`:
   "fingerprints": {
     "data": {
     }
+  },
+  "http": {
+    "enabled": true,
+    "auth": {
+      "basic": {
+        "enabled": true,
+        "username": "user",
+        "password": "password"
+      },
+      "bearer": {
+        "enabled": false
+      }
+    }
   }
 }
 
