@@ -10,9 +10,17 @@ import {
     Tags,
 } from "@atomist/automation-client";
 import axios from "axios";
+import _ = require("lodash");
 import {QMConfig} from "../../config/QMConfig";
 import {gluonMemberFromScreenName} from "../member/Members";
-import {gluonProjectFromProjectName} from "./Projects";
+import {
+    gluonTeamForSlackTeamChannel,
+    gluonTeamsWhoSlackScreenNameBelongsTo, menuForTeams,
+} from "../team/Teams";
+import {
+    gluonProjectFromProjectName,
+    gluonProjectsWhichBelongToGluonTeam, menuForProjects,
+} from "./Projects";
 
 @CommandHandler("Create new OpenShift environments for a project", QMConfig.subatomic.commandPrefix + " request project environments")
 @Tags("subatomic", "openshift", "project")
@@ -27,11 +35,23 @@ export class NewProjectEnvironments implements HandleCommand {
     @Parameter({
         description: "project name",
         displayable: false,
+        required: false,
     })
-    public projectName: string;
+    public projectName: string = null;
+
+    @Parameter({
+        description: "team name",
+        displayable: false,
+        required: false,
+    })
+    public teamName: string = null;
 
     public handle(ctx: HandlerContext): Promise<HandlerResult> {
         logger.info("Creating new OpenShift environments...");
+
+        if (_.isEmpty(this.teamName) || _.isEmpty(this.projectName)) {
+            return this.requestUnsetParameters(ctx);
+        }
 
         return gluonMemberFromScreenName(ctx, this.screenName)
             .then(member => {
@@ -50,6 +70,39 @@ export class NewProjectEnvironments implements HandleCommand {
                         }, this.teamChannel);
                     });
             });
+    }
+
+    private requestUnsetParameters(ctx: HandlerContext): Promise<HandlerResult> {
+        if (_.isEmpty(this.teamName)) {
+            return gluonTeamForSlackTeamChannel(this.teamChannel)
+                .then(
+                    team => {
+                        this.teamName = team.name;
+                        return this.requestUnsetParameters(ctx);
+                    },
+                    () => {
+                        return gluonTeamsWhoSlackScreenNameBelongsTo(ctx, this.screenName).then(teams => {
+                            return menuForTeams(
+                                ctx,
+                                teams,
+                                this,
+                                "Please select a team associated with the project you wish to provision the environments for",
+                            );
+                        });
+                    },
+                );
+        }
+        if (_.isEmpty(this.projectName)) {
+            return gluonProjectsWhichBelongToGluonTeam(ctx, this.teamName)
+                .then(projects => {
+                    return menuForProjects(
+                        ctx,
+                        projects,
+                        this,
+                        "Please select the projects you wish to provision the environments for",
+                    );
+                });
+        }
     }
 
 }

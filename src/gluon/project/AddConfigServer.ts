@@ -19,8 +19,9 @@ import {OCClient} from "../../openshift/OCClient";
 import {OCCommon} from "../../openshift/OCCommon";
 import {
     gluonTeamForSlackTeamChannel,
-    gluonTeamsWhoSlackScreenNameBelongsTo,
+    gluonTeamsWhoSlackScreenNameBelongsTo, menuForTeams,
 } from "../team/Teams";
+import {gluonProjectsWhichBelongToGluonTeam, menuForProjects} from "./Projects";
 
 @CommandHandler("Add a new Subatomic Config Server", QMConfig.subatomic.commandPrefix + " add config server")
 export class AddConfigServer implements HandleCommand<HandlerResult> {
@@ -44,47 +45,38 @@ export class AddConfigServer implements HandleCommand<HandlerResult> {
     public gitUri: string;
 
     public handle(ctx: HandlerContext): Promise<HandlerResult> {
-        return gluonTeamForSlackTeamChannel(this.teamChannel)
-            .then(team => {
-                return this.addConfigServer(
-                    ctx,
-                    team.name,
-                    this.gitUri,
-                );
-            }, () => {
-                if (!_.isEmpty(this.gluonTeamName)) {
-                    return this.addConfigServer(
-                        ctx,
-                        this.gluonTeamName,
-                        this.gitUri,
-                    );
-                } else {
-                    return gluonTeamsWhoSlackScreenNameBelongsTo(ctx, this.screenName)
-                        .then(teams => {
-                            return ctx.messageClient.respond({
-                                text: "Please select a team, whose DevOps project the Subatomic Config Server will be added to",
-                                attachments: [{
-                                    fallback: "Please select a team",
-                                    actions: [
-                                        menuForCommand({
-                                                text: "Select Team", options:
-                                                    teams.map(team => {
-                                                        return {
-                                                            value: team.name,
-                                                            text: team.name,
-                                                        };
-                                                    }),
-                                            },
-                                            this, "gluonTeamName",
-                                            {
-                                                gitUri: this.gitUri,
-                                            }),
-                                    ],
-                                }],
-                            });
+        if (_.isEmpty(this.gluonTeamName)) {
+            return this.requestUnsetParameters(ctx);
+        }
+
+        return this.addConfigServer(
+            ctx,
+            this.gluonTeamName,
+            this.gitUri,
+        );
+    }
+
+    private requestUnsetParameters(ctx: HandlerContext): Promise<HandlerResult> {
+        if (_.isEmpty(this.gluonTeamName)) {
+            return gluonTeamForSlackTeamChannel(this.teamChannel)
+                .then(
+                    team => {
+                        this.gluonTeamName = team.name;
+                        return this.requestUnsetParameters(ctx);
+                    },
+                    () => {
+                        return gluonTeamsWhoSlackScreenNameBelongsTo(ctx, this.screenName).then(teams => {
+                            return menuForTeams(
+                                ctx,
+                                teams,
+                                this,
+                                "Please select a team, whose DevOps project the Subatomic Config Server will be added to",
+                                "gluonTeamName",
+                            );
                         });
-                }
-            });
+                    },
+                );
+        }
     }
 
     private addConfigServer(ctx: HandlerContext,

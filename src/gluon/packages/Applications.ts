@@ -1,9 +1,10 @@
-import {HandlerContext} from "@atomist/automation-client";
+import {HandleCommand, HandlerContext} from "@atomist/automation-client";
 import {buttonForCommand} from "@atomist/automation-client/spi/message/MessageClient";
 import {SlackMessage, url} from "@atomist/slack-messages";
 import axios from "axios";
 import * as _ from "lodash";
 import {QMConfig} from "../../config/QMConfig";
+import {createMenu} from "../shared/GenericMenu";
 import {CreateApplication} from "./CreateApplication";
 
 export enum ApplicationType {
@@ -12,7 +13,7 @@ export enum ApplicationType {
     LIBRARY = "LIBRARY",
 }
 
-export function gluonApplicationsLinkedToGluonProject(ctx: HandlerContext, gluonProjectName: string): Promise<any[]> {
+export function gluonApplicationsLinkedToGluonProject(ctx: HandlerContext, gluonProjectName: string): Promise<any> {
     return axios.get(`${QMConfig.subatomic.gluon.baseUrl}/applications?projectName=${gluonProjectName}`)
         .then(applications => {
             if (!_.isEmpty(applications.data._embedded)) {
@@ -84,4 +85,21 @@ export function gluonApplicationsLinkedToGluonProjectId(gluonProjectId: string):
             }
             return [];
         });
+}
+
+export function menuForApplications(ctx: HandlerContext, applications: any[],
+                                    command: HandleCommand, message: string = "Please select an application",
+                                    applicationNameVariable: string = "applicationName"): Promise<any> {
+    return createMenu(ctx,
+        applications.map(application => {
+            return {
+                value: application.name,
+                text: application.name,
+            };
+        }),
+        command,
+        message,
+        "Select Application",
+        applicationNameVariable,
+    );
 }

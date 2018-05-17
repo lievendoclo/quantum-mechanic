@@ -229,7 +229,7 @@ Adding a team member from Slack requires typing their \`@mention\` name or using
     }
 }
 
-@CommandHandler("Request membership to a team", QMConfig.subatomic.commandPrefix + " request membership")
+@CommandHandler("Request membership to a team")
 @Tags("subatomic", "team", "member")
 export class CreateMembershipRequestToTeam implements HandleCommand<HandlerResult> {
 

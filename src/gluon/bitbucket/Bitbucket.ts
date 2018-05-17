@@ -1,3 +1,4 @@
+import {HandleCommand, HandlerContext} from "@atomist/automation-client";
 import axios from "axios";
 import {AxiosInstance} from "axios-https-proxy-fix";
 import * as fs from "fs";
@@ -5,6 +6,7 @@ import * as https from "https";
 import * as path from "path";
 import {QMConfig} from "../../config/QMConfig";
 import {addAxiosLogger} from "../shared/axiosLogger";
+import {createMenu} from "../shared/GenericMenu";
 
 export function bitbucketAxios(): AxiosInstance {
     const caFile = path.resolve(__dirname, QMConfig.subatomic.bitbucket.caPath);
@@ -62,5 +64,24 @@ export function getBitbucketResources(resourceUri: string, axiosInstance: AxiosI
 
             return getBitbucketResources(resourceUri, axiosInstance, currentResources);
         },
+    );
+}
+
+export function menuForBitbucketRepositories(ctx: HandlerContext, bitbucketRepositories: any[],
+                                             command: HandleCommand, message: string = "Please select a Bitbucket repository",
+                                             bitbucketProjectNameVariable: string = "bitbucketRepositoryName",
+                                             thumbUrl = ""): Promise<any> {
+    return createMenu(ctx,
+        bitbucketRepositories.map(bitbucketRepository => {
+            return {
+                value: bitbucketRepository.name,
+                text: bitbucketRepository.name,
+            };
+        }),
+        command,
+        message,
+        "Select Bitbucket Repo",
+        bitbucketProjectNameVariable,
+        thumbUrl,
     );
 }

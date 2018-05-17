@@ -8,24 +8,17 @@ import {
     Parameter,
     success,
 } from "@atomist/automation-client";
-import {
-    buttonForCommand,
-    menuForCommand,
-} from "@atomist/automation-client/spi/message/MessageClient";
+import {buttonForCommand} from "@atomist/automation-client/spi/message/MessageClient";
 import {SlackMessage} from "@atomist/slack-messages";
+import _ = require("lodash");
 import {QMConfig} from "../../config/QMConfig";
-import {
-    gluonApplicationsLinkedToGluonProject,
-    gluonApplicationsLinkedToGluonProjectId,
-} from "../packages/Applications";
+import {gluonApplicationsLinkedToGluonProjectId} from "../packages/Applications";
 import {
     gluonTeamForSlackTeamChannel,
     gluonTeamsWhoSlackScreenNameBelongsTo,
+    menuForTeams,
 } from "../team/Teams";
-import {
-    gluonProjectFromProjectName,
-    gluonProjectsWhichBelongToGluonTeam,
-} from "./Projects";
+import {gluonProjectsWhichBelongToGluonTeam} from "./Projects";
 
 @CommandHandler("List projects belonging to a team", QMConfig.subatomic.commandPrefix + " list projects")
 export class ListTeamProjects implements HandleCommand<HandlerResult> {
@@ -44,38 +37,33 @@ export class ListTeamProjects implements HandleCommand<HandlerResult> {
     public teamName: string;
 
     public handle(ctx: HandlerContext): Promise<HandlerResult> {
-        if (this.teamName == null) {
+        if (_.isEmpty(this.teamName)) {
+            return this.requestUnsetParameters(ctx);
+        }
+
+        return this.listTeamProjects(ctx, this.teamName);
+
+    }
+
+    private requestUnsetParameters(ctx: HandlerContext): Promise<HandlerResult> {
+        if (_.isEmpty(this.teamName)) {
             return gluonTeamForSlackTeamChannel(this.teamChannel)
-                .then(team => {
-                        return this.listTeamProjects(ctx, team.name);
-                    }, () => {
-                        return gluonTeamsWhoSlackScreenNameBelongsTo(ctx, this.screenName)
-                            .then(teams => {
-                                const msg: SlackMessage = {
-                                    text: "Please select the team you would like to list the projects for",
-                                    attachments: [{
-                                        fallback: "A menu",
-                                        actions: [
-                                            menuForCommand({
-                                                    text: "Select Team", options:
-                                                        teams.map(team => {
-                                                            return {
-                                                                value: team.name,
-                                                                text: team.name,
-                                                            };
-                                                        }),
-                                                },
-                                                this, "teamName"),
-                                        ],
-                                    }],
-                                };
-                                return ctx.messageClient.respond(msg)
-                                    .then(success);
-                            });
+                .then(
+                    team => {
+                        this.teamName = team.name;
+                        return this.listTeamProjects(ctx, this.teamName);
+                    },
+                    () => {
+                        return gluonTeamsWhoSlackScreenNameBelongsTo(ctx, this.screenName).then(teams => {
+                            return menuForTeams(
+                                ctx,
+                                teams,
+                                this,
+                                "Please select the team you would like to list the projects for",
+                            );
+                        });
                     },
                 );
-        } else {
-            return this.listTeamProjects(ctx, this.teamName);
         }
     }
 

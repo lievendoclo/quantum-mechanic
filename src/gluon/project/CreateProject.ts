@@ -12,10 +12,13 @@ import axios from "axios";
 import * as _ from "lodash";
 import {QMConfig} from "../../config/QMConfig";
 import {gluonMemberFromScreenName} from "../member/Members";
-import {gluonTenantFromTenantName, gluonTenantList} from "../shared/Tenant";
+import {
+    gluonTenantFromTenantName, gluonTenantList,
+    menuForTenants,
+} from "../shared/Tenant";
 import {
     gluonTeamForSlackTeamChannel,
-    gluonTeamsWhoSlackScreenNameBelongsTo,
+    gluonTeamsWhoSlackScreenNameBelongsTo, menuForTeams,
 } from "../team/Teams";
 
 @CommandHandler("Create a new project", QMConfig.subatomic.commandPrefix + " create project")
@@ -49,89 +52,44 @@ export class CreateProject implements HandleCommand<HandlerResult> {
         required: false,
         displayable: false,
     })
-    public tenantName: string = null;
+    public tenantName: string;
 
     public handle(ctx: HandlerContext): Promise<HandlerResult> {
-        return gluonTeamForSlackTeamChannel(this.teamChannel)
-            .then(team => {
-                return this.requestNewProjectForTeam(
-                    ctx,
-                    this.screenName,
-                    team.name,
-                    this.tenantName,
-                );
-            }, () => {
-                if (!_.isEmpty(this.teamName)) {
-                    return this.requestNewProjectForTeam(
-                        ctx,
-                        this.screenName,
-                        this.teamName,
-                        this.tenantName,
-                    );
-                } else {
-                    return gluonTeamsWhoSlackScreenNameBelongsTo(ctx, this.screenName)
-                        .then(teams => {
-                            return ctx.messageClient.respond({
-                                text: "Please select a team you would like to associate this project with",
-                                attachments: [{
-                                    fallback: "Select a team to associate this new project with",
-                                    actions: [
-                                        menuForCommand({
-                                                text: "Select Team", options:
-                                                    teams.map(team => {
-                                                        return {
-                                                            value: team.name,
-                                                            text: team.name,
-                                                        };
-                                                    }),
-                                            },
-                                            this, "teamName",
-                                            {
-                                                name: this.name,
-                                                description: this.description,
-                                            }),
-                                    ],
-                                }],
-                            });
-                        });
-                }
-            }).catch(rejectedReason => {
-                return ctx.messageClient.respond(`Failed to create project with error: ${JSON.stringify(rejectedReason)}`);
-            });
+        if (_.isEmpty(this.teamName) || _.isEmpty(this.teamName)) {
+            return this.requestUnsetParameters(ctx);
+        }
+        return gluonTenantFromTenantName(this.tenantName).then(tenant => {
+            return this.requestNewProjectForTeamAndTenant(ctx, this.screenName, this.teamName, tenant.tenantId);
+        });
     }
 
-    private requestNewProjectForTeam(ctx: HandlerContext, screenName: string,
-                                     teamName: string, tenantName: string): Promise<any> {
-
-        if (tenantName === null) {
+    private requestUnsetParameters(ctx: HandlerContext): Promise<HandlerResult> {
+        if (_.isEmpty(this.teamName)) {
+            return gluonTeamForSlackTeamChannel(this.teamChannel)
+                .then(
+                    team => {
+                        this.teamName = team.name;
+                        return this.requestUnsetParameters(ctx);
+                    },
+                    () => {
+                        return gluonTeamsWhoSlackScreenNameBelongsTo(ctx, this.screenName).then(teams => {
+                            return menuForTeams(
+                                ctx,
+                                teams,
+                                this,
+                                "Please select a team you would like to associate this project with",
+                            );
+                        });
+                    },
+                );
+        }
+        if (_.isEmpty(this.tenantName)) {
             return gluonTenantList().then(tenants => {
-                return ctx.messageClient.respond({
-                    text: "Please select a tenant you would like to associate this project with. Choose Default if you have no tenant specified for this project.",
-                    attachments: [{
-                        fallback: "Select a tenant to associate this new project with. Choose Default if you have no tenant specified for this project.",
-                        actions: [
-                            menuForCommand({
-                                    text: "Select Tenant", options:
-                                        tenants.map(tenant => {
-                                            return {
-                                                value: tenant.name,
-                                                text: tenant.name,
-                                            };
-                                        }),
-                                },
-                                new CreateProject(), "tenantName",
-                                {
-                                    name: this.name,
-                                    description: this.description,
-                                    teamName: this.tenantName,
-                                }),
-                        ],
-                    }],
-                });
-            });
-        } else {
-            return gluonTenantFromTenantName(tenantName).then(tenant => {
-                return this.requestNewProjectForTeamAndTenant(ctx, screenName, teamName, tenant.tenantId);
+                return menuForTenants(ctx,
+                    tenants,
+                    this,
+                    "Please select a tenant you would like to associate this project with. Choose Default if you have no tenant specified for this project.",
+                );
             });
         }
     }

@@ -1,6 +1,8 @@
+import {HandleCommand, HandlerContext} from "@atomist/automation-client";
 import axios from "axios";
 import * as _ from "lodash";
 import {QMConfig} from "../../config/QMConfig";
+import {createMenu} from "./GenericMenu";
 
 export function gluonTenantList(): Promise<any> {
     return axios.get(`${QMConfig.subatomic.gluon.baseUrl}/tenants`)
@@ -29,4 +31,21 @@ export function gluonTenantFromTenantId(tenantId: string): Promise<any> {
         .then(tenant => {
             return Promise.resolve(tenant.data);
         });
+}
+
+export function menuForTenants(ctx: HandlerContext, tenants: any[],
+                               command: HandleCommand, message: string = "Please select a tenant",
+                               tenantNameVariable: string = "tenantName"): Promise<any> {
+    return createMenu(ctx,
+        tenants.map(tenant => {
+            return {
+                value: tenant.name,
+                text: tenant.name,
+            };
+        }),
+        command,
+        message,
+        "Select Tenant",
+        tenantNameVariable,
+    );
 }

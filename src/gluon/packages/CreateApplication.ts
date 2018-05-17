@@ -1,5 +1,5 @@
 import {
-    CommandHandler,
+    CommandHandler, failure,
     HandleCommand,
     HandlerContext,
     HandlerResult,
@@ -17,18 +17,19 @@ import * as _ from "lodash";
 import {QMConfig} from "../../config/QMConfig";
 import {
     bitbucketRepositoriesForProjectKey,
-    bitbucketRepositoryForSlug,
+    bitbucketRepositoryForSlug, menuForBitbucketRepositories,
 } from "../bitbucket/Bitbucket";
 import {gluonMemberFromScreenName} from "../member/Members";
 import {
     gluonProjectFromProjectName,
-    gluonProjectsWhichBelongToGluonTeam,
+    gluonProjectsWhichBelongToGluonTeam, menuForProjects,
 } from "../project/Projects";
 import {
     gluonTeamForSlackTeamChannel,
-    gluonTeamsWhoSlackScreenNameBelongsTo,
+    gluonTeamsWhoSlackScreenNameBelongsTo, menuForTeams,
 } from "../team/Teams";
 import {ApplicationType} from "./Applications";
+import isEmpty = hbs.Utils.isEmpty;
 
 @CommandHandler("Create a new Bitbucket project", QMConfig.subatomic.commandPrefix + " create bitbucket project")
 export class CreateApplication implements HandleCommand<HandlerResult> {
@@ -50,11 +51,6 @@ export class CreateApplication implements HandleCommand<HandlerResult> {
     public description: string;
 
     @Parameter({
-        description: "project name",
-    })
-    public projectName: string;
-
-    @Parameter({
         description: "Bitbucket repository name",
     })
     public bitbucketRepositoryName: string;
@@ -64,8 +60,25 @@ export class CreateApplication implements HandleCommand<HandlerResult> {
     })
     public bitbucketRepositoryRepoUrl: string;
 
+    @Parameter({
+        description: "project name",
+        displayable: false,
+        required: false,
+    })
+    public projectName: string;
+
+    @Parameter({
+        description: "team name",
+        displayable: false,
+        required: false,
+    })
+    public teamName: string;
+
     public handle(ctx: HandlerContext): Promise<HandlerResult> {
 
+        if (_.isEmpty(this.teamName) || _.isEmpty(this.projectName)) {
+            return this.requestUnsetParameters(ctx);
+        }
         // get memberId for createdBy
         return gluonMemberFromScreenName(ctx, this.screenName)
             .then(member => {
@@ -103,6 +116,29 @@ export class CreateApplication implements HandleCommand<HandlerResult> {
                 }, this.teamChannel);
             });
     }
+
+    private requestUnsetParameters(ctx: HandlerContext): Promise<HandlerResult> {
+        if (_.isEmpty(this.teamName)) {
+            return gluonTeamForSlackTeamChannel(this.teamChannel)
+                .then(
+                    team => {
+                        this.teamName = team.name;
+                        return this.requestUnsetParameters(ctx);
+                    },
+                    () => {
+                        return gluonTeamsWhoSlackScreenNameBelongsTo(ctx, this.screenName).then(teams => {
+                            return menuForTeams(ctx, teams, this);
+                        });
+                    },
+                );
+        }
+        if (_.isEmpty(this.projectName)) {
+            return gluonProjectsWhichBelongToGluonTeam(ctx, this.teamName)
+                .then(projects => {
+                    return menuForProjects(ctx, projects, this);
+                });
+        }
+    }
 }
 
 @CommandHandler("Link an existing application", QMConfig.subatomic.commandPrefix + " link application")
@@ -139,13 +175,6 @@ export class LinkExistingApplication implements HandleCommand<HandlerResult> {
     public projectName: string;
 
     @Parameter({
-        description: "Bitbucket repository name",
-        displayable: false,
-        required: false,
-    })
-    public bitbucketRepositoryName: string;
-
-    @Parameter({
         description: "Bitbucket repository slug",
         displayable: false,
         required: false,
@@ -153,95 +182,73 @@ export class LinkExistingApplication implements HandleCommand<HandlerResult> {
     public bitbucketRepositorySlug: string;
 
     public handle(ctx: HandlerContext): Promise<HandlerResult> {
-        return gluonTeamForSlackTeamChannel(this.teamChannel)
-            .then(team => {
-                return this.linkApplicationForGluonTeam(ctx,
-                    this.screenName,
-                    this.teamChannel,
-                    this.name,
-                    this.description,
-                    this.bitbucketRepositorySlug,
-                    this.projectName,
-                    team.name);
-            }, () => {
-                if (!_.isEmpty(this.teamName)) {
-                    logger.debug(`Linking existing application to projects for team: ${this.teamName}`);
 
-                    return this.linkApplicationForGluonTeam(ctx,
-                        this.screenName,
-                        this.teamChannel,
-                        this.name,
-                        this.description,
-                        this.bitbucketRepositorySlug,
-                        this.projectName,
-                        this.teamName);
-                } else {
-                    return gluonTeamsWhoSlackScreenNameBelongsTo(ctx, this.screenName)
-                        .then(teams => {
-                            return ctx.messageClient.respond({
-                                text: "Please select a team, whose project you would like to link an application to",
-                                attachments: [{
-                                    fallback: "Please select a team, whose project you would like to link an application to",
-                                    actions: [
-                                        menuForCommand({
-                                                text: "Select Team", options:
-                                                    teams.map(team => {
-                                                        return {
-                                                            value: team.name,
-                                                            text: team.name,
-                                                        };
-                                                    }),
-                                            },
-                                            this, "teamName"),
-                                    ],
-                                }],
-                            });
-                        });
-                }
-            });
+        if (_.isEmpty(this.projectName) || _.isEmpty(this.teamName) || _.isEmpty(this.bitbucketRepositorySlug)) {
+            return this.requestUnsetParameters(ctx);
+        }
+
+        logger.debug(`Linking to Gluon project: ${this.projectName}`);
+
+        return this.linkApplicationForGluonProject(ctx,
+            this.screenName,
+            this.teamChannel,
+            this.name,
+            this.description,
+            this.bitbucketRepositorySlug,
+            this.projectName);
     }
 
-    private linkApplicationForGluonTeam(ctx: HandlerContext,
-                                        slackScreeName: string,
-                                        teamSlackChannel: string,
-                                        applicationName: string,
-                                        applicationDescription: string,
-                                        bitbucketRepositorySlug: string,
-                                        gluonProjectName: string,
-                                        gluonTeamName: string): Promise<HandlerResult> {
-        if (!_.isEmpty(gluonProjectName)) {
-            logger.debug(`Linking to Gluon project: ${gluonProjectName}`);
-
-            return this.linkApplicationForGluonProject(ctx,
-                slackScreeName,
-                teamSlackChannel,
-                applicationName,
-                applicationDescription,
-                bitbucketRepositorySlug,
-                gluonProjectName);
-        } else {
-            return gluonProjectsWhichBelongToGluonTeam(ctx, gluonTeamName)
+    private requestUnsetParameters(ctx: HandlerContext): Promise<HandlerResult> {
+        if (_.isEmpty(this.teamName)) {
+            return gluonTeamForSlackTeamChannel(this.teamChannel)
+                .then(
+                    team => {
+                        this.teamName = team.name;
+                        return this.requestUnsetParameters(ctx);
+                    },
+                    () => {
+                        return gluonTeamsWhoSlackScreenNameBelongsTo(ctx, this.screenName).then(teams => {
+                            return menuForTeams(
+                                ctx,
+                                teams,
+                                this,
+                                "Please select a team, whose project you would like to link an application to");
+                        });
+                    },
+                );
+        }
+        if (_.isEmpty(this.projectName)) {
+            return gluonProjectsWhichBelongToGluonTeam(ctx, this.teamName)
                 .then(projects => {
-                    return ctx.messageClient.respond({
-                        text: "Please select a project to which you would like to link an application to",
-                        attachments: [{
-                            fallback: "Please select a project to which you would like to link an application to",
-                            actions: [
-                                menuForCommand({
-                                        text: "Select Project", options:
-                                            projects.map(project => {
-                                                return {
-                                                    value: project.name,
-                                                    text: project.name,
-                                                };
-                                            }),
-                                    },
-                                    this, "projectName"),
-                            ],
-                        }],
-                    });
+                    return menuForProjects(
+                        ctx,
+                        projects,
+                        this,
+                        "Please select a project to which you would like to link an application to");
                 });
         }
+        if (_.isEmpty(this.bitbucketRepositorySlug)) {
+            return gluonProjectFromProjectName(ctx, this.projectName)
+                .then(project => {
+                    if (_.isEmpty(project.bitbucketProject)) {
+                        return ctx.messageClient.respond(`❗The selected project does not have an associated bitbucket project. Please first associate a bitbucket project using the \`${QMConfig.subatomic.commandPrefix} link bitbucket project\` command.`);
+                    }
+                    return bitbucketRepositoriesForProjectKey(project.bitbucketProject.key)
+                        .then(bitbucketRepos => {
+                            logger.debug(`Bitbucket project [${project.bitbucketProject.name}] has repositories: ${JSON.stringify(bitbucketRepos)}`);
+
+                            return menuForBitbucketRepositories(
+                                ctx,
+                                bitbucketRepos,
+                                this,
+                                "Please select the Bitbucket repository which contains the application you want to link",
+                                "bitbucketRepositorySlug",
+                                "https://raw.githubusercontent.com/absa-subatomic/subatomic-documentation/gh-pages/images/atlassian-bitbucket-logo.png",
+                            );
+                        });
+                });
+        }
+
     }
 
     private linkApplicationForGluonProject(ctx: HandlerContext,
@@ -253,43 +260,16 @@ export class LinkExistingApplication implements HandleCommand<HandlerResult> {
                                            gluonProjectName: string): Promise<HandlerResult> {
         return gluonProjectFromProjectName(ctx, gluonProjectName)
             .then(project => {
-                if (!_.isEmpty(bitbucketRepositorySlug)) {
-                    logger.debug(`Linking Bitbucket repository: ${bitbucketRepositorySlug}`);
+                logger.debug(`Linking Bitbucket repository: ${bitbucketRepositorySlug}`);
 
-                    return this.linkBitbucketRepository(ctx,
-                        slackScreeName,
-                        teamSlackChannel,
-                        applicationName,
-                        applicationDescription,
-                        bitbucketRepositorySlug,
-                        project.bitbucketProject.key,
-                        project.projectId);
-                } else {
-                    return bitbucketRepositoriesForProjectKey(project.bitbucketProject.key)
-                        .then(bitbucketRepos => {
-                            logger.debug(`Bitbucket project [${project.bitbucketProject.name}] has repositories: ${JSON.stringify(bitbucketRepos)}`);
-                            return ctx.messageClient.respond({
-                                text: "Please select the Bitbucket repository which contains the application you want to link",
-                                attachments: [{
-                                    fallback: "Please select the Bitbucket repository which contains the application you want to link",
-                                    thumb_url: "https://raw.githubusercontent.com/absa-subatomic/subatomic-documentation/gh-pages/images/atlassian-bitbucket-logo.png",
-                                    actions: [
-                                        menuForCommand({
-                                                text: "Select Bitbucket repository",
-                                                options:
-                                                    bitbucketRepos.map(bitbucketRepo => {
-                                                        return {
-                                                            value: bitbucketRepo.name,
-                                                            text: bitbucketRepo.name,
-                                                        };
-                                                    }),
-                                            },
-                                            this, "bitbucketRepositorySlug"),
-                                    ],
-                                }],
-                            });
-                        });
-                }
+                return this.linkBitbucketRepository(ctx,
+                    slackScreeName,
+                    teamSlackChannel,
+                    applicationName,
+                    applicationDescription,
+                    bitbucketRepositorySlug,
+                    project.bitbucketProject.key,
+                    project.projectId);
             });
     }
 

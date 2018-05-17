@@ -2,13 +2,12 @@ import {
     CommandHandler,
     HandleCommand,
     HandlerContext,
-    HandlerResult,
+    HandlerResult, logger,
     MappedParameter,
     MappedParameters,
     Parameter,
     Tags,
 } from "@atomist/automation-client";
-import {menuForCommand} from "@atomist/automation-client/spi/message/MessageClient";
 import axios from "axios";
 import * as _ from "lodash";
 import {QMConfig} from "../../config/QMConfig";
@@ -16,6 +15,7 @@ import {gluonMemberFromScreenName} from "../member/Members";
 import {
     gluonTeamForSlackTeamChannel,
     gluonTeamsWhoSlackScreenNameBelongsTo,
+    menuForTeams,
 } from "./Teams";
 
 @CommandHandler("Check whether to create a new OpenShift DevOps environment or use an existing one", QMConfig.subatomic.commandPrefix + " request devops environment")
@@ -36,54 +36,37 @@ export class NewDevOpsEnvironment implements HandleCommand {
     public teamName: string;
 
     public handle(ctx: HandlerContext): Promise<HandlerResult> {
-        return gluonTeamForSlackTeamChannel(this.teamChannel)
-            .then(team => {
-                return this.requestDevOpsEnvironment(
-                    ctx,
-                    this.screenName,
-                    team.name,
-                    team.slack.teamChannel,
-                );
-            }, () => {
-                if (!_.isEmpty(this.teamName)) {
-                    return this.requestDevOpsEnvironment(
-                        ctx,
-                        this.screenName,
-                        this.teamName,
-                        this.teamChannel,
-                    );
-                } else {
-                    return gluonTeamsWhoSlackScreenNameBelongsTo(ctx, this.screenName)
-                        .then(teams => {
-                            if (teams.length === 1) {
-                                this.teamName = teams[0].name;
-                                return this.handle(ctx);
-                            } else {
-                                return ctx.messageClient.respond({
-                                    text: "Please select a team you would like to create a DevOps environment for",
-                                    attachments: [{
-                                        fallback: "Select a team to create a DevOps project for",
-                                        actions: [
-                                            menuForCommand({
-                                                    text: "Select Team", options:
-                                                        teams.map(team => {
-                                                            return {
-                                                                value: team.name,
-                                                                text: team.name,
-                                                            };
-                                                        }),
-                                                },
-                                                this, "teamName",
-                                                {
-                                                    name: this.teamName,
-                                                }),
-                                        ],
-                                    }],
-                                });
-                            }
+        if (_.isEmpty(this.teamName)) {
+            return this.requestUnsetParameters(ctx);
+        }
+
+        return this.requestDevOpsEnvironment(
+            ctx,
+            this.screenName,
+            this.teamName,
+            this.teamChannel,
+        );
+    }
+
+    private requestUnsetParameters(ctx: HandlerContext): Promise<HandlerResult> {
+        if (_.isEmpty(this.teamName)) {
+            return gluonTeamForSlackTeamChannel(this.teamChannel)
+                .then(
+                    team => {
+                        this.teamName = team.name;
+                        return this.requestDevOpsEnvironment(ctx, this.screenName, this.teamName, this.teamChannel);
+                    },
+                    () => {
+                        return gluonTeamsWhoSlackScreenNameBelongsTo(ctx, this.screenName).then(teams => {
+                            return menuForTeams(
+                                ctx,
+                                teams,
+                                this,
+                                "Please select a team you would like to create a DevOps environment for");
                         });
-                }
-            });
+                    },
+                );
+        }
     }
 
     private requestDevOpsEnvironment(ctx: HandlerContext, screenName: string,
@@ -94,6 +77,7 @@ export class NewDevOpsEnvironment implements HandleCommand {
                 axios.get(`${QMConfig.subatomic.gluon.baseUrl}/teams?name=${teamName}`)
                     .then(team => {
                         if (!_.isEmpty(team.data._embedded)) {
+                            logger.info("Requesting DevOps environment for team: " + teamName);
                             return axios.put(`${QMConfig.subatomic.gluon.baseUrl}/teams/${team.data._embedded.teamResources[0].teamId}`,
                                 {
                                     devOpsEnvironment: {

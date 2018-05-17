@@ -1,8 +1,9 @@
-import {HandlerContext} from "@atomist/automation-client";
+import {HandleCommand, HandlerContext} from "@atomist/automation-client";
 import {buttonForCommand} from "@atomist/automation-client/spi/message/MessageClient";
 import axios from "axios";
 import * as _ from "lodash";
 import {QMConfig} from "../../config/QMConfig";
+import {createMenu} from "../shared/GenericMenu";
 import {CreateTeam} from "./CreateTeam";
 import {JoinTeam} from "./JoinTeam";
 
@@ -49,4 +50,21 @@ export function gluonTeamForSlackTeamChannel(teamChannel: string): Promise<any> 
                 return Promise.reject(`No team associated with Slack team channel: ${teamChannel}`);
             }
         });
+}
+
+export function menuForTeams(ctx: HandlerContext, teams: any[],
+                             command: HandleCommand, message: string = "Please select a team",
+                             projectNameVariable: string = "teamName"): Promise<any> {
+    return createMenu(ctx,
+        teams.map(team => {
+            return {
+                value: team.name,
+                text: team.name,
+            };
+        }),
+        command,
+        message,
+        "Select Team",
+        projectNameVariable,
+    );
 }

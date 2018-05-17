@@ -11,10 +11,7 @@ import {
     success,
     Tags,
 } from "@atomist/automation-client";
-import {
-    buttonForCommand,
-    menuForCommand,
-} from "@atomist/automation-client/spi/message/MessageClient";
+import {buttonForCommand} from "@atomist/automation-client/spi/message/MessageClient";
 import {addBotToSlackChannel} from "@atomist/lifecycle-automation/handlers/command/slack/AddBotToChannel";
 import {inviteUserToSlackChannel} from "@atomist/lifecycle-automation/handlers/command/slack/AssociateRepo";
 import {createChannel} from "@atomist/lifecycle-automation/handlers/command/slack/CreateChannel";
@@ -23,7 +20,7 @@ import axios from "axios";
 import * as _ from "lodash";
 import {QMConfig} from "../../config/QMConfig";
 import {CreateTeam} from "./CreateTeam";
-import {gluonTeamsWhoSlackScreenNameBelongsTo} from "./Teams";
+import {gluonTeamsWhoSlackScreenNameBelongsTo, menuForTeams} from "./Teams";
 
 @CommandHandler("Check whether to create a new team channel or use an existing channel")
 @Tags("subatomic", "slack", "channel", "team")
@@ -130,7 +127,7 @@ export class LinkExistingTeamSlackChannel implements HandleCommand {
         required: false,
         displayable: false,
     })
-    public teamName: string = null;
+    public teamName: string;
 
     @Parameter({
         description: "team channel name",
@@ -139,34 +136,21 @@ export class LinkExistingTeamSlackChannel implements HandleCommand {
     public teamChannel: string;
 
     public handle(ctx: HandlerContext): Promise<HandlerResult> {
-        if (this.teamName === null) {
-            return gluonTeamsWhoSlackScreenNameBelongsTo(ctx, this.slackScreenName)
-                .then(teams => {
-                    const msg: SlackMessage = {
-                        text: "Please select the team you would like to link the slack channel to",
-                        attachments: [{
-                            fallback: "A menu",
-                            actions: [
-                                menuForCommand({
-                                        text: "Select Team", options:
-                                            teams.map(team => {
-                                                return {
-                                                    value: team.name,
-                                                    text: team.name,
-                                                };
-                                            }),
-                                    },
-                                    this, "teamName",
-                                    {teamChannel: this.teamChannel}),
-                            ],
-                        }],
-                    };
+        if (_.isEmpty(this.teamName)) {
+            return this.requestUnsetParameters(ctx);
+        }
+        return linkSlackChannelToGluonTeam(ctx, this.teamName, this.teamId, this.teamChannel, this.docs(), false);
+    }
 
-                    return ctx.messageClient.addressUsers(msg, this.slackScreenName)
-                        .then(success);
-                });
-        } else {
-            return linkSlackChannelToGluonTeam(ctx, this.teamName, this.teamId, this.teamChannel, this.docs(), false);
+    private requestUnsetParameters(ctx: HandlerContext): Promise<HandlerResult> {
+        if (_.isEmpty(this.teamName)) {
+            return gluonTeamsWhoSlackScreenNameBelongsTo(ctx, this.slackScreenName).then(teams => {
+                return menuForTeams(
+                    ctx,
+                    teams,
+                    this,
+                    "Please select the team you would like to link the slack channel to");
+            });
         }
     }
 

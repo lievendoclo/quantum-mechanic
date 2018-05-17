@@ -1,9 +1,10 @@
-import {HandlerContext} from "@atomist/automation-client";
+import {HandleCommand, HandlerContext} from "@atomist/automation-client";
 import {buttonForCommand} from "@atomist/automation-client/spi/message/MessageClient";
 import {SlackMessage, url} from "@atomist/slack-messages";
 import axios from "axios";
 import * as _ from "lodash";
 import {QMConfig} from "../../config/QMConfig";
+import {createMenu} from "../shared/GenericMenu";
 import {CreateTeam} from "../team/CreateTeam";
 import {CreateProject} from "./CreateProject";
 
@@ -44,6 +45,23 @@ Consider creating a new project called ${projectName}. Click the button below to
                         `Project with name ${projectName} does not exist`));
             }
         });
+}
+
+export function menuForProjects(ctx: HandlerContext, projects: any[],
+                                command: HandleCommand, message: string = "Please select a project",
+                                projectNameVariable: string = "projectName"): Promise<any> {
+    return createMenu(ctx,
+        projects.map(project => {
+            return {
+                value: project.name,
+                text: project.name,
+            };
+        }),
+        command,
+        message,
+        "Select Project",
+        projectNameVariable,
+    );
 }
 
 export function gluonProjectsWhichBelongToGluonTeam(ctx: HandlerContext, teamName: string): Promise<any[]> {
