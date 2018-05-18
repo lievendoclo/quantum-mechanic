@@ -38,7 +38,9 @@ import {
 import {
     ActionedBy,
     BitbucketProject,
-    GluonTeam, GluonTenant, GluonTenantId,
+    GluonTeam,
+    GluonTenant,
+    GluonTenantId,
     Project,
     SlackIdentity,
 } from "./gluon/shared/sharedIngester";

@@ -1,5 +1,5 @@
 import {
-    CommandHandler, failure,
+    CommandHandler,
     HandleCommand,
     HandlerContext,
     HandlerResult,
@@ -11,25 +11,27 @@ import {
 import {BitBucketServerRepoRef} from "@atomist/automation-client/operations/common/BitBucketServerRepoRef";
 import {GitCommandGitProject} from "@atomist/automation-client/project/git/GitCommandGitProject";
 import {GitProject} from "@atomist/automation-client/project/git/GitProject";
-import {menuForCommand} from "@atomist/automation-client/spi/message/MessageClient";
 import axios from "axios";
 import * as _ from "lodash";
 import {QMConfig} from "../../config/QMConfig";
+import {QMTemplate} from "../../template/QMTemplate";
 import {
     bitbucketRepositoriesForProjectKey,
-    bitbucketRepositoryForSlug, menuForBitbucketRepositories,
+    bitbucketRepositoryForSlug,
+    menuForBitbucketRepositories,
 } from "../bitbucket/Bitbucket";
 import {gluonMemberFromScreenName} from "../member/Members";
 import {
     gluonProjectFromProjectName,
-    gluonProjectsWhichBelongToGluonTeam, menuForProjects,
+    gluonProjectsWhichBelongToGluonTeam,
+    menuForProjects,
 } from "../project/Projects";
 import {
     gluonTeamForSlackTeamChannel,
-    gluonTeamsWhoSlackScreenNameBelongsTo, menuForTeams,
+    gluonTeamsWhoSlackScreenNameBelongsTo,
+    menuForTeams,
 } from "../team/Teams";
 import {ApplicationType} from "./Applications";
-import isEmpty = hbs.Utils.isEmpty;
 
 @CommandHandler("Create a new Bitbucket project", QMConfig.subatomic.commandPrefix + " create bitbucket project")
 export class CreateApplication implements HandleCommand<HandlerResult> {
@@ -76,7 +78,7 @@ export class CreateApplication implements HandleCommand<HandlerResult> {
 
     public handle(ctx: HandlerContext): Promise<HandlerResult> {
 
-        if (_.isEmpty(this.teamName) || _.isEmpty(this.projectName)) {
+        if (_.isEmpty(this.projectName)) {
             return this.requestUnsetParameters(ctx);
         }
         // get memberId for createdBy
@@ -183,7 +185,7 @@ export class LinkExistingApplication implements HandleCommand<HandlerResult> {
 
     public handle(ctx: HandlerContext): Promise<HandlerResult> {
 
-        if (_.isEmpty(this.projectName) || _.isEmpty(this.teamName) || _.isEmpty(this.bitbucketRepositorySlug)) {
+        if (_.isEmpty(this.projectName) || _.isEmpty(this.bitbucketRepositorySlug)) {
             return this.requestUnsetParameters(ctx);
         }
 
@@ -297,158 +299,9 @@ export class LinkExistingApplication implements HandleCommand<HandlerResult> {
                         return project.findFile("Jenkinsfile")
                             .catch(() => {
                                 logger.warn("Doesn't exist, add it!");
+                                const jenkinsTemplate: QMTemplate = new QMTemplate("templates/jenkins/jenkinsfile-application.groovy");
                                 return project.addFile("Jenkinsfile",
-                                    `
-/**
- * Jenkins pipeline to build an application with the GitHub flow in mind (https://guides.github.com/introduction/flow/).
- *
- * This pipeline requires the following credentials:
- * ---
- * Type          | ID                | Description
- * Secret text   | devops-project    | The OpenShift project Id of the DevOps project that this Jenkins instance is running in
- * Secret text   | dev-project       | The OpenShift project Id of the project's development environment
- * Secret text   | sit-project       | The OpenShift project Id of the project's sit environment
- * Secret text   | uat-project       | The OpenShift project Id of the project's uat environment
- *
- */
-
-def deploy(project, app, tag) {
-    openshift.withProject(project) {
-        def dc = openshift.selector('dc', app);
-        for (trigger in dc.object().spec.triggers) {
-            if (trigger.type == "ImageChange") {
-                def imageStreamName = trigger.imageChangeParams.from.name
-                echo "Current ImageStream tag: \${imageStreamName}"
-                echo "New ImageStream tag: \${app}:\${tag}"
-                if (imageStreamName != "\${app}:\${tag}") {
-                    openshift.selector('dc', app).patch("\\'{ \\"spec\\": { \\"triggers\\": [{ \\"type\\": \\"ImageChange\\", \\"imageChangeParams\\": { \\"automatic\\": false, \\"containerNames\\": [\\"\${app}\\"], \\"from\\": { \\"kind\\": \\"ImageStreamTag\\", \\"name\\": \\"\${app}:\${tag}\\" } } }] } }\\'")
-                }
-                break
-            }
-            openshift.selector('dc', app).rollout().latest()
-
-            timeout(5) {
-                def deploymentObject = openshift.selector('dc', "\${app}").object()
-                if (deploymentObject.spec.replicas > 0) {
-                    def latestDeploymentVersion = deploymentObject.status.latestVersion
-                    def replicationController = openshift.selector('rc', "\${app}-\${latestDeploymentVersion}")
-                    replicationController.untilEach(1) {
-                        def replicationControllerMap = it.object()
-                        echo "Replicas: \${replicationControllerMap.status.readyReplicas}"
-                        return (replicationControllerMap.status.replicas.equals(replicationControllerMap.status.readyReplicas))
-                    }
-                } else {
-                    echo "Deployment has a replica count of 0. Not waiting for Pods to become healthy..."
-                }
-            }
-        }
-    }
-}
-
-node('maven') {
-
-    def teamDevOpsProject
-    def projectDevProject
-    def projectSitProject
-    def projectUatProject
-
-    withCredentials([
-            string(credentialsId: 'devops-project', variable: 'DEVOPS_PROJECT_ID'),
-            string(credentialsId: 'dev-project', variable: 'DEV_PROJECT_ID'),
-            string(credentialsId: 'sit-project', variable: 'SIT_PROJECT_ID'),
-            string(credentialsId: 'uat-project', variable: 'UAT_PROJECT_ID')
-    ]) {
-        teamDevOpsProject = "\${env.DEVOPS_PROJECT_ID}"
-        projectDevProject = "\${env.DEV_PROJECT_ID}"
-        projectSitProject = "\${env.SIT_PROJECT_ID}"
-        projectUatProject = "\${env.UAT_PROJECT_ID}"
-    }
-
-    def project = "\${env.JOB_NAME.split('/')[0]}"
-    def app = "\${env.JOB_NAME.split('/')[1]}"
-    def appBuildConfig = "\${project}-\${app}"
-
-    def tag
-
-    stage('Checks and Tests') {
-        final scmVars = checkout(scm)
-
-        def shortGitCommit = scmVars.GIT_COMMIT[0..6]
-        def pom = readMavenPom file: 'pom.xml'
-        tag = "\${pom.version}-\${shortGitCommit}"
-        echo "Building application \${app}:\${tag} from commit \${scmVars} with BuildConfig \${appBuildConfig}"
-
-        try {
-            withCredentials([
-                    file(credentialsId: 'maven-settings', variable: 'MVN_SETTINGS')
-            ]) {
-                sh ': Maven build &&' +
-                        " ./mvnw --batch-mode test --settings $MVN_SETTINGS" +
-                        " || mvn --batch-mode test --settings $MVN_SETTINGS" +
-                        ' -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn' +
-                        ' -Dmaven.test.redirectTestOutputToFile=true'
-            }
-        } finally {
-            junit 'target/surefire-reports/*.xml'
-        }
-
-        // TODO split unit and integration tests
-    }
-
-    if (env.BRANCH_NAME == 'master' || !env.BRANCH_NAME) {
-        stage('OpenShift Build') {
-            openshift.withProject(teamDevOpsProject) {
-                def bc = openshift.selector("bc/\${appBuildConfig}")
-
-                def buildConfig = bc.object()
-                def outputImage = buildConfig.spec.output.to.name
-                echo "Current tag: \${outputImage}"
-                if (outputImage != "\${appBuildConfig}:\${tag}") {
-                    bc.patch("\\'{ \\"spec\\": { \\"output\\": { \\"to\\": { \\"name\\": \\"\${appBuildConfig}:\${tag}\\" } } } }\\'")
-                    def build = bc.startBuild();
-                    timeout(5) {
-                        build.untilEach(1) {
-                            return it.object().status.phase == "Complete"
-                        }
-                    }
-                }
-            }
-        }
-
-        stage('Deploy to DEV') {
-            sh ': Deploying to DEV...'
-
-            openshift.withProject(teamDevOpsProject) {
-                openshift.tag("\${teamDevOpsProject}/\${appBuildConfig}:\${tag}", "\${projectDevProject}/\${app}:\${tag}")
-            }
-
-            deploy(projectDevProject, app, tag);
-        }
-
-        stage('Deploy to SIT') {
-            sh ': Deploying to SIT...'
-
-            openshift.withProject(projectDevProject) {
-                openshift.tag("\${projectDevProject}/\${app}:\${tag}", "\${projectSitProject}/\${app}:\${tag}")
-            }
-
-            deploy(projectSitProject, app, tag)
-        }
-
-        stage('Deploy to UAT') {
-            sh ': Deploying to UAT...'
-
-            input "Confirm deployment to UAT"
-
-            openshift.withProject(projectSitProject) {
-                openshift.tag("\${projectSitProject}/\${app}:\${tag}", "\${projectUatProject}/\${app}:\${tag}")
-            }
-
-            deploy(projectUatProject, app, tag);
-        }
-    }
-}
-`);
+                                    jenkinsTemplate.build({}));
                             })
                             .then(() => {
                                 return project.isClean()

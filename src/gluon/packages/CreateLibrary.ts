@@ -11,22 +11,25 @@ import {
 import {BitBucketServerRepoRef} from "@atomist/automation-client/operations/common/BitBucketServerRepoRef";
 import {GitCommandGitProject} from "@atomist/automation-client/project/git/GitCommandGitProject";
 import {GitProject} from "@atomist/automation-client/project/git/GitProject";
-import {menuForCommand} from "@atomist/automation-client/spi/message/MessageClient";
 import axios from "axios";
 import * as _ from "lodash";
 import {QMConfig} from "../../config/QMConfig";
+import {QMTemplate} from "../../template/QMTemplate";
 import {
     bitbucketRepositoriesForProjectKey,
-    bitbucketRepositoryForSlug, menuForBitbucketRepositories,
+    bitbucketRepositoryForSlug,
+    menuForBitbucketRepositories,
 } from "../bitbucket/Bitbucket";
 import {gluonMemberFromScreenName} from "../member/Members";
 import {
     gluonProjectFromProjectName,
-    gluonProjectsWhichBelongToGluonTeam, menuForProjects,
+    gluonProjectsWhichBelongToGluonTeam,
+    menuForProjects,
 } from "../project/Projects";
 import {
     gluonTeamForSlackTeamChannel,
-    gluonTeamsWhoSlackScreenNameBelongsTo, menuForTeams,
+    gluonTeamsWhoSlackScreenNameBelongsTo,
+    menuForTeams,
 } from "../team/Teams";
 import {ApplicationType} from "./Applications";
 
@@ -71,11 +74,9 @@ export class LinkExistingLibrary implements HandleCommand<HandlerResult> {
     public bitbucketRepositorySlug: string;
 
     public handle(ctx: HandlerContext): Promise<HandlerResult> {
-        if (_.isEmpty(this.projectName) || _.isEmpty(this.teamName) || _.isEmpty(this.bitbucketRepositorySlug)) {
+        if (_.isEmpty(this.projectName) || _.isEmpty(this.bitbucketRepositorySlug)) {
             return this.requestUnsetParameters(ctx);
         }
-
-        logger.debug(`Linking existing library to projects for team: ${this.teamName}`);
 
         return this.linkLibraryForGluonProject(
             ctx,
@@ -187,47 +188,10 @@ export class LinkExistingLibrary implements HandleCommand<HandlerResult> {
                         return project.findFile("Jenkinsfile")
                             .catch(() => {
                                 logger.warn("Doesn't exist, add it!");
+
+                                const jenkinsTemplate: QMTemplate = new QMTemplate("templates/jenkins/jenkinsfile-library.groovy", true);
                                 return project.addFile("Jenkinsfile",
-                                    `
-node('maven') {
-
-    withCredentials([
-            string(credentialsId: 'nexus-base-url', variable: 'NEXUS_BASE_URL'),
-            file(credentialsId: 'maven-settings', variable: 'MVN_SETTINGS'),
-    ]) {
-        stage('Checks and Tests') {
-            checkout(scm)
-
-            try {
-                sh ': Maven build &&' +
-                     ' ./mvnw --batch-mode verify --settings $MVN_SETTINGS' +
-                     ' || mvn --batch-mode verify --settings $MVN_SETTINGS' +
-                     ' -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn' +
-                     ' -Dmaven.test.redirectTestOutputToFile=true'
-            } finally {
-                junit 'target/surefire-reports/*.xml'
-            }
-        }
-
-        if (env.BRANCH_NAME == 'master' || !env.BRANCH_NAME) {
-            stage('Publish to Nexus') {
-                repository = 'releases'
-                pom = readMavenPom file: 'pom.xml'
-                if (pom.version.endsWith('SNAPSHOT')) {
-                    repository = 'snapshots'
-                }
-
-                sh ': Maven deploy &&' +
-                     ' ./mvnw --batch-mode deploy --settings $MVN_SETTINGS -DskipTests' +
-                     ' -DaltDeploymentRepository=nexus::default::\${env.NEXUS_BASE_URL}/\${repository}/' +
-                     ' || mvn --batch-mode deploy --settings $MVN_SETTINGS -DskipTests' +
-                     ' -DaltDeploymentRepository=nexus::default::\${env.NEXUS_BASE_URL}/\${repository}/' +
-                     ' -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn'
-            }
-        }
-    }
-}
-`);
+                                    jenkinsTemplate.build({}));
                             })
                             .then(() => {
                                 return project.isClean()

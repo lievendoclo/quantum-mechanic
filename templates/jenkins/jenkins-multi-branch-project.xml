@@ -1,0 +1,44 @@
+<org.jenkinsci.plugins.workflow.multibranch.WorkflowMultiBranchProject plugin="workflow-multibranch@2.14">
+    <description>{{gluonApplicationName}} pipelines [[managed by Subatomic]({{gluonBaseUrl}}/projects/{{gluonProjectId}})]</description>
+    <displayName>{{gluonApplicationName}}</displayName>
+    <sources class="jenkins.branch.MultiBranchProject$BranchSourceList" plugin="branch-api@2.0.18">
+        <data>
+            <jenkins.branch.BranchSource>
+                <source class="com.cloudbees.jenkins.plugins.bitbucket.BitbucketSCMSource" plugin="cloudbees-bitbucket-branch-source@2.2.8">
+                    <serverUrl>{{bitbucketBaseUrl}}</serverUrl>
+                    <credentialsId>{{teamDevOpsProjectId}}-bitbucket</credentialsId>
+                    <repoOwner>{{bitbucketProjectKey}}</repoOwner>
+                    <repository>{{bitbucketRepositoryName}}</repository>
+                    <traits>
+                        <com.cloudbees.jenkins.plugins.bitbucket.BranchDiscoveryTrait>
+                            <strategyId>3</strategyId>
+                        </com.cloudbees.jenkins.plugins.bitbucket.BranchDiscoveryTrait>
+                        <com.cloudbees.jenkins.plugins.bitbucket.OriginPullRequestDiscoveryTrait>
+                            <strategyId>1</strategyId>
+                        </com.cloudbees.jenkins.plugins.bitbucket.OriginPullRequestDiscoveryTrait>
+                        <com.cloudbees.jenkins.plugins.bitbucket.ForkPullRequestDiscoveryTrait>
+                            <strategyId>1</strategyId>
+                            <trust class="com.cloudbees.jenkins.plugins.bitbucket.ForkPullRequestDiscoveryTrait$TrustTeamForks" />
+                        </com.cloudbees.jenkins.plugins.bitbucket.ForkPullRequestDiscoveryTrait>
+                        <jenkins.scm.impl.trait.WildcardSCMHeadFilterTrait plugin="scm-api@2.2.6">
+                            <includes>master release* PR-*</includes>
+                            <excludes />
+                        </jenkins.scm.impl.trait.WildcardSCMHeadFilterTrait>
+                        <org.jenkinsci.plugins.scm__filter.BitbucketCommitSkipTrait plugin="bitbucket-scm-trait-commit-skip@0.1.1"/>
+                        <com.cloudbees.jenkins.plugins.bitbucket.WebhookRegistrationTrait>
+                            <mode>ITEM</mode>
+                        </com.cloudbees.jenkins.plugins.bitbucket.WebhookRegistrationTrait>
+                    </traits>
+                </source>
+                <strategy class="jenkins.branch.DefaultBranchPropertyStrategy">
+                    <properties class="empty-list" />
+                </strategy>
+            </jenkins.branch.BranchSource>
+        </data>
+        <owner class="org.jenkinsci.plugins.workflow.multibranch.WorkflowMultiBranchProject" reference="../.." />
+    </sources>
+    <factory class="org.jenkinsci.plugins.workflow.multibranch.WorkflowBranchProjectFactory">
+        <owner class="org.jenkinsci.plugins.workflow.multibranch.WorkflowMultiBranchProject" reference="../.." />
+        <scriptPath>Jenkinsfile</scriptPath>
+    </factory>
+</org.jenkinsci.plugins.workflow.multibranch.WorkflowMultiBranchProject>

@@ -166,7 +166,7 @@ export class DevOpsEnvironmentRequested implements HandleEvent<any> {
                 )]);
             })
             .then(() => {
-                logger.info("Processing Jenkins Template...");
+                logger.info("Processing Jenkins QMTemplate...");
                 return OCCommon.commonCommand("process",
                     "jenkins-persistent-subatomic",
                     [],
@@ -192,7 +192,7 @@ export class DevOpsEnvironmentRequested implements HandleEvent<any> {
                                 new SimpleOption("-namespace", projectId),
                             ])
                             .then(() => {
-                                logger.warn("Jenkins Template has already been processed, deployment exists");
+                                logger.warn("Jenkins QMTemplate has already been processed, deployment exists");
                                 return SuccessPromise;
                             }, () => {
                                 return OCCommon.createFromData(JSON.parse(jenkinsTemplate.output),
@@ -392,7 +392,7 @@ If you haven't already, you might want to create a Project for your team to work
                             buttonForCommand(
                                 {text: "Create project"},
                                 new CreateProject(),
-                                {teamName: devOpsRequestedEvent.team.teamId}),
+                                {teamName: devOpsRequestedEvent.team.name}),
                         ],
                     }, {
                         fallback: `Add a Subatomic Config Server`,
@@ -405,7 +405,7 @@ If your applications will require a Spring Cloud Config Server, you can add a Su
                             buttonForCommand(
                                 {text: "Add Config Server"},
                                 new AddConfigServer(),
-                                {gluonTeamName: devOpsRequestedEvent.team.teamId}),
+                                {gluonTeamName: devOpsRequestedEvent.team.name}),
                         ],
                     }],
                 };

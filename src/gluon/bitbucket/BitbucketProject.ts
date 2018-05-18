@@ -3,7 +3,7 @@ import {
     failure,
     HandleCommand,
     HandlerContext,
-    HandlerResult,
+    HandlerResult, logger,
     MappedParameter,
     MappedParameters,
     Parameter,
@@ -53,9 +53,11 @@ export class NewBitbucketProject implements HandleCommand<HandlerResult> {
 
     public handle(ctx: HandlerContext): Promise<HandlerResult> {
 
-        if (_.isEmpty(this.teamName) || _.isEmpty(this.projectName)) {
+        if (_.isEmpty(this.projectName)) {
             return this.requestUnsetParameters(ctx);
         }
+
+        logger.info(`Team: ${this.teamName}, Project: ${this.projectName}`);
         // get memberId for createdBy
         return gluonMemberFromScreenName(ctx, this.screenName)
             .then(member => {
@@ -85,6 +87,7 @@ export class NewBitbucketProject implements HandleCommand<HandlerResult> {
 
     private requestUnsetParameters(ctx: HandlerContext): Promise<HandlerResult> {
         if (_.isEmpty(this.teamName)) {
+            logger.info("Team name is empty");
             return gluonTeamForSlackTeamChannel(this.teamChannel)
                 .then(
                     team => {
@@ -104,6 +107,7 @@ export class NewBitbucketProject implements HandleCommand<HandlerResult> {
                 );
         }
         if (_.isEmpty(this.projectName)) {
+            logger.info("Project name is empty");
             return gluonProjectsWhichBelongToGluonTeam(ctx, this.teamName)
                 .then(projects => {
                     return menuForProjects(
@@ -114,6 +118,8 @@ export class NewBitbucketProject implements HandleCommand<HandlerResult> {
                     );
                 });
         }
+
+        logger.info("Nothing was empty");
     }
 }
 
@@ -150,9 +156,11 @@ export class ListExistingBitbucketProject implements HandleCommand<HandlerResult
 
     public handle(ctx: HandlerContext): Promise<HandlerResult> {
 
-        if (_.isEmpty(this.teamName) || _.isEmpty(this.projectName)) {
+        if (_.isEmpty(this.projectName)) {
             return this.requestUnsetParameters(ctx);
         }
+
+        logger.info(`Team: ${this.teamName}, Project: ${this.projectName}`);
 
         // get memberId for createdBy
         return gluonMemberFromScreenName(ctx, this.screenName)
@@ -197,6 +205,7 @@ export class ListExistingBitbucketProject implements HandleCommand<HandlerResult
 
     private requestUnsetParameters(ctx: HandlerContext): Promise<HandlerResult> {
         if (_.isEmpty(this.teamName)) {
+            logger.info("Team name is empty");
             return gluonTeamForSlackTeamChannel(this.teamChannel)
                 .then(
                     team => {
@@ -216,6 +225,7 @@ export class ListExistingBitbucketProject implements HandleCommand<HandlerResult
                 );
         }
         if (_.isEmpty(this.projectName)) {
+            logger.info("Project name is empty");
             return gluonProjectsWhichBelongToGluonTeam(ctx, this.teamName)
                 .then(projects => {
                     return menuForProjects(
@@ -226,5 +236,6 @@ export class ListExistingBitbucketProject implements HandleCommand<HandlerResult
                     );
                 });
         }
+        logger.info("Nothing was empty");
     }
 }

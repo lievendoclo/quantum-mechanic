@@ -15,6 +15,7 @@ import * as _ from "lodash";
 import {QMConfig} from "../../config/QMConfig";
 import {SimpleOption} from "../../openshift/base/options/SimpleOption";
 import {OCCommon} from "../../openshift/OCCommon";
+import {QMTemplate} from "../../template/QMTemplate";
 import {jenkinsAxios} from "../jenkins/Jenkins";
 import {KickOffJenkinsBuild} from "../jenkins/JenkinsBuild";
 import {getProjectId} from "../project/Project";
@@ -86,9 +87,10 @@ export class ApplicationCreated implements HandleEvent<any> {
         const jenkinsPromise: Promise<HandlerResult> = this.createJenkinsJob(
             teamDevOpsProjectId,
             applicationCreatedEvent.project.name,
+            applicationCreatedEvent.project.projectId,
             applicationCreatedEvent.application.name,
             applicationCreatedEvent.bitbucketProject.key,
-            applicationCreatedEvent.bitbucketRepository.name,
+            applicationCreatedEvent.bitbucketRepository.name.toLowerCase(),
         );
 
         if (applicationCreatedEvent.application.applicationType === ApplicationType.DEPLOYABLE.toString()) {
@@ -107,7 +109,7 @@ export class ApplicationCreated implements HandleEvent<any> {
                         .then(() => {
                             logger.info(`Using Git URI: ${applicationCreatedEvent.bitbucketRepository.remoteUrl}`);
 
-                            // TODO this should be extracted to a configurable Template
+                            // TODO this should be extracted to a configurable QMTemplate
                             return OCCommon.createFromData({
                                     apiVersion: "v1",
                                     kind: "BuildConfig",
@@ -276,6 +278,7 @@ You can kick off the build pipeline for your library by clicking the button belo
 
     private createJenkinsJob(teamDevOpsProjectId: string,
                              gluonProjectName: string,
+                             gluonProjectId: string,
                              gluonApplicationName: string,
                              bitbucketProjectKey: string,
                              bitbucketRepositoryName: string): Promise<HandlerResult> {
@@ -298,53 +301,21 @@ You can kick off the build pipeline for your library by clicking the button belo
                     .then(jenkinsHost => {
                         logger.debug(`Using Jenkins Route host [${jenkinsHost.output}] to add Bitbucket credentials`);
 
+                        const jenkinsTemplate: QMTemplate = new QMTemplate("templates/jenkins/jenkins-multi-branch-project.xml");
+                        const builtTemplate: string = jenkinsTemplate.build(
+                            {
+                                gluonApplicationName,
+                                gluonBaseUrl: QMConfig.subatomic.gluon.baseUrl,
+                                gluonProjectId,
+                                bitbucketBaseUrl: QMConfig.subatomic.bitbucket.baseUrl,
+                                teamDevOpsProjectId,
+                                bitbucketProjectKey,
+                                bitbucketRepositoryName,
+                            },
+                        );
                         const axios = jenkinsAxios();
                         return axios.post(`https://${jenkinsHost.output}/job/${_.kebabCase(gluonProjectName).toLowerCase()}/createItem?name=${_.kebabCase(gluonApplicationName).toLowerCase()}`,
-                            `
-<org.jenkinsci.plugins.workflow.multibranch.WorkflowMultiBranchProject plugin="workflow-multibranch@2.14">
-  <description>${gluonApplicationName} pipelines [[managed by Subatomic](${QMConfig.subatomic.docs.baseUrl}/projects/${encodeURI(gluonProjectName)})]</description>
-  <displayName>${gluonApplicationName}</displayName>
-  <sources class="jenkins.branch.MultiBranchProject$BranchSourceList" plugin="branch-api@2.0.18">
-  <data>
-    <jenkins.branch.BranchSource>
-      <source class="com.cloudbees.jenkins.plugins.bitbucket.BitbucketSCMSource" plugin="cloudbees-bitbucket-branch-source@2.2.8">
-        <serverUrl>${QMConfig.subatomic.bitbucket.baseUrl}</serverUrl>
-        <credentialsId>${teamDevOpsProjectId}-bitbucket</credentialsId>
-        <repoOwner>${bitbucketProjectKey}</repoOwner>
-        <repository>${bitbucketRepositoryName}</repository>
-          <traits>
-            <com.cloudbees.jenkins.plugins.bitbucket.BranchDiscoveryTrait>
-              <strategyId>3</strategyId>
-            </com.cloudbees.jenkins.plugins.bitbucket.BranchDiscoveryTrait>
-            <com.cloudbees.jenkins.plugins.bitbucket.OriginPullRequestDiscoveryTrait>
-              <strategyId>1</strategyId>
-            </com.cloudbees.jenkins.plugins.bitbucket.OriginPullRequestDiscoveryTrait>
-            <com.cloudbees.jenkins.plugins.bitbucket.ForkPullRequestDiscoveryTrait>
-              <strategyId>1</strategyId>
-              <trust class="com.cloudbees.jenkins.plugins.bitbucket.ForkPullRequestDiscoveryTrait$TrustTeamForks" />
-            </com.cloudbees.jenkins.plugins.bitbucket.ForkPullRequestDiscoveryTrait>
-            <jenkins.scm.impl.trait.WildcardSCMHeadFilterTrait plugin="scm-api@2.2.6">
-              <includes>master release* PR-*</includes>
-              <excludes />
-            </jenkins.scm.impl.trait.WildcardSCMHeadFilterTrait>
-            <org.jenkinsci.plugins.scm__filter.BitbucketCommitSkipTrait plugin="bitbucket-scm-trait-commit-skip@0.1.1"/>
-            <com.cloudbees.jenkins.plugins.bitbucket.WebhookRegistrationTrait>
-              <mode>ITEM</mode>
-            </com.cloudbees.jenkins.plugins.bitbucket.WebhookRegistrationTrait>
-          </traits>
-        </source>
-        <strategy class="jenkins.branch.DefaultBranchPropertyStrategy">
-          <properties class="empty-list" />
-        </strategy>
-      </jenkins.branch.BranchSource>
-    </data>
-    <owner class="org.jenkinsci.plugins.workflow.multibranch.WorkflowMultiBranchProject" reference="../.." />
-  </sources>
-  <factory class="org.jenkinsci.plugins.workflow.multibranch.WorkflowBranchProjectFactory">
-    <owner class="org.jenkinsci.plugins.workflow.multibranch.WorkflowMultiBranchProject" reference="../.." />
-    <scriptPath>Jenkinsfile</scriptPath>
-  </factory>
-</org.jenkinsci.plugins.workflow.multibranch.WorkflowMultiBranchProject>`,
+                            builtTemplate,
                             {
                                 headers: {
                                     "Content-Type": "application/xml",

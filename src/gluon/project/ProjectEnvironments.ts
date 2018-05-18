@@ -49,7 +49,7 @@ export class NewProjectEnvironments implements HandleCommand {
     public handle(ctx: HandlerContext): Promise<HandlerResult> {
         logger.info("Creating new OpenShift environments...");
 
-        if (_.isEmpty(this.teamName) || _.isEmpty(this.projectName)) {
+        if (_.isEmpty(this.projectName)) {
             return this.requestUnsetParameters(ctx);
         }
 

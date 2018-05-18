@@ -55,7 +55,7 @@ export class CreateProject implements HandleCommand<HandlerResult> {
     public tenantName: string;
 
     public handle(ctx: HandlerContext): Promise<HandlerResult> {
-        if (_.isEmpty(this.teamName) || _.isEmpty(this.teamName)) {
+        if (_.isEmpty(this.teamName) || _.isEmpty(this.tenantName)) {
             return this.requestUnsetParameters(ctx);
         }
         return gluonTenantFromTenantName(this.tenantName).then(tenant => {
@@ -96,7 +96,6 @@ export class CreateProject implements HandleCommand<HandlerResult> {
 
     private requestNewProjectForTeamAndTenant(ctx: HandlerContext, screenName: string,
                                               teamName: string, tenantId: string): Promise<any> {
-
         return gluonMemberFromScreenName(ctx, screenName)
             .then(member => {
                 axios.get(`${QMConfig.subatomic.gluon.baseUrl}/teams?name=${teamName}`)
