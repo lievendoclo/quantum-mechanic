@@ -1,3 +1,4 @@
+import * as _ from "lodash";
 import {OCCommand} from "./base/OCCommand";
 import {OCCommandResult} from "./base/OCCommandResult";
 import {SimpleOption} from "./base/options/SimpleOption";
@@ -10,7 +11,7 @@ export class OCClient {
     public static policy = OCPolicy;
 
     public static getInstance(): OCClient {
-        if (this.instance === null) {
+        if (_.isEmpty(this.instance)) {
             this.instance = new OCClient();
         }
         return this.instance;

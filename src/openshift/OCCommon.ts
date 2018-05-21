@@ -1,5 +1,6 @@
 import {logger} from "@atomist/automation-client";
 import * as fs from "fs";
+import * as _ from "lodash";
 import {OCCommand} from "./base/OCCommand";
 import {OCCommandResult} from "./base/OCCommandResult";
 import {AbstractOption} from "./base/options/AbstractOption";
@@ -9,7 +10,7 @@ import {StandardOption} from "./base/options/StandardOption";
 export class OCCommon {
 
     public static getInstance(): OCCommon {
-        if (this.instance === null) {
+        if (_.isEmpty(this.instance)) {
             this.instance = new OCCommon();
         }
         return this.instance;

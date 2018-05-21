@@ -58,7 +58,9 @@
     "enabled": false,
     "auth": {
       "basic": {
-        "enabled": false
+        "enabled": true,
+        "username": "user",
+        "password": "password"
       },
       "bearer": {
         "enabled": false

@@ -1,0 +1,46 @@
+<com.cloudbees.hudson.plugins.folder.Folder plugin="cloudbees-folder@6.0.4">
+    <description>Folder for {{projectName}} project (managed by Subatomic)</description>
+    <displayName>{{projectName}}</displayName>
+    <properties>
+        <com.cloudbees.hudson.plugins.folder.properties.FolderCredentialsProvider_-FolderCredentialsProperty>
+            <domainCredentialsMap class="hudson.util.CopyOnWriteMap$Hash">
+                <entry>
+                    <com.cloudbees.plugins.credentials.domains.Domain plugin="credentials@2.1.16">
+                        <specifications />
+                    </com.cloudbees.plugins.credentials.domains.Domain>
+                    <java.util.concurrent.CopyOnWriteArrayList />
+                </entry>
+                <entry>
+                    <com.cloudbees.plugins.credentials.domains.Domain plugin="credentials@2.1.16">
+                        <name>{{projectName}} Credentials</name>
+                        <name>{{projectName}} Credentials</name>
+                        <description>The secrets which contain the deployment environments for use in the multibranch jobs for this project</description>
+                        <specifications />
+                    </com.cloudbees.plugins.credentials.domains.Domain>
+                    <list>
+                        <org.jenkinsci.plugins.plaincredentials.impl.StringCredentialsImpl plugin="plain-credentials@1.4">
+                            <id>devops-project</id>
+                            <description>Team DevOps OpenShift project Id</description>
+                            <secret>{{teamDevOpsProjectId}}</secret>
+                        </org.jenkinsci.plugins.plaincredentials.impl.StringCredentialsImpl>
+                        <org.jenkinsci.plugins.plaincredentials.impl.StringCredentialsImpl plugin="plain-credentials@1.4">
+                            <id>dev-project</id>
+                            <description>DEV OpenShift project Id</description>
+                            <secret>{{devProjectId}}</secret>
+                        </org.jenkinsci.plugins.plaincredentials.impl.StringCredentialsImpl>
+                        <org.jenkinsci.plugins.plaincredentials.impl.StringCredentialsImpl plugin="plain-credentials@1.4">
+                            <id>sit-project</id>
+                            <description>SIT OpenShift project Id</description>
+                            <secret>{{sitProjectId}}</secret>
+                        </org.jenkinsci.plugins.plaincredentials.impl.StringCredentialsImpl>
+                        <org.jenkinsci.plugins.plaincredentials.impl.StringCredentialsImpl plugin="plain-credentials@1.4">
+                            <id>uat-project</id>
+                            <description>UAT OpenShift project Id</description>
+                            <secret>{{uatProjectId}}</secret>
+                        </org.jenkinsci.plugins.plaincredentials.impl.StringCredentialsImpl>
+                    </list>
+                </entry>
+            </domainCredentialsMap>
+        </com.cloudbees.hudson.plugins.folder.properties.FolderCredentialsProvider_-FolderCredentialsProperty>
+    </properties>
+</com.cloudbees.hudson.plugins.folder.Folder>

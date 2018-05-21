@@ -17,6 +17,7 @@ import {QMConfig} from "../../config/QMConfig";
 import {SimpleOption} from "../../openshift/base/options/SimpleOption";
 import {OCClient} from "../../openshift/OCClient";
 import {OCCommon} from "../../openshift/OCCommon";
+import {QMTemplate} from "../../template/QMTemplate";
 import {jenkinsAxios} from "../jenkins/Jenkins";
 import {LinkExistingApplication} from "../packages/CreateApplication";
 import {LinkExistingLibrary} from "../packages/CreateLibrary";
@@ -209,54 +210,19 @@ export class ProjectEnvironmentsRequested implements HandleEvent<any> {
                                 logger.debug(`Using Jenkins Route host [${jenkinsHost.output}] to add Bitbucket credentials`);
 
                                 const axios = jenkinsAxios();
+                                const projectTemplate: QMTemplate = new QMTemplate("templates/openshift/openshift-environment-setup.xml");
+                                const builtTemplate: string = projectTemplate.build(
+                                    {
+                                        projectName: environmentsRequestedEvent.project.name,
+                                        docsUrl: QMConfig.subatomic.docs.baseUrl,
+                                        teamDevOpsProjectId,
+                                        devProjectId: getProjectId(environmentsRequestedEvent.owningTenant.name, environmentsRequestedEvent.project.name, "dev"),
+                                        sitProjectId: getProjectId(environmentsRequestedEvent.owningTenant.name, environmentsRequestedEvent.project.name, "sit"),
+                                        uatProjectId: getProjectId(environmentsRequestedEvent.owningTenant.name, environmentsRequestedEvent.project.name, "uat"),
+                                    },
+                                );
                                 return axios.post(`https://${jenkinsHost.output}/createItem?name=${_.kebabCase(environmentsRequestedEvent.project.name).toLowerCase()}`,
-                                    `
-<com.cloudbees.hudson.plugins.folder.Folder plugin="cloudbees-folder@6.0.4">
-  <description>Folder for ${environmentsRequestedEvent.project.name} project [[managed by Subatomic](${QMConfig.subatomic.docs.baseUrl}/projects/${environmentsRequestedEvent.project.name})]</description>
-  <displayName>${environmentsRequestedEvent.project.name}</displayName>
-  <properties>
-    <com.cloudbees.hudson.plugins.folder.properties.FolderCredentialsProvider_-FolderCredentialsProperty>
-      <domainCredentialsMap class="hudson.util.CopyOnWriteMap$Hash">
-        <entry>
-          <com.cloudbees.plugins.credentials.domains.Domain plugin="credentials@2.1.16">
-            <specifications />
-          </com.cloudbees.plugins.credentials.domains.Domain>
-          <java.util.concurrent.CopyOnWriteArrayList />
-        </entry>
-        <entry>
-          <com.cloudbees.plugins.credentials.domains.Domain plugin="credentials@2.1.16">
-            <name>${environmentsRequestedEvent.project.name} Credentials</name>
-            <name>${environmentsRequestedEvent.project.name} Credentials</name>
-            <description>The secrets which contain the deployment environments for use in the multibranch jobs for this project</description>
-            <specifications />
-          </com.cloudbees.plugins.credentials.domains.Domain>
-          <list>
-            <org.jenkinsci.plugins.plaincredentials.impl.StringCredentialsImpl plugin="plain-credentials@1.4">
-              <id>devops-project</id>
-              <description>Team DevOps OpenShift project Id</description>
-              <secret>${teamDevOpsProjectId}</secret>
-            </org.jenkinsci.plugins.plaincredentials.impl.StringCredentialsImpl>
-            <org.jenkinsci.plugins.plaincredentials.impl.StringCredentialsImpl plugin="plain-credentials@1.4">
-              <id>dev-project</id>
-              <description>DEV OpenShift project Id</description>
-              <secret>${getProjectId(environmentsRequestedEvent.owningTenant.name, environmentsRequestedEvent.project.name, "dev")}</secret>
-            </org.jenkinsci.plugins.plaincredentials.impl.StringCredentialsImpl>
-            <org.jenkinsci.plugins.plaincredentials.impl.StringCredentialsImpl plugin="plain-credentials@1.4">
-              <id>sit-project</id>
-              <description>SIT OpenShift project Id</description>
-              <secret>${getProjectId(environmentsRequestedEvent.owningTenant.name, environmentsRequestedEvent.project.name, "sit")}</secret>
-            </org.jenkinsci.plugins.plaincredentials.impl.StringCredentialsImpl>
-            <org.jenkinsci.plugins.plaincredentials.impl.StringCredentialsImpl plugin="plain-credentials@1.4">
-              <id>uat-project</id>
-              <description>UAT OpenShift project Id</description>
-              <secret>${getProjectId(environmentsRequestedEvent.owningTenant.name, environmentsRequestedEvent.project.name, "uat")}</secret>
-            </org.jenkinsci.plugins.plaincredentials.impl.StringCredentialsImpl>
-          </list>
-        </entry>
-      </domainCredentialsMap>
-    </com.cloudbees.hudson.plugins.folder.properties.FolderCredentialsProvider_-FolderCredentialsProperty>
-  </properties>
-</com.cloudbees.hudson.plugins.folder.Folder>`,
+                                    builtTemplate,
                                     {
                                         headers: {
                                             "Content-Type": "application/xml",
