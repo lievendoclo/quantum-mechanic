@@ -11,7 +11,7 @@ export function jenkinsAxios(): AxiosInstance {
         httpsAgent: new https.Agent({
             rejectUnauthorized: false,
         }),
-        timeout: 30000,
+        timeout: 45000,
         proxy: false,
     });
     return addAxiosLogger(instance, "Jenkins");
