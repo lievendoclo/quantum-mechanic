@@ -169,7 +169,7 @@ export class ApplicationCreated implements HandleEvent<any> {
                         "and is ready to build and deploy to your project environments",
                         attachments: [{
                             fallback: `Your application has been provisioned successfully`,
-                            footer: `For more information, please read the ${this.docs() + "#jenkins-build"}`,
+                            footer: `For more information, please read the ${this.docs()}`,
                             text: `
 You can kick off the build pipeline for your application by clicking the button below or pushing changes to your application's repository`,
                             mrkdwn_in: ["text"],
@@ -196,7 +196,7 @@ You can kick off the build pipeline for your application by clicking the button 
                             text: "Your library has been provisioned successfully and is ready to build",
                             attachments: [{
                                 fallback: `Your library has been provisioned successfully`,
-                                footer: `For more information, please read the ${this.docs() + "#jenkins-build"}`,
+                                footer: `For more information, please read the ${this.docs()}`,
                                 text: `
 You can kick off the build pipeline for your library by clicking the button below or pushing changes to your library's repository`,
                                 mrkdwn_in: ["text"],
@@ -335,7 +335,7 @@ You can kick off the build pipeline for your library by clicking the button belo
     }
 
     private docs(): string {
-        return `${url(`${QMConfig.subatomic.docs.baseUrl}/quantum-mechanic/command-reference`,
+        return `${url(`${QMConfig.subatomic.docs.baseUrl}/quantum-mechanic/command-reference#jenkins-build`,
             "documentation")}`;
     }
 }
