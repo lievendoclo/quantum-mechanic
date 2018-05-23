@@ -20,6 +20,7 @@ import {jenkinsAxios} from "../jenkins/Jenkins";
 import {KickOffJenkinsBuild} from "../jenkins/JenkinsBuild";
 import {getProjectId} from "../project/Project";
 import {gluonProjectFromProjectName} from "../project/Projects";
+import {logErrorAndReturnSuccess} from "../shared/Error";
 import {gluonTenantFromTenantId} from "../shared/Tenant";
 import {ApplicationType} from "./Applications";
 
@@ -157,6 +158,8 @@ export class ApplicationCreated implements HandleEvent<any> {
                                     logger.info(`Found tenant: ${tenant}`);
                                     return this.createApplicationOpenshiftResources(tenant.name, project.name, applicationCreatedEvent.application.name);
                                 });
+                            }).catch(error  => {
+                                logErrorAndReturnSuccess(gluonProjectFromProjectName.name, error);
                             });
 
                         });

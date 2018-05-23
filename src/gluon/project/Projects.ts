@@ -5,7 +5,6 @@ import axios from "axios";
 import * as _ from "lodash";
 import {QMConfig} from "../../config/QMConfig";
 import {createMenu} from "../shared/GenericMenu";
-import {CreateTeam} from "../team/CreateTeam";
 import {CreateProject} from "./CreateProject";
 
 export function gluonProjectFromProjectName(ctx: HandlerContext,
@@ -80,7 +79,7 @@ export function gluonProjectsWhichBelongToGluonTeam(ctx: HandlerContext, teamNam
                             {
                                 text: "Create project",
                             },
-                            new CreateTeam()),
+                            new CreateProject()),
                     ],
                 }],
             })

@@ -1,17 +1,17 @@
 import {
-    CommandHandler, failure,
+    CommandHandler,
     HandleCommand,
     HandlerContext,
-    HandlerResult, logger,
+    HandlerResult,
     MappedParameter,
     MappedParameters,
     Parameter,
 } from "@atomist/automation-client";
-import {menuForCommand} from "@atomist/automation-client/spi/message/MessageClient";
 import axios from "axios";
 import * as _ from "lodash";
 import {QMConfig} from "../../config/QMConfig";
 import {gluonMemberFromScreenName} from "../member/Members";
+import {logErrorAndReturnSuccess} from "../shared/Error";
 import {
     gluonTenantFromTenantName, gluonTenantList,
     menuForTenants,
@@ -79,6 +79,8 @@ export class CreateProject implements HandleCommand<HandlerResult> {
                                 this,
                                 "Please select a team you would like to associate this project with",
                             );
+                        }).catch(error => {
+                            logErrorAndReturnSuccess(gluonTeamsWhoSlackScreenNameBelongsTo.name, error);
                         });
                     },
                 );
@@ -119,6 +121,8 @@ export class CreateProject implements HandleCommand<HandlerResult> {
                             });
                         }
                     });
+            }).catch(error => {
+                logErrorAndReturnSuccess(gluonMemberFromScreenName.name, error);
             });
     }
 }

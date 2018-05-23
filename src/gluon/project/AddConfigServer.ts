@@ -9,7 +9,6 @@ import {
     Parameter,
     SuccessPromise,
 } from "@atomist/automation-client";
-import {menuForCommand} from "@atomist/automation-client/spi/message/MessageClient";
 import {SlackMessage, url} from "@atomist/slack-messages";
 import * as _ from "lodash";
 import {QMConfig} from "../../config/QMConfig";
@@ -17,11 +16,11 @@ import {NamedSimpleOption} from "../../openshift/base/options/NamedSimpleOption"
 import {SimpleOption} from "../../openshift/base/options/SimpleOption";
 import {OCClient} from "../../openshift/OCClient";
 import {OCCommon} from "../../openshift/OCCommon";
+import {logErrorAndReturnSuccess} from "../shared/Error";
 import {
     gluonTeamForSlackTeamChannel,
     gluonTeamsWhoSlackScreenNameBelongsTo, menuForTeams,
 } from "../team/Teams";
-import {gluonProjectsWhichBelongToGluonTeam, menuForProjects} from "./Projects";
 
 @CommandHandler("Add a new Subatomic Config Server", QMConfig.subatomic.commandPrefix + " add config server")
 export class AddConfigServer implements HandleCommand<HandlerResult> {
@@ -73,6 +72,8 @@ export class AddConfigServer implements HandleCommand<HandlerResult> {
                                 "Please select a team, whose DevOps project the Subatomic Config Server will be added to",
                                 "gluonTeamName",
                             );
+                        }).catch(error => {
+                            logErrorAndReturnSuccess(gluonTeamsWhoSlackScreenNameBelongsTo.name, error);
                         });
                     },
                 );

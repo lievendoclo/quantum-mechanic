@@ -21,6 +21,7 @@ import {
     gluonProjectsWhichBelongToGluonTeam,
     menuForProjects,
 } from "../project/Projects";
+import {logErrorAndReturnSuccess} from "../shared/Error";
 import {
     gluonTeamForSlackTeamChannel,
     gluonTeamsWhoSlackScreenNameBelongsTo,
@@ -84,6 +85,8 @@ export class KickOffJenkinsBuild implements HandleCommand<HandlerResult> {
                                 teams,
                                 this,
                                 "Please select the team which contains the owning project of the application you would like to build");
+                        }).catch(error => {
+                            logErrorAndReturnSuccess(gluonTeamsWhoSlackScreenNameBelongsTo.name, error);
                         });
                     },
                 );
@@ -96,6 +99,8 @@ export class KickOffJenkinsBuild implements HandleCommand<HandlerResult> {
                         projects,
                         this,
                         "Please select a project which contains the application you would like to build");
+                }).catch(error => {
+                    logErrorAndReturnSuccess(gluonProjectsWhichBelongToGluonTeam.name, error);
                 });
         }
         if (_.isEmpty(this.applicationName)) {
@@ -105,6 +110,8 @@ export class KickOffJenkinsBuild implements HandleCommand<HandlerResult> {
                     applications,
                     this,
                     "Please select the application you would like to build");
+            }).catch(error => {
+                logErrorAndReturnSuccess(gluonApplicationsLinkedToGluonProject.name, error);
             });
         }
 

@@ -156,8 +156,8 @@ describe("Create a new or use an existing Openshift DevOps environment", () => {
         };
 
         subject.handle(fakeContext)
-            .catch(err => {
-                assert(err === `${screenName} does not belong to any team`);
+            .then(() => {
+                assert(fakeContext.messageClient.textMsg.text === "Unfortunately, you are not a member of any team. To associate this project you need to be a member of at least one team.");
             })
             .then(done, done);
     });
