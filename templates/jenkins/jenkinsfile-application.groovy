@@ -22,7 +22,11 @@ def deploy(project, app, tag) {
                 if (imageStreamName != "${app}:${tag}") {
                     openshift.selector('dc', app).patch("\'{ \"spec\": { \"triggers\": [{ \"type\": \"ImageChange\", \"imageChangeParams\": { \"automatic\": false, \"containerNames\": [\"${app}\"], \"from\": { \"kind\": \"ImageStreamTag\", \"name\": \"${app}:${tag}\" } } }] } }\'")
                 }
-                break
+                def latestVersion = dc.object().status.latestVersion
+                if (latestVersion != 0){
+                    break
+                }
+                echo "Running initial deployment"
             }
             openshift.selector('dc', app).rollout().latest()
 
@@ -104,12 +108,17 @@ node('maven') {
                 echo "Current tag: ${outputImage}"
                 if (outputImage != "${appBuildConfig}:${tag}") {
                     bc.patch("\'{ \"spec\": { \"output\": { \"to\": { \"name\": \"${appBuildConfig}:${tag}\" } } } }\'")
-                    def build = bc.startBuild();
-                    timeout(5) {
-                        build.untilEach(1) {
-                            return it.object().status.phase == "Complete"
-                        }
+                }
+                def build = bc.startBuild()
+                def result = "Pending"
+                timeout(5) {
+                    build.untilEach(1) {
+                      result = it.object().status.phase
+                      return result == "Complete" || result == "Failed"
                     }
+                }
+                if (result == "Failed"){
+                  error("Build failed")
                 }
             }
         }

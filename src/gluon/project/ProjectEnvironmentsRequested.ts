@@ -152,27 +152,6 @@ export class ProjectEnvironmentsRequested implements HandleEvent<any> {
                             });
                     })
                     .then(() => {
-                        // TODO filter for the valid app templates by using a selector on the openshif project
-                        // I.e. get all templates that have a label of subatomic.bison.co.za/app-template: xxx
-                        // then iterate over them and copy them into the project
-                        return OCCommon.commonCommand("get", "templates",
-                            ["subatomic-app-template"],
-                            [
-                                new SimpleOption("-namespace", "subatomic"),
-                                new SimpleOption("-output", "json"),
-                            ],
-                        )
-                            .then(template => {
-                                const appTemplate: any = JSON.parse(template.output);
-                                appTemplate.metadata.namespace = projectId;
-                                return OCCommon.createFromData(appTemplate,
-                                    [
-                                        new SimpleOption("-namespace", projectId),
-                                    ]
-                                    , );
-                            });
-                    })
-                    .then(() => {
                         const teamDevOpsProjectId = `${_.kebabCase(environmentsRequestedEvent.teams[0].name).toLowerCase()}-devops`;
                         return OCCommon.commonCommand(
                             "policy add-role-to-user",

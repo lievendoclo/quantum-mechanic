@@ -134,6 +134,30 @@ export class DevOpsEnvironmentRequested implements HandleEvent<any> {
                             new SimpleOption("-namespace", projectId),
                         ]);
                     });
+            }).then(() => {
+                logger.info(`Finding templates in subatomic namespace`);
+                // TODO filter for the valid app templates by using a selector on the openshif project
+                // I.e. get all templates that have a label of subatomic.bison.co.za/app-template: xxx
+                // then iterate over them and copy them into the project
+                return OCCommon.commonCommand("get", "templates",
+                    [],
+                    [
+                        new SimpleOption("l", "usage=subatomic-app"),
+                        new SimpleOption("-namespace", "subatomic"),
+                        new SimpleOption("-output", "json"),
+                    ],
+                )
+                    .then(template => {
+                        const appTemplate: any = JSON.parse(template.output);
+                        for (const item of appTemplate.items) {
+                            item.metadata.namespace = projectId;
+                        }
+                        return OCCommon.createFromData(appTemplate,
+                            [
+                                new SimpleOption("-namespace", projectId),
+                            ]
+                            , );
+                    });
             })
             .then(() => {
                 return OCCommon.commonCommand("get", "templates",

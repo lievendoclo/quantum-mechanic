@@ -88,7 +88,7 @@ export function gluonApplicationsLinkedToGluonProjectId(gluonProjectId: string):
 }
 
 export function menuForApplications(ctx: HandlerContext, applications: any[],
-                                    command: HandleCommand, message: string = "Please select an application",
+                                    command: HandleCommand, message: string = "Please select an application/library",
                                     applicationNameVariable: string = "applicationName"): Promise<any> {
     return createMenu(ctx,
         applications.map(application => {
@@ -99,7 +99,7 @@ export function menuForApplications(ctx: HandlerContext, applications: any[],
         }),
         command,
         message,
-        "Select Application",
+        "Select Application/Library",
         applicationNameVariable,
     );
 }

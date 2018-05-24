@@ -63,7 +63,7 @@ export class KickOffJenkinsBuild implements HandleCommand<HandlerResult> {
     public applicationName: string;
 
     public handle(ctx: HandlerContext): Promise<HandlerResult> {
-        if (_.isEmpty(this.projectName) || _.isEmpty(this.applicationName)) {
+        if (_.isEmpty(this.teamName) || _.isEmpty(this.projectName) || _.isEmpty(this.applicationName)) {
             return this.requestUnsetParameters(ctx);
         }
 
@@ -115,6 +115,7 @@ export class KickOffJenkinsBuild implements HandleCommand<HandlerResult> {
             });
         }
 
+        return this.applicationsForGluonProject(ctx, this.applicationName, this.teamName, this.projectName);
     }
 
     private applicationsForGluonProject(ctx: HandlerContext,

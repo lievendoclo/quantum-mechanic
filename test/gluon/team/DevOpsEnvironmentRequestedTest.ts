@@ -11,6 +11,7 @@ import {OCCommon} from "../../../src/openshift/OCCommon";
 import {OCPolicy} from "../../../src/openshift/OCPolicy";
 import {TestMessageClient} from "../TestMessageClient";
 
+import {logger} from "@atomist/automation-client";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -114,15 +115,22 @@ describe("DevOps environment test", () => {
             return resolve(response);
         }));
 
-        when(mockedOCCommon.commonCommand("get", "templates", anything(), anything(), anything())).thenReturn(new Promise((resolve, reject) => {
-            const templateFile = path.resolve(__dirname, "./OCGetJenkinsTemplate.txt");
-            const response = new OCCommandResult();
-            response.command = "oc get";
-            response.output = fs.readFileSync(templateFile, "utf8");
-            response.status = true;
-
-            return resolve(response);
-        }));
+        when(mockedOCCommon.commonCommand("get", "templates", anything(), anything(), anything())).thenCall((command: string, arg2: string, parameters: string[]) => {
+            return new Promise((resolve, reject) => {
+                const response = new OCCommandResult();
+                if (parameters.length === 0) {
+                    response.command = "oc get";
+                    response.output = "{\"items\":[]}";
+                    response.status = true;
+                } else {
+                    const templateFile = path.resolve(__dirname, "./OCGetJenkinsTemplate.txt");
+                    response.command = "oc get";
+                    response.output = fs.readFileSync(templateFile, "utf8");
+                    response.status = true;
+                }
+                return resolve(response);
+            });
+        });
 
         when(mockedOCCommon.commonCommand("rollout status", "dc/jenkins", anything(), anything(), anything())).thenReturn(new Promise((resolve, reject) => {
             const response = new OCCommandResult();
@@ -181,6 +189,7 @@ describe("DevOps environment test", () => {
 
         subject.handle(fakeEventFired, fakeContext)
             .then(() => {
+                logger.info(fakeContext.messageClient.textMsg);
                 assert(fakeContext.messageClient.textMsg.text.trim() === "Your DevOps environment has been provisioned successfully");
                 return Promise.resolve();
             })

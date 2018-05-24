@@ -59,6 +59,13 @@ export const ApplicationCreatedEvent: Ingester = {
                         name: "ActionedBy",
                     },
                 },
+                {
+                    name: "requestConfiguration",
+                    type: {
+                        kind: "SCALAR",
+                        name: "Boolean",
+                    },
+                },
             ],
         },
         {
