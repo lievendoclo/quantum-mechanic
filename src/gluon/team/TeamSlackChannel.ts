@@ -20,6 +20,10 @@ import axios from "axios";
 import * as _ from "lodash";
 import {QMConfig} from "../../config/QMConfig";
 import {logErrorAndReturnSuccess} from "../shared/Error";
+import {
+    RecursiveParameter,
+    RecursiveParameterRequestCommand,
+} from "../shared/RecursiveParameterRequestCommand";
 import {CreateTeam} from "./CreateTeam";
 import {gluonTeamsWhoSlackScreenNameBelongsTo, menuForTeams} from "./Teams";
 
@@ -115,7 +119,7 @@ export class NewTeamSlackChannel implements HandleCommand {
 
 @CommandHandler("Link existing team channel", QMConfig.subatomic.commandPrefix + " link team channel")
 @Tags("subatomic", "slack", "channel", "team")
-export class LinkExistingTeamSlackChannel implements HandleCommand {
+export class LinkExistingTeamSlackChannel extends RecursiveParameterRequestCommand {
 
     @MappedParameter(MappedParameters.SlackUserName)
     public slackScreenName: string;
@@ -123,10 +127,8 @@ export class LinkExistingTeamSlackChannel implements HandleCommand {
     @MappedParameter(MappedParameters.SlackTeam)
     public teamId: string;
 
-    @Parameter({
+    @RecursiveParameter({
         description: "team name",
-        required: false,
-        displayable: false,
     })
     public teamName: string;
 
@@ -136,14 +138,11 @@ export class LinkExistingTeamSlackChannel implements HandleCommand {
     })
     public teamChannel: string;
 
-    public handle(ctx: HandlerContext): Promise<HandlerResult> {
-        if (_.isEmpty(this.teamName)) {
-            return this.requestUnsetParameters(ctx);
-        }
+    protected runCommand(ctx: HandlerContext) {
         return linkSlackChannelToGluonTeam(ctx, this.teamName, this.teamId, this.teamChannel, this.docs(), false);
     }
 
-    private requestUnsetParameters(ctx: HandlerContext): Promise<HandlerResult> {
+    protected requestUnsetParameters(ctx: HandlerContext): Promise<HandlerResult> | void {
         if (_.isEmpty(this.teamName)) {
             return gluonTeamsWhoSlackScreenNameBelongsTo(ctx, this.slackScreenName).then(teams => {
                 return menuForTeams(
