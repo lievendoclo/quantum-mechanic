@@ -6,15 +6,12 @@ import {
     logger,
     MappedParameter,
     MappedParameters,
-    Parameter, success,
+    Parameter,
+    success,
 } from "@atomist/automation-client";
-import {BitBucketServerRepoRef} from "@atomist/automation-client/operations/common/BitBucketServerRepoRef";
-import {GitCommandGitProject} from "@atomist/automation-client/project/git/GitCommandGitProject";
-import {GitProject} from "@atomist/automation-client/project/git/GitProject";
 import axios from "axios";
 import * as _ from "lodash";
 import {QMConfig} from "../../config/QMConfig";
-import {QMTemplate} from "../../template/QMTemplate";
 import {
     bitbucketRepositoriesForProjectKey,
     bitbucketRepositoryForSlug,
@@ -299,71 +296,33 @@ export class LinkExistingApplication implements HandleCommand<HandlerResult> {
                                     gluonProjectId: string): Promise<HandlerResult> {
         return bitbucketRepositoryForSlug(bitbucketProjectKey, bitbucketRepositorySlug)
             .then(repo => {
-                const username = QMConfig.subatomic.bitbucket.auth.username;
-                const password = QMConfig.subatomic.bitbucket.auth.password;
-                return GitCommandGitProject.cloned({
-                        username,
-                        password,
-                    },
-                    new BitBucketServerRepoRef(
-                        QMConfig.subatomic.bitbucket.baseUrl.replace(/^(https?:|)\/\//, ""),
-                        bitbucketProjectKey,
-                        bitbucketRepositorySlug))
-                    .then((project: GitProject) => {
-                        return project.findFile("Jenkinsfile")
-                            .catch(() => {
-                                logger.warn("Doesn't exist, add it!");
-                                const jenkinsTemplate: QMTemplate = new QMTemplate("templates/jenkins/jenkinsfile-application.groovy");
-                                return project.addFile("Jenkinsfile",
-                                    jenkinsTemplate.build({}));
-                            })
-                            .then(() => {
-                                return project.isClean()
-                                    .then(clean => {
-                                        logger.debug(`Jenkinsfile has been added: ${clean.success}`);
-
-                                        if (!clean.success) {
-                                            return project.setUserConfig(
-                                                QMConfig.subatomic.bitbucket.auth.username,
-                                                QMConfig.subatomic.bitbucket.auth.email,
-                                            )
-                                                .then(() => project.commit(`Added Jenkinsfile`))
-                                                .then(() => project.push());
-                                        } else {
-                                            logger.debug("Jenkinsfile already exists");
-                                            return clean;
-                                        }
-                                    });
+                return gluonMemberFromScreenName(ctx, slackScreeName)
+                    .then(member => {
+                        const remoteUrl = _.find(repo.links.clone, clone => {
+                            return (clone as any).name === "ssh";
+                        }) as any;
+                        return axios.post(`${QMConfig.subatomic.gluon.baseUrl}/applications`,
+                            {
+                                name: applicationName,
+                                description: applicationDescription,
+                                applicationType: ApplicationType.DEPLOYABLE,
+                                projectId: gluonProjectId,
+                                createdBy: member.memberId,
+                                bitbucketRepository: {
+                                    bitbucketId: repo.id,
+                                    name: repo.name,
+                                    slug: bitbucketRepositorySlug,
+                                    remoteUrl: remoteUrl.href,
+                                    repoUrl: repo.links.self[0].href,
+                                },
+                                requestConfiguration: true,
                             });
                     })
-                    .then(() => {
-                        return gluonMemberFromScreenName(ctx, slackScreeName)
-                            .then(member => {
-                                const remoteUrl = _.find(repo.links.clone, clone => {
-                                    return (clone as any).name === "ssh";
-                                }) as any;
-                                return axios.post(`${QMConfig.subatomic.gluon.baseUrl}/applications`,
-                                    {
-                                        name: applicationName,
-                                        description: applicationDescription,
-                                        applicationType: ApplicationType.DEPLOYABLE,
-                                        projectId: gluonProjectId,
-                                        createdBy: member.memberId,
-                                        bitbucketRepository: {
-                                            bitbucketId: repo.id,
-                                            name: repo.name,
-                                            slug: bitbucketRepositorySlug,
-                                            remoteUrl: remoteUrl.href,
-                                            repoUrl: repo.links.self[0].href,
-                                        },
-                                        requestConfiguration: true,
-                                    });
-                            })
-                            .then(success)
-                            .catch(error => {
-                                return logErrorAndReturnSuccess(gluonMemberFromScreenName.name, error);
-                            });
+                    .then(success)
+                    .catch(error => {
+                        return logErrorAndReturnSuccess(gluonMemberFromScreenName.name, error);
                     });
             });
     }
+
 }

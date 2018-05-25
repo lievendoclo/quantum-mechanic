@@ -16,7 +16,7 @@ export abstract class RecursiveParameterRequestCommand implements HandleCommand<
     public handle(ctx: HandlerContext): Promise<HandlerResult> {
 
         if (!this.recursiveParametersAreSet()) {
-            return this.requestUnsetParametersEntry(ctx);
+            return this.requestNextUnsetParameter(ctx);
         }
 
         return this.runCommand(ctx);
@@ -29,7 +29,20 @@ export abstract class RecursiveParameterRequestCommand implements HandleCommand<
         this.recursiveParameterProperties.push(propertyKey);
     }
 
-    protected abstract requestUnsetParameters(ctx: HandlerContext): Promise<HandlerResult> | void;
+    protected requestNextUnsetParameter(ctx: HandlerContext): Promise<HandlerResult> {
+        logger.info(`Requesting next unset recursive parameter.`);
+        const result: Promise<HandlerResult> = this.setNextParameter(ctx) || null;
+
+        if (result !== null) {
+            return result;
+        }
+
+        logger.info(`Recursive parameter request returned a void result. Assuming all recursive parameters are set.`);
+
+        return this.runCommand(ctx);
+    }
+
+    protected abstract setNextParameter(ctx: HandlerContext): Promise<HandlerResult> | void;
 
     protected abstract runCommand(ctx: HandlerContext): Promise<HandlerResult>;
 
@@ -44,19 +57,6 @@ export abstract class RecursiveParameterRequestCommand implements HandleCommand<
             }
         }
         return parametersAreSet;
-    }
-
-    private requestUnsetParametersEntry(ctx: HandlerContext): Promise<HandlerResult> {
-        logger.info(`Requesting next unset recursive parameter.`);
-        const result: Promise<HandlerResult> = this.requestUnsetParameters(ctx) || null;
-
-        if (result !== null) {
-            return result;
-        }
-
-        logger.info(`Recursive parameter request returned a void result. Assuming all recursive parameters are set.`);
-
-        return this.runCommand(ctx);
     }
 }
 

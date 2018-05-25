@@ -142,7 +142,7 @@ export class LinkExistingTeamSlackChannel extends RecursiveParameterRequestComma
         return linkSlackChannelToGluonTeam(ctx, this.teamName, this.teamId, this.teamChannel, this.docs(), false);
     }
 
-    protected requestUnsetParameters(ctx: HandlerContext): Promise<HandlerResult> | void {
+    protected setNextParameter(ctx: HandlerContext): Promise<HandlerResult> | void {
         if (_.isEmpty(this.teamName)) {
             return gluonTeamsWhoSlackScreenNameBelongsTo(ctx, this.slackScreenName).then(teams => {
                 return menuForTeams(
