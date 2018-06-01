@@ -1,0 +1,10 @@
+{
+  "openshiftTemplate": "subatomic-nodejs-template",
+  "buildConfig": {
+    "imageStream": "nodejs8-nginx112-subatomic:2.0",
+    "envVariables": {
+      "NPM_REGISTRY_URL": "{{subatomic.nexus.baseUrl}}/content/groups/npm"
+    }
+  },
+  "jenkinsfile": "nodejs"
+}

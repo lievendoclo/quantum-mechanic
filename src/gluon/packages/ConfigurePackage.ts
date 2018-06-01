@@ -1,13 +1,11 @@
 import {
     CommandHandler,
     failure,
-    HandleCommand,
     HandlerContext,
     HandlerResult,
     logger,
     MappedParameter,
-    MappedParameters,
-    Parameter,
+    MappedParameters, Parameter,
     success,
     SuccessPromise,
 } from "@atomist/automation-client";
@@ -36,7 +34,7 @@ import {
     RecursiveParameter,
     RecursiveParameterRequestCommand,
 } from "../shared/RecursiveParameterRequestCommand";
-import {subatomicAppOpenshiftTemplates} from "../shared/SubatomicAppOpenshiftTemplates";
+import {subatomicApplicationTemplates} from "../shared/SubatomicOpenshiftQueries";
 import {gluonTenantFromTenantId} from "../shared/Tenant";
 import {
     gluonTeamForSlackTeamChannel,
@@ -49,8 +47,112 @@ import {
     gluonApplicationsLinkedToGluonProject,
     menuForApplications,
 } from "./Applications";
+import {PackageDefinition} from "./PackageDefinition";
 
-@CommandHandler("Configure an existing application/library", QMConfig.subatomic.commandPrefix + " configure package")
+@CommandHandler("Configure an existing application/library using a predefined template", QMConfig.subatomic.commandPrefix + " configure package")
+export class ConfigureBasicPackage extends RecursiveParameterRequestCommand {
+    @MappedParameter(MappedParameters.SlackUserName)
+    public screenName: string;
+
+    @MappedParameter(MappedParameters.SlackChannelName)
+    public teamChannel: string;
+
+    @Parameter({
+        description: "application name",
+        required: false,
+        displayable: false,
+    })
+    public applicationName: string;
+
+    @Parameter({
+        description: "project name",
+        required: false,
+        displayable: false,
+    })
+    public projectName: string;
+
+    @Parameter({
+        description: "team name",
+        required: false,
+        displayable: false,
+    })
+    public teamName: string;
+
+    @RecursiveParameter({
+        description: "package definition file",
+    })
+    public packageDefinition: string;
+
+    private readonly PACKAGE_DEFINITION_EXTENSION = ".json";
+    private readonly PACKAGE_DEFINITION_FOLDER = "resources/package-definitions/";
+
+    protected runCommand(ctx: HandlerContext): Promise<HandlerResult> {
+        return this.callPackageConfiguration(ctx);
+    }
+
+    protected setNextParameter(ctx: HandlerContext): Promise<HandlerResult> {
+        if (_.isEmpty(this.packageDefinition)) {
+            return this.requestPackageDefinitionFile(ctx);
+        }
+        return null;
+    }
+
+    private requestPackageDefinitionFile(ctx: HandlerContext): Promise<HandlerResult> {
+        const fs = require("fs");
+        const packageDefinitionOptions: string [] = [];
+        logger.info(`Searching folder: ${this.PACKAGE_DEFINITION_FOLDER}`);
+        fs.readdirSync(this.PACKAGE_DEFINITION_FOLDER).forEach(file => {
+            logger.info(`Found file: ${file}`);
+            if (file.endsWith(this.PACKAGE_DEFINITION_EXTENSION)) {
+                packageDefinitionOptions.push(this.getNameFromDefinitionPath(file));
+            }
+        });
+        return createMenu(ctx, packageDefinitionOptions.map(packageDefinition => {
+                return {
+                    value: packageDefinition,
+                    text: packageDefinition,
+                };
+            }),
+            this,
+            "Please select a package definition to use for your project",
+            "Select a package definition",
+            "packageDefinition");
+    }
+
+    private callPackageConfiguration(ctx: HandlerContext): Promise<HandlerResult> {
+        const configTemplate: QMTemplate = new QMTemplate(this.getPathFromDefinitionName(this.packageDefinition));
+        const definition: PackageDefinition = JSON.parse(configTemplate.build(QMConfig.publicConfig()));
+
+        const configurePackage = new ConfigurePackage();
+        configurePackage.screenName = this.screenName;
+        configurePackage.teamChannel = this.teamChannel;
+        configurePackage.openshiftTemplate = definition.openshiftTemplate || "";
+        configurePackage.jenkinsfileName = definition.jenkinsfile;
+        configurePackage.baseS2IImage = definition.buildConfig.imageStream;
+        if (definition.buildConfig.envVariables != null) {
+            configurePackage.buildEnvironmentVariables = definition.buildConfig.envVariables;
+        }
+        configurePackage.applicationName = this.applicationName;
+        configurePackage.teamName = this.teamName;
+        configurePackage.projectName = this.projectName;
+
+        return configurePackage.handle(ctx);
+    }
+
+    private getNameFromDefinitionPath(definitionPath: string): string {
+        const definitionSlashSplit = definitionPath.split("/");
+        let name = definitionSlashSplit[definitionSlashSplit.length - 1];
+        // Remove file extension
+        name = name.substring(0, definitionPath.length - this.PACKAGE_DEFINITION_EXTENSION.length);
+        return name;
+    }
+
+    private getPathFromDefinitionName(definitionName: string): string {
+        return this.PACKAGE_DEFINITION_FOLDER + definitionName + this.PACKAGE_DEFINITION_EXTENSION;
+    }
+}
+
+@CommandHandler("Configure an existing application/library", QMConfig.subatomic.commandPrefix + " configure custom package")
 export class ConfigurePackage extends RecursiveParameterRequestCommand {
 
     @MappedParameter(MappedParameters.SlackUserName)
@@ -84,8 +186,15 @@ export class ConfigurePackage extends RecursiveParameterRequestCommand {
     })
     public jenkinsfileName: string;
 
+    @Parameter({
+        description: "Base image for s2i build",
+    })
+    public baseS2IImage: string;
+
+    public buildEnvironmentVariables: { [key: string]: string };
+
     private readonly JENKINSFILE_EXTENSION = ".groovy";
-    private readonly JENKINSFILE_FOLDER = "templates/jenkins/jenkinsfile-repo/";
+    private readonly JENKINSFILE_FOLDER = "resources/templates/jenkins/jenkinsfile-repo/";
     private readonly JENKINSFILE_EXISTS = "JENKINS_FILE_EXISTS";
 
     protected runCommand(ctx: HandlerContext): Promise<HandlerResult> {
@@ -130,7 +239,7 @@ export class ConfigurePackage extends RecursiveParameterRequestCommand {
         }
         if (_.isEmpty(this.openshiftTemplate)) {
             const namespace = `${_.kebabCase(this.teamName).toLowerCase()}-devops`;
-            return subatomicAppOpenshiftTemplates(namespace)
+            return subatomicApplicationTemplates(namespace)
                 .then(templates => {
                     return createMenu(ctx, templates.map(template => {
                             return {
@@ -328,44 +437,55 @@ export class ConfigurePackage extends RecursiveParameterRequestCommand {
                             ])
                                 .then(() => {
                                     logger.info(`Using Git URI: ${bitbucketRepoRemoteUrl}`);
-
-                                    // TODO this should be extracted to a configurable QMTemplate
-                                    return OCCommon.createFromData({
-                                            apiVersion: "v1",
-                                            kind: "BuildConfig",
-                                            metadata: {
-                                                name: appBuildName,
+                                    const buildConfig: { [key: string]: any } = {
+                                        apiVersion: "v1",
+                                        kind: "BuildConfig",
+                                        metadata: {
+                                            name: appBuildName,
+                                        },
+                                        spec: {
+                                            source: {
+                                                type: "Git",
+                                                git: {
+                                                    // temporary hack because of the NodePort
+                                                    // TODO remove this!
+                                                    uri: `${bitbucketRepoRemoteUrl.replace("7999", "30999")}`,
+                                                    ref: "master",
+                                                },
+                                                sourceSecret: {
+                                                    // TODO should this be configurable?
+                                                    name: "bitbucket-ssh",
+                                                },
                                             },
-                                            spec: {
-                                                source: {
-                                                    type: "Git",
-                                                    git: {
-                                                        // temporary hack because of the NodePort
-                                                        // TODO remove this!
-                                                        uri: `${bitbucketRepoRemoteUrl.replace("7999", "30999")}`,
-                                                        ref: "master",
-                                                    },
-                                                    sourceSecret: {
-                                                        // TODO should this be configurable?
-                                                        name: "bitbucket-ssh",
-                                                    },
-                                                },
-                                                strategy: {
-                                                    sourceStrategy: {
-                                                        from: {
-                                                            kind: "ImageStreamTag",
-                                                            name: "jdk8-maven3-newrelic-subatomic:2.0",
-                                                        },
-                                                    },
-                                                },
-                                                output: {
-                                                    to: {
+                                            strategy: {
+                                                sourceStrategy: {
+                                                    from: {
                                                         kind: "ImageStreamTag",
-                                                        name: `${appBuildName}:latest`,
+                                                        name: this.baseS2IImage,
                                                     },
+                                                    env: [],
+                                                },
+                                            },
+                                            output: {
+                                                to: {
+                                                    kind: "ImageStreamTag",
+                                                    name: `${appBuildName}:latest`,
                                                 },
                                             },
                                         },
+                                    };
+
+                                    for (const envVariableName of Object.keys(this.buildEnvironmentVariables)) {
+                                        buildConfig.spec.strategy.sourceStrategy.env.push(
+                                            {
+                                                name: envVariableName,
+                                                value: this.buildEnvironmentVariables[envVariableName],
+                                            },
+                                        );
+                                    }
+
+                                    // TODO this should be extracted to a configurable QMTemplate
+                                    return OCCommon.createFromData(buildConfig,
                                         [
                                             new SimpleOption("-namespace", teamDevOpsProjectId),
                                         ], true); // TODO clean up this hack - cannot be a boolean (magic)
@@ -522,7 +642,7 @@ You can kick off the build pipeline for your library by clicking the button belo
                     .then(jenkinsHost => {
                         logger.debug(`Using Jenkins Route host [${jenkinsHost.output}] to add Bitbucket credentials`);
 
-                        const jenkinsTemplate: QMTemplate = new QMTemplate("templates/jenkins/jenkins-multi-branch-project.xml");
+                        const jenkinsTemplate: QMTemplate = new QMTemplate("resources/templates/jenkins/jenkins-multi-branch-project.xml");
                         const builtTemplate: string = jenkinsTemplate.build(
                             {
                                 gluonApplicationName,

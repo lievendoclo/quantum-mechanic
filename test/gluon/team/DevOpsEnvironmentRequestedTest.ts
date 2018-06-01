@@ -132,6 +132,15 @@ describe("DevOps environment test", () => {
             });
         });
 
+        when(mockedOCCommon.commonCommand("get", "istag", anything(), anything(), anything())).thenReturn(new Promise((resolve, reject) => {
+            const response = new OCCommandResult();
+            response.command = "oc other";
+            response.output = `{"items":[]}`;
+            response.status = true;
+
+            return resolve(response);
+        }));
+
         when(mockedOCCommon.commonCommand("rollout status", "dc/jenkins", anything(), anything(), anything())).thenReturn(new Promise((resolve, reject) => {
             const response = new OCCommandResult();
             response.command = "oc get";

@@ -1,0 +1,7 @@
+{
+  "buildConfig": {
+    "imageStream": "jdk8-maven3-newrelic-subatomic:2.0",
+    "envVariables": {}
+  },
+  "jenkinsfile": "maven-library.groovy"
+}

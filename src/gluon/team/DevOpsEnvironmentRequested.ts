@@ -22,6 +22,7 @@ import {
 } from "../jenkins/Jenkins";
 import {AddConfigServer} from "../project/AddConfigServer";
 import {CreateProject} from "../project/CreateProject";
+import {subatomicImageStreamTags} from "../shared/SubatomicOpenshiftQueries";
 
 const promiseRetry = require("promise-retry");
 
@@ -177,17 +178,18 @@ export class DevOpsEnvironmentRequested implements HandleEvent<any> {
                             , );
                     });
             }).then(() => {
-                return Promise.all([OCCommon.commonCommand("tag",
-                    // TODO Fix: abusing the commonCommand here a bit...
-                    "subatomic/jenkins-subatomic:2.0",
-                    [`${projectId}/jenkins-subatomic:2.0`],
-                ), OCCommon.commonCommand("tag",
-                    "subatomic/jenkins-slave-maven-subatomic:2.0",
-                    [`${projectId}/jenkins-slave-maven-subatomic:2.0`],
-                ), OCCommon.commonCommand("tag",
-                    "subatomic/jdk8-maven3-newrelic-subatomic:2.0",
-                    [`${projectId}/jdk8-maven3-newrelic-subatomic:2.0`],
-                )]);
+                return subatomicImageStreamTags("subatomic").then(imageStreamTags => {
+                    const imageStreamTagPromises = [];
+
+                    for (const imageStreamTag of imageStreamTags) {
+                        const imageStreamTagName = imageStreamTag.metadata.name;
+                        imageStreamTagPromises.push(OCCommon.commonCommand("tag",
+                            `subatomic/${imageStreamTagName}`,
+                            [`${projectId}/${imageStreamTagName}`]));
+                    }
+
+                    return Promise.all(imageStreamTagPromises);
+                });
             })
             .then(() => {
                 logger.info("Processing Jenkins QMTemplate...");
@@ -205,6 +207,7 @@ export class DevOpsEnvironmentRequested implements HandleEvent<any> {
                         new SimpleOption("p", "JENKINS_ADMIN_EMAIL=subatomic@local"),
                         // TODO the registry Cluster IP we will have to get by introspecting the registry Service
                         new SimpleOption("p", `MAVEN_SLAVE_IMAGE=${QMConfig.subatomic.openshift.dockerRepoUrl}/${projectId}/jenkins-slave-maven-subatomic:2.0`),
+                        new SimpleOption("p", `NODEJS_SLAVE_IMAGE=${QMConfig.subatomic.openshift.dockerRepoUrl}/${projectId}/jenkins-slave-nodejs-subatomic:2.0`),
                         new SimpleOption("-namespace", projectId),
                     ],
                 )
@@ -345,7 +348,7 @@ export class DevOpsEnvironmentRequested implements HandleEvent<any> {
                                                         "credentials": {
                                                             scope: "GLOBAL",
                                                             id: "nexus-base-url",
-                                                            secret: QMConfig.subatomic.nexus.baseUrl,
+                                                            secret: `${QMConfig.subatomic.nexus.baseUrl}/content/repositories/`,
                                                             description: "Nexus base URL",
                                                             $class: "org.jenkinsci.plugins.plaincredentials.impl.StringCredentialsImpl",
                                                         },

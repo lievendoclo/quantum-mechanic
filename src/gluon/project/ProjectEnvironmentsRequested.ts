@@ -189,7 +189,7 @@ export class ProjectEnvironmentsRequested implements HandleEvent<any> {
                                 logger.debug(`Using Jenkins Route host [${jenkinsHost.output}] to add Bitbucket credentials`);
 
                                 const axios = jenkinsAxios();
-                                const projectTemplate: QMTemplate = new QMTemplate("templates/openshift/openshift-environment-setup.xml");
+                                const projectTemplate: QMTemplate = new QMTemplate("resources/templates/openshift/openshift-environment-setup.xml");
                                 const builtTemplate: string = projectTemplate.build(
                                     {
                                         projectName: environmentsRequestedEvent.project.name,
@@ -200,6 +200,7 @@ export class ProjectEnvironmentsRequested implements HandleEvent<any> {
                                         uatProjectId: getProjectId(environmentsRequestedEvent.owningTenant.name, environmentsRequestedEvent.project.name, "uat"),
                                     },
                                 );
+                                logger.info("Template found and built successfully.");
                                 return axios.post(`https://${jenkinsHost.output}/createItem?name=${_.kebabCase(environmentsRequestedEvent.project.name).toLowerCase()}`,
                                     builtTemplate,
                                     {

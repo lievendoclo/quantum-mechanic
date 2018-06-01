@@ -16,7 +16,10 @@ import {TeamMemberCreated} from "./gluon/member/TeamMemberCreated";
 import {TeamMemberCreatedEvent} from "./gluon/member/teamMemberIngester";
 import {ApplicationCreated} from "./gluon/packages/ApplicationCreated";
 import {ApplicationCreatedEvent} from "./gluon/packages/applicationsIngester";
-import {ConfigurePackage} from "./gluon/packages/ConfigurePackage";
+import {
+    ConfigureBasicPackage,
+    ConfigurePackage,
+} from "./gluon/packages/ConfigurePackage";
 import {
     CreateApplication,
     LinkExistingApplication,
@@ -104,6 +107,7 @@ export const configuration: any = {
         ListTeamProjects,
         ListProjectDetails,
         ConfigurePackage,
+        ConfigureBasicPackage,
     ],
     events: [
         TeamCreated,

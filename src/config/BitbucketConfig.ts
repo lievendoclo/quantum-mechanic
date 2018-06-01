@@ -11,4 +11,6 @@ export interface BitbucketConfig {
 
 export interface SubatomicAuthCredentials extends BasicAuthCredentials {
     email: string;
+    username: string;
+    password: string;
 }

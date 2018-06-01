@@ -10,7 +10,7 @@ import {
 import {buttonForCommand} from "@atomist/automation-client/spi/message/MessageClient";
 import {url} from "@atomist/slack-messages";
 import {QMConfig} from "../../config/QMConfig";
-import {ConfigurePackage} from "./ConfigurePackage";
+import {ConfigureBasicPackage} from "./ConfigurePackage";
 
 @EventHandler("Receive ApplicationCreatedEvent events", `
 subscription ApplicationCreatedEvent {
@@ -83,7 +83,7 @@ export class ApplicationCreated implements HandleEvent<any> {
                     actions: [
                         buttonForCommand(
                             {text: "Configure Component"},
-                            new ConfigurePackage(),
+                            new ConfigureBasicPackage(),
                             {
                                 projectName : applicationCreatedEvent.project.name,
                                 applicationName : applicationCreatedEvent.application.name,
