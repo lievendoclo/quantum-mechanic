@@ -8,6 +8,7 @@ import {
 } from "@atomist/automation-client";
 import * as _ from "lodash";
 import {BitbucketConfiguration} from "../bitbucket/BitbucketConfiguration";
+import {getProjectDisplayName} from "../project/Project";
 import {gluonProjectsWhichBelongToGluonTeam} from "../project/Projects";
 import {logErrorAndReturnSuccess} from "../shared/Error";
 import {addOpenshiftMembershipPermissions} from "./DevOpsEnvironmentRequested";
@@ -67,7 +68,7 @@ export class MembersAddedToTeam implements HandleEvent<any> {
                     );
                     // Add to openshift environments
                     for (const environment of ["dev", "sit", "uat"]) {
-                        const projectId = `${_.kebabCase(project.name).toLowerCase()}-${environment}`;
+                        const projectId = getProjectDisplayName(project.owningTenant, project.name, environment);
                         permissionPromises.push(
                             addOpenshiftMembershipPermissions(projectId, membersAddedToTeamEvent),
                         );

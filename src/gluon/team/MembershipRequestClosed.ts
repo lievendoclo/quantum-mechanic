@@ -99,7 +99,9 @@ export class MembershipRequestClosed implements HandleCommand<HandlerResult> {
                                 return ctx.messageClient.addressChannels("Membership request rejected", this.teamChannel);
                             });
                     }
-                }).catch(error => failure(error));
+                }).catch(error => {
+                    return ctx.messageClient.respond("❗Failed to close the membership request. Please make sure that you are the owner of this team before trying to accept/reject this request.");
+                });
             });
 
     }
