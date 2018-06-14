@@ -154,8 +154,6 @@ https://github.com/absa-subatomic/local-hadron-collider
 Once you have the environment setup, replace the token and masterUrl in the config.json
 with the one's from openshift.
 
-* test/gluon/team/DevOpsEnvironmentRequestedTest is currently skipped as it will make the Travis run fail. To execute this locally, simply remove the `.skip` and append the `.timeout(10000)`.
-
 Next run with:
 ```console
 $ npm run test

@@ -22,6 +22,7 @@ import * as _ from "lodash";
 import {QMConfig} from "../../config/QMConfig";
 import * as graphql from "../../typings/types";
 import {ListTeamProjects} from "../project/ProjectDetails";
+import {CreateTeam} from "./CreateTeam";
 
 @CommandHandler("Apply to join an existing team", QMConfig.subatomic.commandPrefix + " apply to team")
 @Tags("subatomic", "team")
@@ -60,6 +61,21 @@ export class JoinTeam implements HandleCommand<HandlerResult> {
 
                 return ctx.messageClient.addressUsers(msg, this.slackName)
                     .then(success);
+            }).catch( () => {
+                const msg: SlackMessage = {
+                    text: `Unfortunately no teams have been created.`,
+                    attachments: [{
+                        fallback: "Welcome to the Subatomic environment",
+                        footer: `For more information, please read the `,
+                        thumb_url: "https://raw.githubusercontent.com/absa-subatomic/subatomic-documentation/gh-pages/images/subatomic-logo-colour.png",
+                        actions: [
+                            buttonForCommand(
+                                {text: "Create a new team"},
+                                new CreateTeam()),
+                        ],
+                    }],
+                };
+                return ctx.messageClient.addressUsers(msg, this.slackName);
             });
     }
 }

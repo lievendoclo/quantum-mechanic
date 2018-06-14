@@ -9,6 +9,7 @@ import {
 import {buttonForCommand} from "@atomist/automation-client/spi/message/MessageClient";
 import {url} from "@atomist/slack-messages";
 import {QMConfig} from "../../config/QMConfig";
+import {AssociateTeam} from "../project/AssociateTeam";
 import {NewProjectEnvironments} from "../project/ProjectEnvironments";
 import {addBitbucketProjectAccessKeys} from "./BitbucketConfiguration";
 
@@ -87,6 +88,13 @@ If you would like to associate more teams to the *${addedEvent.project.name}* pr
                             fallback: "Associate multiple teams to this project",
                             footer: `For more information, please read the ${this.docs("associate-team")}`,
                             color: "#00a5ff",
+                            actions: [
+                                buttonForCommand(
+                                    {
+                                        text: "Associate team",
+                                    },
+                                    new AssociateTeam(addedEvent.project.name, addedEvent.project.description)),
+                            ],
                         }],
                 }, addedEvent.teams.map(team => team.slackIdentity.teamChannel));
             });

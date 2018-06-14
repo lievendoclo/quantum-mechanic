@@ -13,6 +13,7 @@ import {
     ListExistingBitbucketProject,
     NewBitbucketProject,
 } from "../bitbucket/BitbucketProject";
+import {AssociateTeam} from "./AssociateTeam";
 import {NewProjectEnvironments} from "./ProjectEnvironments";
 
 @EventHandler("Receive ProjectCreated events", `
@@ -51,6 +52,7 @@ export class ProjectCreated implements HandleEvent<any> {
         logger.info(`Ingested ProjectCreated event: ${JSON.stringify(event.data)}`);
 
         const projectCreatedEvent = event.data.ProjectCreatedEvent[0];
+
         return ctx.messageClient.addressChannels({
             text: `The *${projectCreatedEvent.project.name}* project has been created successfully.`,
             attachments: [{
@@ -98,6 +100,13 @@ If you would like to associate more teams to the *${projectCreatedEvent.project.
                 fallback: "Associate multiple teams to this project",
                 footer: `For more information, please read the ${this.docs("associate-team")}`,
                 color: "#00a5ff",
+                actions: [
+                    buttonForCommand(
+                        {
+                            text: "Associate team",
+                        },
+                        new AssociateTeam(projectCreatedEvent.project.name, projectCreatedEvent.project.description)),
+                ],
             }],
         }, projectCreatedEvent.team.slackIdentity.teamChannel);
     }

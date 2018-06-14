@@ -86,3 +86,27 @@ export function gluonProjectsWhichBelongToGluonTeam(ctx: HandlerContext, teamNam
                 .then(() => Promise.reject(`${teamName} team does not have any projects linked to it`));
         });
 }
+
+export function gluonProjects(ctx: HandlerContext): Promise<any[]> {
+    return axios.get(`${QMConfig.subatomic.gluon.baseUrl}/projects`)
+        .then(projects => {
+            if (!_.isEmpty(projects.data._embedded)) {
+                return Promise.resolve(projects.data._embedded.projectResources);
+            }
+
+            return ctx.messageClient.respond({
+                text: "Unfortunately there are no existing projects",
+                attachments: [{
+                    text: "Would you like to create a new project?",
+                    actions: [
+                        buttonForCommand(
+                            {
+                                text: "Create project",
+                            },
+                            new CreateProject()),
+                    ],
+                }],
+            })
+                .then(() => Promise.reject(`Currently no existing projects.`));
+        });
+}
