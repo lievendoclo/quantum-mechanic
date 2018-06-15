@@ -16,7 +16,9 @@ import {buttonForCommand} from "@atomist/automation-client/spi/message/MessageCl
 import {url} from "@atomist/slack-messages";
 import * as _ from "lodash";
 import {QMConfig} from "../../config/QMConfig";
+import {OCCommandResult} from "../../openshift/base/OCCommandResult";
 import {SimpleOption} from "../../openshift/base/options/SimpleOption";
+import {OCClient} from "../../openshift/OCClient";
 import {OCCommon} from "../../openshift/OCCommon";
 import {QMTemplate} from "../../template/QMTemplate";
 import {bitbucketRepositoryForSlug} from "../bitbucket/Bitbucket";
@@ -411,6 +413,8 @@ export class ConfigurePackage extends RecursiveParameterRequestCommand {
         logger.debug(`Using owning team DevOps project: ${teamDevOpsProjectId}`);
         logger.debug(`Teams are: ${JSON.stringify(associatedTeams)}`);
 
+        const ocLogin: Promise<OCCommandResult> = OCClient.login(QMConfig.subatomic.openshift.masterUrl, QMConfig.subatomic.openshift.auth.token);
+
         const jenkinsPromise: Promise<HandlerResult> = this.createJenkinsJob(
             teamDevOpsProjectId,
             projectName,
@@ -421,122 +425,96 @@ export class ConfigurePackage extends RecursiveParameterRequestCommand {
         );
 
         const jenkinsfilePromise = this.addJenkinsfilePromise(bitbucketProjectKey, bitbucketRepoName);
-        return jenkinsfilePromise.then(() => {
-                if (applicationType === ApplicationType.DEPLOYABLE.toString()) {
-                    return jenkinsPromise
-                        .then(() => {
-                            const appBuildName = `${_.kebabCase(projectName).toLowerCase()}-${_.kebabCase(applicationName).toLowerCase()}`;
-                            return OCCommon.createFromData({
-                                apiVersion: "v1",
-                                kind: "ImageStream",
-                                metadata: {
-                                    name: appBuildName,
-                                },
-                            }, [
-                                new SimpleOption("-namespace", teamDevOpsProjectId),
-                            ])
-                                .then(() => {
-                                    logger.info(`Using Git URI: ${bitbucketRepoRemoteUrl}`);
-                                    const buildConfig: { [key: string]: any } = {
-                                        apiVersion: "v1",
-                                        kind: "BuildConfig",
-                                        metadata: {
-                                            name: appBuildName,
-                                        },
-                                        spec: {
-                                            source: {
-                                                type: "Git",
-                                                git: {
-                                                    // temporary hack because of the NodePort
-                                                    // TODO remove this!
-                                                    uri: `${bitbucketRepoRemoteUrl.replace("7999", "30999")}`,
-                                                    ref: "master",
-                                                },
-                                                sourceSecret: {
-                                                    // TODO should this be configurable?
-                                                    name: "bitbucket-ssh",
-                                                },
+        return ocLogin.then(() => {
+            return jenkinsfilePromise.then(() => {
+                    if (applicationType === ApplicationType.DEPLOYABLE.toString()) {
+                        return jenkinsPromise
+                            .then(() => {
+                                const appBuildName = `${_.kebabCase(projectName).toLowerCase()}-${_.kebabCase(applicationName).toLowerCase()}`;
+                                return OCCommon.createFromData({
+                                    apiVersion: "v1",
+                                    kind: "ImageStream",
+                                    metadata: {
+                                        name: appBuildName,
+                                    },
+                                }, [
+                                    new SimpleOption("-namespace", teamDevOpsProjectId),
+                                ])
+                                    .then(() => {
+                                        logger.info(`Using Git URI: ${bitbucketRepoRemoteUrl}`);
+                                        const buildConfig: { [key: string]: any } = {
+                                            apiVersion: "v1",
+                                            kind: "BuildConfig",
+                                            metadata: {
+                                                name: appBuildName,
                                             },
-                                            strategy: {
-                                                sourceStrategy: {
-                                                    from: {
-                                                        kind: "ImageStreamTag",
-                                                        name: this.baseS2IImage,
+                                            spec: {
+                                                source: {
+                                                    type: "Git",
+                                                    git: {
+                                                        // temporary hack because of the NodePort
+                                                        // TODO remove this!
+                                                        uri: `${bitbucketRepoRemoteUrl.replace("7999", "30999")}`,
+                                                        ref: "master",
                                                     },
-                                                    env: [],
+                                                    sourceSecret: {
+                                                        // TODO should this be configurable?
+                                                        name: "bitbucket-ssh",
+                                                    },
+                                                },
+                                                strategy: {
+                                                    sourceStrategy: {
+                                                        from: {
+                                                            kind: "ImageStreamTag",
+                                                            name: this.baseS2IImage,
+                                                        },
+                                                        env: [],
+                                                    },
+                                                },
+                                                output: {
+                                                    to: {
+                                                        kind: "ImageStreamTag",
+                                                        name: `${appBuildName}:latest`,
+                                                    },
                                                 },
                                             },
-                                            output: {
-                                                to: {
-                                                    kind: "ImageStreamTag",
-                                                    name: `${appBuildName}:latest`,
+                                        };
+
+                                        for (const envVariableName of Object.keys(this.buildEnvironmentVariables)) {
+                                            buildConfig.spec.strategy.sourceStrategy.env.push(
+                                                {
+                                                    name: envVariableName,
+                                                    value: this.buildEnvironmentVariables[envVariableName],
                                                 },
-                                            },
-                                        },
-                                    };
+                                            );
+                                        }
 
-                                    for (const envVariableName of Object.keys(this.buildEnvironmentVariables)) {
-                                        buildConfig.spec.strategy.sourceStrategy.env.push(
-                                            {
-                                                name: envVariableName,
-                                                value: this.buildEnvironmentVariables[envVariableName],
-                                            },
-                                        );
-                                    }
-
-                                    // TODO this should be extracted to a configurable QMTemplate
-                                    return OCCommon.createFromData(buildConfig,
-                                        [
-                                            new SimpleOption("-namespace", teamDevOpsProjectId),
-                                        ], true); // TODO clean up this hack - cannot be a boolean (magic)
-                                })
-                                .then(() => {
-                                    return gluonProjectFromProjectName(ctx, projectName).then(project => {
-                                        logger.info(`Trying to find tenant: ${project.owningTenant}`);
-                                        return gluonTenantFromTenantId(project.owningTenant).then(tenant => {
-                                            logger.info(`Found tenant: ${tenant}`);
-                                            return this.createApplicationOpenshiftResources(tenant.name, project.name, applicationName);
+                                        // TODO this should be extracted to a configurable QMTemplate
+                                        return OCCommon.createFromData(buildConfig,
+                                            [
+                                                new SimpleOption("-namespace", teamDevOpsProjectId),
+                                            ], true); // TODO clean up this hack - cannot be a boolean (magic)
+                                    })
+                                    .then(() => {
+                                        return gluonProjectFromProjectName(ctx, projectName).then(project => {
+                                            logger.info(`Trying to find tenant: ${project.owningTenant}`);
+                                            return gluonTenantFromTenantId(project.owningTenant).then(tenant => {
+                                                logger.info(`Found tenant: ${tenant}`);
+                                                return this.createApplicationOpenshiftResources(tenant.name, project.name, applicationName);
+                                            });
                                         });
-                                    });
 
-                                });
-                        })
-                        .then(() => {
-                            return ctx.messageClient.addressChannels({
-                                text: `Your application *${applicationName}*, in project *${projectName}*, has been provisioned successfully ` +
-                                "and is ready to build and deploy to your project environments",
-                                attachments: [{
-                                    fallback: `Your application has been provisioned successfully`,
-                                    footer: `For more information, please read the ${this.docs() + "#jenkins-build"}`,
-                                    text: `
-You can kick off the build pipeline for your application by clicking the button below or pushing changes to your application's repository`,
-                                    mrkdwn_in: ["text"],
-                                    actions: [
-                                        buttonForCommand(
-                                            {
-                                                text: "Start build",
-                                                style: "primary",
-                                            },
-                                            new KickOffJenkinsBuild(),
-                                            {
-                                                projectName,
-                                                applicationName,
-                                            }),
-                                    ],
-                                }],
-                            }, associatedTeams.map(team =>
-                                team.slack.teamChannel));
-                        });
-                } else {
-                    return jenkinsPromise
-                        .then(() => {
+                                    });
+                            })
+                            .then(() => {
                                 return ctx.messageClient.addressChannels({
-                                    text: "Your library has been provisioned successfully and is ready to build",
+                                    text: `Your application *${applicationName}*, in project *${projectName}*, has been provisioned successfully ` +
+                                    "and is ready to build and deploy to your project environments",
                                     attachments: [{
-                                        fallback: `Your library has been provisioned successfully`,
+                                        fallback: `Your application has been provisioned successfully`,
                                         footer: `For more information, please read the ${this.docs() + "#jenkins-build"}`,
                                         text: `
-You can kick off the build pipeline for your library by clicking the button below or pushing changes to your library's repository`,
+You can kick off the build pipeline for your application by clicking the button below or pushing changes to your application's repository`,
                                         mrkdwn_in: ["text"],
                                         actions: [
                                             buttonForCommand(
@@ -553,11 +531,39 @@ You can kick off the build pipeline for your library by clicking the button belo
                                     }],
                                 }, associatedTeams.map(team =>
                                     team.slack.teamChannel));
-                            },
-                        );
-                }
-            },
-        );
+                            });
+                    } else {
+                        return jenkinsPromise
+                            .then(() => {
+                                    return ctx.messageClient.addressChannels({
+                                        text: "Your library has been provisioned successfully and is ready to build",
+                                        attachments: [{
+                                            fallback: `Your library has been provisioned successfully`,
+                                            footer: `For more information, please read the ${this.docs() + "#jenkins-build"}`,
+                                            text: `
+You can kick off the build pipeline for your library by clicking the button below or pushing changes to your library's repository`,
+                                            mrkdwn_in: ["text"],
+                                            actions: [
+                                                buttonForCommand(
+                                                    {
+                                                        text: "Start build",
+                                                        style: "primary",
+                                                    },
+                                                    new KickOffJenkinsBuild(),
+                                                    {
+                                                        projectName,
+                                                        applicationName,
+                                                    }),
+                                            ],
+                                        }],
+                                    }, associatedTeams.map(team =>
+                                        team.slack.teamChannel));
+                                },
+                            );
+                    }
+                },
+            );
+        });
 
     }
 
