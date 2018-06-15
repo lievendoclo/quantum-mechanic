@@ -66,7 +66,7 @@ export class JoinTeam implements HandleCommand<HandlerResult> {
                     text: `Unfortunately no teams have been created.`,
                     attachments: [{
                         fallback: "Welcome to the Subatomic environment",
-                        footer: `For more information, please read the `,
+                        footer: `For more information, please read ${this.docs()}`,
                         thumb_url: "https://raw.githubusercontent.com/absa-subatomic/subatomic-documentation/gh-pages/images/subatomic-logo-colour.png",
                         actions: [
                             buttonForCommand(
@@ -77,6 +77,11 @@ export class JoinTeam implements HandleCommand<HandlerResult> {
                 };
                 return ctx.messageClient.addressUsers(msg, this.slackName);
             });
+    }
+
+    private docs(): string {
+        return `${url(`${QMConfig.subatomic.docs.baseUrl}/quantum-mechanic/command-reference#create-team`,
+            "documentation")}`;
     }
 }
 
@@ -117,6 +122,12 @@ export class AddMemberToTeam implements HandleCommand<HandlerResult> {
                         .then(newMember => {
                             logger.info(`Member: ${JSON.stringify(newMember.data)}`);
                             if (!_.isEmpty(newMember.data._embedded)) {
+                                const newTeamMember = newMember.data._embedded.teamMemberResources[0];
+                                if (!_.isEmpty(_.find(newTeamMember.teams,
+                                        (team: any) => team.slack.teamChannel === this.teamChannel))) {
+                                    return ctx.messageClient.respond(`${newTeamMember.slack.screenName} is already a member of this team.`);
+                                }
+
                                 logger.info(`Getting teams that ${this.screenName} (you) are a part of...`);
 
                                 return axios.get(`${QMConfig.subatomic.gluon.baseUrl}/members?slackScreenName=${this.screenName}`)
@@ -129,7 +140,6 @@ export class AddMemberToTeam implements HandleCommand<HandlerResult> {
                                                 (team: any) => team.slack.teamChannel === this.teamChannel);
                                             logger.info(`Found team Slack channel: ${JSON.stringify(teamSlackChannel)}`);
                                             if (!_.isEmpty(teamSlackChannel)) {
-                                                const newTeamMember = newMember.data._embedded.teamMemberResources[0];
                                                 const newMemberId = newTeamMember.memberId;
                                                 logger.info(`Adding member [${newMemberId}] to team with ${JSON.stringify(teamSlackChannel._links.self.href)}`);
                                                 return axios.put(teamSlackChannel._links.self.href,
@@ -289,6 +299,8 @@ export class CreateMembershipRequestToTeam implements HandleCommand<HandlerResul
                                         }],
                                 }).then(() => {
                                     return success();
+                            }).catch( () => {
+                                return ctx.messageClient.addressUsers(`You are already a member of this team.`, this.slackName);
                             });
 
                         });

@@ -43,7 +43,7 @@ describe("Join team tests", () => {
 
     it("should add member to team", done => {
         const mock = new MockAdapter(axios);
-        const screenName = "Test.User";
+        const screenName = "Owner.User";
         const teamId = "79c41ee3-f092-4664-916f-da780195a51e";
         const channelId = "3d01d401-abb3-4eee-8884-2ed5a472172d";
         const teamChannel = "test-channel";
@@ -58,10 +58,25 @@ describe("Join team tests", () => {
                         memberId: "3d01d401-abb3-4eee-8884-2ed5a472172d",
                         firstName: "Test",
                         lastName: "User",
+                        slack: {
+                            screenName: `${chatId}`,
+                            userId: "9USDA7D6dH",
+                        },
+                    },
+                ],
+            },
+        });
+        mock.onGet(`${QMConfig.subatomic.gluon.baseUrl}/members?slackScreenName=${screenName}`).reply(200, {
+            _embedded: {
+                teamMemberResources: [
+                    {
+                        memberId: "3d03923-ddasdje3-asd3i29s",
+                        firstName: "Owner",
+                        lastName: "User",
                         teamId: `${teamId}`,
                         slack: {
                             screenName: `${screenName}`,
-                            userId: "9USDA7D6dH",
+                            userId: "7U283FH",
                         },
                         teams: [{
                             name: "test-channel",
