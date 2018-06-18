@@ -15,6 +15,7 @@ import * as _ from "lodash";
 import * as qs from "query-string";
 import {QMConfig} from "../../config/QMConfig";
 import {SimpleOption} from "../../openshift/base/options/SimpleOption";
+import {StandardOption} from "../../openshift/base/options/StandardOption";
 import {OCClient} from "../../openshift/OCClient";
 import {OCCommon} from "../../openshift/OCCommon";
 import {QMTemplate} from "../../template/QMTemplate";
@@ -273,6 +274,19 @@ export class ProjectEnvironmentsRequested implements HandleEvent<any> {
                                 },
                             });
                     });
+            })
+            .then(() => {
+                const teamDevOpsProjectId = `${_.kebabCase(environmentsRequestedEvent.teams[0].name).toLowerCase()}-devops`;
+                const projectIdDev = getProjectId(environmentsRequestedEvent.owningTenant.name, environmentsRequestedEvent.project.name, "dev");
+                const projectIdSit = getProjectId(environmentsRequestedEvent.owningTenant.name, environmentsRequestedEvent.project.name, "sit");
+                const projectIdUat = getProjectId(environmentsRequestedEvent.owningTenant.name, environmentsRequestedEvent.project.name, "uat");
+                return OCCommon.commonCommand(
+                    "adm pod-network",
+                    "join-projects",
+                    [projectIdDev, projectIdSit, projectIdUat],
+                    [
+                        new StandardOption("to", `${teamDevOpsProjectId}`),
+                    ]);
             })
             .then(() => {
 

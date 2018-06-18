@@ -100,8 +100,6 @@ export class DevOpsEnvironmentRequested implements HandleEvent<any> {
                             "limits.cpu": "16", // 4 * 4m
                             "limits.memory": "4096Mi", // 4 * 1024Mi
                             "pods": "4",
-                            "replicationcontrollers": "4",
-                            "services": "4",
                         },
                     },
                 }, [
@@ -299,7 +297,7 @@ export class DevOpsEnvironmentRequested implements HandleEvent<any> {
                         }, {
                             // Retry for up to 3 mins
                             factor: 1,
-                            retries: 9,
+                            retries: 19,
                             minTimeout: 20000,
                         })
                             .then(() => {
