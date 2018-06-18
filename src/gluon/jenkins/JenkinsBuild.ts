@@ -1,13 +1,11 @@
 import {
     CommandHandler,
     failure,
-    HandleCommand,
     HandlerContext,
     HandlerResult,
     logger,
     MappedParameter,
     MappedParameters,
-    Parameter,
 } from "@atomist/automation-client";
 import * as _ from "lodash";
 import {QMConfig} from "../../config/QMConfig";
@@ -22,6 +20,7 @@ import {
     menuForProjects,
 } from "../project/Projects";
 import {logErrorAndReturnSuccess} from "../shared/Error";
+import {RecursiveParameter, RecursiveParameterRequestCommand} from "../shared/RecursiveParameterRequestCommand";
 import {
     gluonTeamForSlackTeamChannel,
     gluonTeamsWhoSlackScreenNameBelongsTo,
@@ -30,7 +29,7 @@ import {
 import {kickOffBuild, kickOffFirstBuild} from "./Jenkins";
 
 @CommandHandler("Kick off a Jenkins build", QMConfig.subatomic.commandPrefix + " jenkins build")
-export class KickOffJenkinsBuild implements HandleCommand<HandlerResult> {
+export class KickOffJenkinsBuild extends RecursiveParameterRequestCommand {
 
     @MappedParameter(MappedParameters.SlackUser)
     public slackName: string;
@@ -41,42 +40,32 @@ export class KickOffJenkinsBuild implements HandleCommand<HandlerResult> {
     @MappedParameter(MappedParameters.SlackChannelName)
     public teamChannel: string;
 
-    @Parameter({
+    @RecursiveParameter({
         description: "team name",
-        required: false,
-        displayable: false,
     })
     public teamName: string;
 
-    @Parameter({
+    @RecursiveParameter({
         description: "project name",
-        required: false,
-        displayable: false,
     })
     public projectName: string;
 
-    @Parameter({
+    @RecursiveParameter({
         description: "application name",
-        required: false,
-        displayable: false,
     })
     public applicationName: string;
 
-    public handle(ctx: HandlerContext): Promise<HandlerResult> {
-        if (_.isEmpty(this.teamName) || _.isEmpty(this.projectName) || _.isEmpty(this.applicationName)) {
-            return this.requestUnsetParameters(ctx);
-        }
-
+    protected runCommand(ctx: HandlerContext) {
         return this.applicationsForGluonProject(ctx, this.applicationName, this.teamName, this.projectName);
     }
 
-    private requestUnsetParameters(ctx: HandlerContext): Promise<HandlerResult> {
+    protected setNextParameter(ctx: HandlerContext): Promise<HandlerResult> | void {
         if (_.isEmpty(this.teamName)) {
             return gluonTeamForSlackTeamChannel(this.teamChannel)
                 .then(
                     team => {
                         this.teamName = team.name;
-                        return this.requestUnsetParameters(ctx);
+                        return this.setNextParameter(ctx) || null;
                     },
                     () => {
                         return gluonTeamsWhoSlackScreenNameBelongsTo(ctx, this.screenName).then(teams => {

@@ -1,6 +1,5 @@
 import {
     CommandHandler,
-    HandleCommand,
     HandlerContext,
     HandlerResult, logger,
     MappedParameter,
@@ -13,6 +12,7 @@ import * as _ from "lodash";
 import {QMConfig} from "../../config/QMConfig";
 import {gluonMemberFromScreenName} from "../member/Members";
 import {logErrorAndReturnSuccess} from "../shared/Error";
+import {RecursiveParameter, RecursiveParameterRequestCommand} from "../shared/RecursiveParameterRequestCommand";
 import {
     gluonTeamForSlackTeamChannel,
     gluonTeamsWhoSlackScreenNameBelongsTo,
@@ -21,7 +21,7 @@ import {
 
 @CommandHandler("Check whether to create a new OpenShift DevOps environment or use an existing one", QMConfig.subatomic.commandPrefix + " request devops environment")
 @Tags("subatomic", "slack", "team", "openshift", "devops")
-export class NewDevOpsEnvironment implements HandleCommand {
+export class NewDevOpsEnvironment extends RecursiveParameterRequestCommand {
 
     @MappedParameter(MappedParameters.SlackUserName)
     public screenName: string;
@@ -29,18 +29,12 @@ export class NewDevOpsEnvironment implements HandleCommand {
     @MappedParameter(MappedParameters.SlackChannelName)
     public teamChannel: string;
 
-    @Parameter({
+    @RecursiveParameter({
         description: "team name",
-        displayable: false,
-        required: false,
     })
     public teamName: string;
 
-    public handle(ctx: HandlerContext): Promise<HandlerResult> {
-        if (_.isEmpty(this.teamName)) {
-            return this.requestUnsetParameters(ctx);
-        }
-
+    protected runCommand(ctx: HandlerContext) {
         return this.requestDevOpsEnvironment(
             ctx,
             this.screenName,
@@ -49,7 +43,7 @@ export class NewDevOpsEnvironment implements HandleCommand {
         );
     }
 
-    private requestUnsetParameters(ctx: HandlerContext): Promise<HandlerResult> {
+    protected setNextParameter(ctx: HandlerContext): Promise<HandlerResult> | void {
         if (_.isEmpty(this.teamName)) {
             return gluonTeamForSlackTeamChannel(this.teamChannel)
                 .then(

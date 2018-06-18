@@ -6,7 +6,6 @@ import {
     HandlerResult,
     logger,
     success,
-    SuccessPromise,
 } from "@atomist/automation-client";
 import {url} from "@atomist/slack-messages";
 import axios from "axios";

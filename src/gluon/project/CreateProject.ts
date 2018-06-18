@@ -1,6 +1,5 @@
 import {
     CommandHandler,
-    HandleCommand,
     HandlerContext,
     HandlerResult,
     MappedParameter,
@@ -12,6 +11,7 @@ import * as _ from "lodash";
 import {QMConfig} from "../../config/QMConfig";
 import {gluonMemberFromScreenName} from "../member/Members";
 import {logErrorAndReturnSuccess} from "../shared/Error";
+import {RecursiveParameter, RecursiveParameterRequestCommand} from "../shared/RecursiveParameterRequestCommand";
 import {
     gluonTenantFromTenantName, gluonTenantList,
     menuForTenants,
@@ -22,7 +22,7 @@ import {
 } from "../team/Teams";
 
 @CommandHandler("Create a new project", QMConfig.subatomic.commandPrefix + " create project")
-export class CreateProject implements HandleCommand<HandlerResult> {
+export class CreateProject extends RecursiveParameterRequestCommand {
 
     @MappedParameter(MappedParameters.SlackUserName)
     public screenName: string;
@@ -40,36 +40,29 @@ export class CreateProject implements HandleCommand<HandlerResult> {
     })
     public description: string;
 
-    @Parameter({
+    @RecursiveParameter({
         description: "team name",
-        required: false,
-        displayable: false,
     })
     public teamName: string;
 
-    @Parameter({
+    @RecursiveParameter({
         description: "tenant name",
-        required: false,
-        displayable: false,
     })
     public tenantName: string;
 
-    public handle(ctx: HandlerContext): Promise<HandlerResult> {
-        if (_.isEmpty(this.teamName) || _.isEmpty(this.tenantName)) {
-            return this.requestUnsetParameters(ctx);
-        }
+    protected runCommand(ctx: HandlerContext) {
         return gluonTenantFromTenantName(this.tenantName).then(tenant => {
             return this.requestNewProjectForTeamAndTenant(ctx, this.screenName, this.teamName, tenant.tenantId);
         });
     }
 
-    private requestUnsetParameters(ctx: HandlerContext): Promise<HandlerResult> {
+    protected setNextParameter(ctx: HandlerContext): Promise<HandlerResult> | void {
         if (_.isEmpty(this.teamName)) {
             return gluonTeamForSlackTeamChannel(this.teamChannel)
                 .then(
                     team => {
                         this.teamName = team.name;
-                        return this.requestUnsetParameters(ctx);
+                        return this.setNextParameter(ctx) || null;
                     },
                     () => {
                         return gluonTeamsWhoSlackScreenNameBelongsTo(ctx, this.screenName).then(teams => {

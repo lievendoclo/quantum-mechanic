@@ -1,6 +1,5 @@
 import {
     CommandHandler,
-    HandleCommand,
     HandlerContext,
     HandlerResult,
     logger,
@@ -17,13 +16,14 @@ import {SimpleOption} from "../../openshift/base/options/SimpleOption";
 import {OCClient} from "../../openshift/OCClient";
 import {OCCommon} from "../../openshift/OCCommon";
 import {logErrorAndReturnSuccess} from "../shared/Error";
+import {RecursiveParameter, RecursiveParameterRequestCommand} from "../shared/RecursiveParameterRequestCommand";
 import {
     gluonTeamForSlackTeamChannel,
     gluonTeamsWhoSlackScreenNameBelongsTo, menuForTeams,
 } from "../team/Teams";
 
 @CommandHandler("Add a new Subatomic Config Server", QMConfig.subatomic.commandPrefix + " add config server")
-export class AddConfigServer implements HandleCommand<HandlerResult> {
+export class AddConfigServer extends RecursiveParameterRequestCommand {
 
     @MappedParameter(MappedParameters.SlackUserName)
     public screenName: string;
@@ -31,10 +31,8 @@ export class AddConfigServer implements HandleCommand<HandlerResult> {
     @MappedParameter(MappedParameters.SlackChannelName)
     public teamChannel: string;
 
-    @Parameter({
+    @RecursiveParameter({
         description: "team name",
-        required: false,
-        displayable: false,
     })
     public gluonTeamName: string;
 
@@ -43,11 +41,7 @@ export class AddConfigServer implements HandleCommand<HandlerResult> {
     })
     public gitUri: string;
 
-    public handle(ctx: HandlerContext): Promise<HandlerResult> {
-        if (_.isEmpty(this.gluonTeamName)) {
-            return this.requestUnsetParameters(ctx);
-        }
-
+    protected runCommand(ctx: HandlerContext) {
         return this.addConfigServer(
             ctx,
             this.gluonTeamName,
@@ -55,13 +49,13 @@ export class AddConfigServer implements HandleCommand<HandlerResult> {
         );
     }
 
-    private requestUnsetParameters(ctx: HandlerContext): Promise<HandlerResult> {
+    protected setNextParameter(ctx: HandlerContext): Promise<HandlerResult> | void {
         if (_.isEmpty(this.gluonTeamName)) {
             return gluonTeamForSlackTeamChannel(this.teamChannel)
                 .then(
                     team => {
                         this.gluonTeamName = team.name;
-                        return this.requestUnsetParameters(ctx);
+                        return this.setNextParameter(ctx) || null;
                     },
                     () => {
                         return gluonTeamsWhoSlackScreenNameBelongsTo(ctx, this.screenName).then(teams => {

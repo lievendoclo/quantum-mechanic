@@ -1,6 +1,5 @@
 import {
     CommandHandler,
-    HandleCommand,
     HandlerContext,
     HandlerResult,
     logger,
@@ -24,6 +23,7 @@ import {
     menuForProjects,
 } from "../project/Projects";
 import {logErrorAndReturnSuccess} from "../shared/Error";
+import {RecursiveParameter, RecursiveParameterRequestCommand} from "../shared/RecursiveParameterRequestCommand";
 import {
     gluonTeamForSlackTeamChannel,
     gluonTeamsWhoSlackScreenNameBelongsTo,
@@ -32,7 +32,7 @@ import {
 import {ApplicationType} from "./Applications";
 
 @CommandHandler("Link an existing library", QMConfig.subatomic.commandPrefix + " link library")
-export class LinkExistingLibrary implements HandleCommand<HandlerResult> {
+export class LinkExistingLibrary extends RecursiveParameterRequestCommand {
 
     @MappedParameter(MappedParameters.SlackUserName)
     public screenName: string;
@@ -52,30 +52,22 @@ export class LinkExistingLibrary implements HandleCommand<HandlerResult> {
 
     @Parameter({
         description: "team name",
-        required: false,
         displayable: false,
+        required: false,
     })
     public teamName: string;
 
-    @Parameter({
+    @RecursiveParameter({
         description: "project name",
-        displayable: false,
-        required: false,
     })
     public projectName: string;
 
-    @Parameter({
+    @RecursiveParameter({
         description: "Bitbucket repository slug",
-        displayable: false,
-        required: false,
     })
     public bitbucketRepositorySlug: string;
 
-    public handle(ctx: HandlerContext): Promise<HandlerResult> {
-        if (_.isEmpty(this.projectName) || _.isEmpty(this.bitbucketRepositorySlug)) {
-            return this.requestUnsetParameters(ctx);
-        }
-
+    protected runCommand(ctx: HandlerContext) {
         return ctx.messageClient.addressChannels({
             text: "🚀 Your new library is being created...",
         }, this.teamChannel).then(() => {
@@ -90,13 +82,13 @@ export class LinkExistingLibrary implements HandleCommand<HandlerResult> {
         });
     }
 
-    private requestUnsetParameters(ctx: HandlerContext): Promise<HandlerResult> {
+    protected setNextParameter(ctx: HandlerContext): Promise<HandlerResult> | void {
         if (_.isEmpty(this.teamName)) {
             return gluonTeamForSlackTeamChannel(this.teamChannel)
                 .then(
                     team => {
                         this.teamName = team.name;
-                        return this.requestUnsetParameters(ctx);
+                        return this.setNextParameter(ctx)  || null;
                     },
                     () => {
                         return gluonTeamsWhoSlackScreenNameBelongsTo(ctx, this.screenName).then(teams => {
