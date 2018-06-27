@@ -8,7 +8,7 @@ import {TestGraphClient} from "../TestGraphClient";
 import {TestMessageClient} from "../TestMessageClient";
 
 describe("Join team tests", () => {
-    it("should ask for team selection", done => {
+    it("should ask for team selection", async () => {
         const mock = new MockAdapter(axios);
         const slackName = "Test.User";
         const teamId = "197c1bb3-9c1d-431f-8db3-2188b9c75dce";
@@ -34,14 +34,11 @@ describe("Join team tests", () => {
             messageClient: new TestMessageClient(),
         };
 
-        subject.handle(fakeContext)
-            .then(() => {
-                assert( fakeContext.messageClient.textMsg.text === `Please select the team you would like to join`);
-            })
-            .then(done, done);
+        await subject.handle(fakeContext);
+        assert( fakeContext.messageClient.textMsg.text === `Please select the team you would like to join`);
     });
 
-    it("should add member to team", done => {
+    it("should add member to team", async () => {
         const mock = new MockAdapter(axios);
         const screenName = "Owner.User";
         const teamId = "79c41ee3-f092-4664-916f-da780195a51e";
@@ -111,10 +108,7 @@ describe("Join team tests", () => {
             graphClient: new TestGraphClient(),
         };
 
-        subject.handle(fakeContext)
-            .then(() => {
-                assert(fakeContext.messageClient.textMsg.text === "Welcome to the team *Test*!");
-            })
-            .then(done, done);
+        await subject.handle(fakeContext);
+        assert(fakeContext.messageClient.textMsg.text === "Welcome to the team *Test*!");
     });
 });

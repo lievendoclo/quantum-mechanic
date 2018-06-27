@@ -11,6 +11,8 @@ import {url} from "@atomist/slack-messages";
 import axios from "axios";
 import * as _ from "lodash";
 import {QMConfig} from "../../config/QMConfig";
+import {handleQMError, QMError, UserMessageClient} from "../shared/Error";
+import {isSuccessCode} from "../shared/Http";
 import {bitbucketAxios, bitbucketProjectFromKey} from "./Bitbucket";
 import {
     addBitbucketProjectAccessKeys,
@@ -67,80 +69,96 @@ export class BitbucketProjectRequested implements HandleEvent<any> {
 
     private bitbucketProjectUrl: string;
 
-    public handle(event: EventFired<any>, ctx: HandlerContext): Promise<HandlerResult> {
+    public async handle(event: EventFired<any>, ctx: HandlerContext): Promise<HandlerResult> {
         logger.info(`Ingested BitbucketProjectRequested event: ${JSON.stringify(event.data)}`);
 
         const bitbucketProjectRequestedEvent = event.data.BitbucketProjectRequestedEvent[0];
-        const key: string = bitbucketProjectRequestedEvent.bitbucketProjectRequest.key;
-        const name: string = bitbucketProjectRequestedEvent.bitbucketProjectRequest.name;
-        const description: string = bitbucketProjectRequestedEvent.bitbucketProjectRequest.description;
+        try {
+            const key: string = bitbucketProjectRequestedEvent.bitbucketProjectRequest.key;
+            const name: string = bitbucketProjectRequestedEvent.bitbucketProjectRequest.name;
+            const description: string = bitbucketProjectRequestedEvent.bitbucketProjectRequest.description;
 
-        let teamOwners: string[] = [];
-        let teamMembers: string[] = [];
-        bitbucketProjectRequestedEvent.teams.map(team => {
-            teamOwners = _.union(teamOwners, team.owners.map(owner => owner.domainUsername));
-            teamMembers = _.union(teamMembers, team.members.map(member => member.domainUsername));
-        });
-
-        const bitbucketConfiguration = new BitbucketConfiguration(
-            teamOwners,
-            teamMembers,
-        );
-
-        return bitbucketAxios().post(`${QMConfig.subatomic.bitbucket.restUrl}/api/1.0/projects`,
-            {
-                key,
-                name,
-                description,
-            })
-            .then(project => {
-                logger.info(`Created project: ${JSON.stringify(project.data)} -> ${project.data.id} + ${project.data.links.self[0].href}`);
-                this.bitbucketProjectId = project.data.id;
-                this.bitbucketProjectUrl = project.data.links.self[0].href;
-
-                return bitbucketConfiguration.configureBitbucketProject(key);
-            }, error => {
-                logger.warn(`Error creating project: ${error.response.status}`);
-                if (error.response && (error.response.status === 201 || error.response.status === 409)) {
-                    bitbucketProjectFromKey(key)
-                        .then(bitbucketProject => {
-                            this.bitbucketProjectId = bitbucketProject.id;
-                            this.bitbucketProjectUrl = bitbucketProject.links.self[0].href;
-                        });
-
-                    return bitbucketConfiguration.configureBitbucketProject(key);
-                } else {
-                    return ctx.messageClient.addressUsers({
-                        // TODO make this more descriptive
-                        text: `There was an error creating the ${bitbucketProjectRequestedEvent.project.name} Bitbucket project`,
-                    }, bitbucketProjectRequestedEvent.requestedBy.slackIdentity.screenName);
-                }
-            })
-            .then(() => {
-                return addBitbucketProjectAccessKeys(key);
-            })
-            .catch(error => {
-                logger.error(`Failed to configure Bitbucket Project ${bitbucketProjectRequestedEvent.project.name} with error: ${JSON.stringify(error)}`);
-                return ctx.messageClient.addressUsers({
-                    text: `There was an error adding SSH keys for ${bitbucketProjectRequestedEvent.project.name} Bitbucket project`,
-                }, bitbucketProjectRequestedEvent.requestedBy.slackIdentity.screenName);
-            })
-            .then(() => {
-                logger.info(`Confirming Bitbucket project: [${this.bitbucketProjectId}-${this.bitbucketProjectUrl}]`);
-                return axios.put(`${QMConfig.subatomic.gluon.baseUrl}/projects/${bitbucketProjectRequestedEvent.project.projectId}`,
-                    {
-                        bitbucketProject: {
-                            bitbucketProjectId: this.bitbucketProjectId,
-                            url: this.bitbucketProjectUrl,
-                        },
-                    })
-                    .then(success, error => {
-                        logger.error(`Could not confirm Bitbucket project: [${error.response.status}-${error.response.data}]`);
-                        return ctx.messageClient.addressUsers({
-                            text: `There was an error confirming the ${bitbucketProjectRequestedEvent.project.name} Bitbucket project details`,
-                        }, bitbucketProjectRequestedEvent.requestedBy.slackIdentity.screenName);
-                    });
+            let teamOwners: string[] = [];
+            let teamMembers: string[] = [];
+            bitbucketProjectRequestedEvent.teams.map(team => {
+                teamOwners = _.union(teamOwners, team.owners.map(owner => owner.domainUsername));
+                teamMembers = _.union(teamMembers, team.members.map(member => member.domainUsername));
             });
+
+            const bitbucketConfiguration = new BitbucketConfiguration(
+                teamOwners,
+                teamMembers,
+            );
+
+            await this.createBitbucketProject(key, name, description);
+
+            await bitbucketConfiguration.configureBitbucketProject(key);
+
+            await this.addBitbucketProjectAccessKeys(key, bitbucketProjectRequestedEvent.project.name);
+
+            return await this.confirmBitbucketProjectCreatedWithGluon(bitbucketProjectRequestedEvent.project.projectId, bitbucketProjectRequestedEvent.project.name);
+
+        } catch (error) {
+            return await this.handleError(ctx, bitbucketProjectRequestedEvent.requestedBy.slackIdentity.screenName, error);
+        }
+    }
+
+    private async createBitbucketProject(projectKey: string, projectName: string, projectDescription: string) {
+        const createBitbucketProjectRequest = await bitbucketAxios().post(`${QMConfig.subatomic.bitbucket.restUrl}/api/1.0/projects`,
+            {
+                projectKey,
+                projectName,
+                projectDescription,
+            });
+
+        if (isSuccessCode(createBitbucketProjectRequest.status)) {
+            const project = createBitbucketProjectRequest.data;
+            logger.info(`Created project: ${JSON.stringify(project)} -> ${project.id} + ${project.links.self[0].href}`);
+            this.bitbucketProjectId = project.id;
+            this.bitbucketProjectUrl = project.links.self[0].href;
+        } else {
+            logger.warn(`Error creating project: ${createBitbucketProjectRequest.status}`);
+            if (createBitbucketProjectRequest.status === 201 || createBitbucketProjectRequest.status === 409) {
+                logger.warn(`Project probably already exists.`);
+                const bitbucketProject = await bitbucketProjectFromKey(projectKey);
+                this.bitbucketProjectId = bitbucketProject.id;
+                this.bitbucketProjectUrl = bitbucketProject.links.self[0].href;
+            } else {
+                logger.error(`Failed to create bitbucket project. Error ${JSON.stringify(createBitbucketProjectRequest)}`);
+                throw new QMError(`Failed to create bitbucket project. Bitbucket rejected the request.`);
+            }
+        }
+    }
+
+    private async addBitbucketProjectAccessKeys(bitbucketProjectKey: string, projectName: string) {
+        try {
+            await addBitbucketProjectAccessKeys(bitbucketProjectKey);
+        } catch (error) {
+            logger.error(`Failed to configure Bitbucket Project ${projectName} with error: ${JSON.stringify(error)}`);
+            throw new QMError(`There was an error adding SSH keys for ${projectName} Bitbucket project`);
+        }
+    }
+
+    private async confirmBitbucketProjectCreatedWithGluon(projectId: string, projectName: string) {
+        logger.info(`Confirming Bitbucket project: [${this.bitbucketProjectId}-${this.bitbucketProjectUrl}]`);
+        const confirmBitbucketProjectCreatedResult = await axios.put(`${QMConfig.subatomic.gluon.baseUrl}/projects/${projectId}`,
+            {
+                bitbucketProject: {
+                    bitbucketProjectId: this.bitbucketProjectId,
+                    url: this.bitbucketProjectUrl,
+                },
+            });
+        if (!isSuccessCode(confirmBitbucketProjectCreatedResult.status)) {
+            logger.error(`Could not confirm Bitbucket project: [${confirmBitbucketProjectCreatedResult.status}-${confirmBitbucketProjectCreatedResult.data}]`);
+            throw new QMError(`There was an error confirming the ${projectName} Bitbucket project details`);
+        }
+        return success();
+    }
+
+    private async handleError(ctx: HandlerContext, screenName: string, error) {
+        const messageClient = new UserMessageClient(ctx);
+        messageClient.addDestination(screenName);
+        return await handleQMError(messageClient, error);
     }
 
     private docs(): string {

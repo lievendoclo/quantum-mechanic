@@ -1,4 +1,3 @@
-
 import {logger} from "@atomist/automation-client";
 import {AxiosInstance} from "axios-https-proxy-fix";
 
@@ -20,7 +19,7 @@ export function addAxiosLogger(instance: AxiosInstance, descriptor: string): Axi
         } else {
             logger.debug(`<= ${descriptor} ${error}`);
         }
-        throw error;
+        return error.response;
     });
     return instance;
 }

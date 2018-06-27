@@ -22,8 +22,16 @@ import {
     gluonProjectsWhichBelongToGluonTeam,
     menuForProjects,
 } from "../project/Projects";
-import {logErrorAndReturnSuccess} from "../shared/Error";
-import {RecursiveParameter, RecursiveParameterRequestCommand} from "../shared/RecursiveParameterRequestCommand";
+import {
+    handleQMError,
+    logErrorAndReturnSuccess, QMError,
+    ResponderMessageClient,
+} from "../shared/Error";
+import {isSuccessCode} from "../shared/Http";
+import {
+    RecursiveParameter,
+    RecursiveParameterRequestCommand,
+} from "../shared/RecursiveParameterRequestCommand";
 import {
     gluonTeamForSlackTeamChannel,
     gluonTeamsWhoSlackScreenNameBelongsTo,
@@ -67,11 +75,13 @@ export class LinkExistingLibrary extends RecursiveParameterRequestCommand {
     })
     public bitbucketRepositorySlug: string;
 
-    protected runCommand(ctx: HandlerContext) {
-        return ctx.messageClient.addressChannels({
-            text: "🚀 Your new library is being created...",
-        }, this.teamChannel).then(() => {
-            return this.linkLibraryForGluonProject(
+    protected async runCommand(ctx: HandlerContext): Promise<HandlerResult> {
+        try {
+            await ctx.messageClient.addressChannels({
+                text: "🚀 Your new library is being created...",
+            }, this.teamChannel);
+
+            return await this.linkLibraryForGluonProject(
                 ctx,
                 this.screenName,
                 this.name,
@@ -79,124 +89,113 @@ export class LinkExistingLibrary extends RecursiveParameterRequestCommand {
                 this.bitbucketRepositorySlug,
                 this.projectName,
             );
-        });
+        } catch (error) {
+            return await handleQMError(new ResponderMessageClient(ctx), error);
+        }
     }
 
-    protected setNextParameter(ctx: HandlerContext): Promise<HandlerResult> | void {
+    protected async setNextParameter(ctx: HandlerContext): Promise<HandlerResult> {
         if (_.isEmpty(this.teamName)) {
-            return gluonTeamForSlackTeamChannel(this.teamChannel)
-                .then(
-                    team => {
-                        this.teamName = team.name;
-                        return this.setNextParameter(ctx)  || null;
-                    },
-                    () => {
-                        return gluonTeamsWhoSlackScreenNameBelongsTo(ctx, this.screenName).then(teams => {
-                            return menuForTeams(
-                                ctx,
-                                teams,
-                                this,
-                                "Please select a team, whose project you would like to link a library to");
-                        }).catch(error => {
-                            logErrorAndReturnSuccess(gluonTeamsWhoSlackScreenNameBelongsTo.name, error);
-                        });
-                    },
-                );
+            try {
+                const team = await gluonTeamForSlackTeamChannel(this.teamChannel);
+                this.teamName = team.name;
+                return await this.handle(ctx);
+            } catch (error) {
+                const teams = await gluonTeamsWhoSlackScreenNameBelongsTo(ctx, this.screenName);
+                return menuForTeams(
+                    ctx,
+                    teams,
+                    this,
+                    "Please select a team, whose project you would like to link a library to");
+
+            }
         }
         if (_.isEmpty(this.projectName)) {
-            return gluonProjectsWhichBelongToGluonTeam(ctx, this.teamName)
-                .then(projects => {
-                    return menuForProjects(
-                        ctx,
-                        projects,
-                        this,
-                        "Please select a project to which you would like to link a library to");
-                }).catch(error => {
-                    logErrorAndReturnSuccess(gluonProjectsWhichBelongToGluonTeam.name, error);
-                });
+            const projects = await gluonProjectsWhichBelongToGluonTeam(ctx, this.teamName);
+            return menuForProjects(
+                ctx,
+                projects,
+                this,
+                "Please select a project to which you would like to link a library to");
         }
         if (_.isEmpty(this.bitbucketRepositorySlug)) {
-            return gluonProjectFromProjectName(ctx, this.projectName)
-                .then(project => {
-                    if (_.isEmpty(project.bitbucketProject)) {
-                        return ctx.messageClient.respond(`❗The selected project does not have an associated bitbucket project. Please first associate a bitbucket project using the \`${QMConfig.subatomic.commandPrefix} link bitbucket project\` command.`);
-                    }
-                    return bitbucketRepositoriesForProjectKey(project.bitbucketProject.key)
-                        .then(bitbucketRepos => {
-                            logger.debug(`Bitbucket project [${project.bitbucketProject.name}] has repositories: ${JSON.stringify(bitbucketRepos)}`);
+            const project = await gluonProjectFromProjectName(ctx, this.projectName);
+            if (_.isEmpty(project.bitbucketProject)) {
+                throw new QMError(`The selected project does not have an associated bitbucket project. Please first associate a bitbucket project using the \`${QMConfig.subatomic.commandPrefix} link bitbucket project\` command.`);
+            }
+            const bitbucketRepos = await bitbucketRepositoriesForProjectKey(project.bitbucketProject.key);
+            logger.debug(`Bitbucket project [${project.bitbucketProject.name}] has repositories: ${JSON.stringify(bitbucketRepos)}`);
 
-                            return menuForBitbucketRepositories(
-                                ctx,
-                                bitbucketRepos,
-                                this,
-                                "Please select the Bitbucket repository which contains the library you want to link",
-                                "bitbucketRepositorySlug",
-                                "https://raw.githubusercontent.com/absa-subatomic/subatomic-documentation/gh-pages/images/atlassian-bitbucket-logo.png",
-                            );
-                        });
-                }).catch(error => {
-                    logErrorAndReturnSuccess(gluonProjectFromProjectName.name, error);
-                });
+            return await menuForBitbucketRepositories(
+                ctx,
+                bitbucketRepos,
+                this,
+                "Please select the Bitbucket repository which contains the library you want to link",
+                "bitbucketRepositorySlug",
+                "https://raw.githubusercontent.com/absa-subatomic/subatomic-documentation/gh-pages/images/atlassian-bitbucket-logo.png",
+            );
+        }
+    }
+
+    private async linkLibraryForGluonProject(ctx: HandlerContext,
+                                             slackScreeName: string,
+                                             libraryName: string,
+                                             libraryDescription: string,
+                                             bitbucketRepositorySlug: string,
+                                             gluonProjectName: string): Promise<HandlerResult> {
+        const project = await gluonProjectFromProjectName(ctx, gluonProjectName);
+        logger.debug(`Linking Bitbucket repository: ${bitbucketRepositorySlug}`);
+
+        return await this.linkBitbucketRepository(ctx,
+            slackScreeName,
+            libraryName,
+            libraryDescription,
+            bitbucketRepositorySlug,
+            project.bitbucketProject.key,
+            project.projectId);
+    }
+
+    private async linkBitbucketRepository(ctx: HandlerContext,
+                                          slackScreeName: string,
+                                          libraryName: string,
+                                          libraryDescription: string,
+                                          bitbucketRepositorySlug: string,
+                                          bitbucketProjectKey: string,
+                                          gluonProjectId: string): Promise<HandlerResult> {
+        const repo = await bitbucketRepositoryForSlug(bitbucketProjectKey, bitbucketRepositorySlug);
+        let member;
+        try {
+            member = await gluonMemberFromScreenName(ctx, slackScreeName);
+        } catch (error) {
+            return await logErrorAndReturnSuccess(gluonMemberFromScreenName.name, error);
+        }
+        const remoteUrl = _.find(repo.links.clone, clone => {
+            return (clone as any).name === "ssh";
+        }) as any;
+
+        const createApplicationResult = await axios.post(`${QMConfig.subatomic.gluon.baseUrl}/applications`,
+            {
+                name: libraryName,
+                description: libraryDescription,
+                applicationType: ApplicationType.LIBRARY,
+                projectId: gluonProjectId,
+                createdBy: member.memberId,
+                bitbucketRepository: {
+                    bitbucketId: repo.id,
+                    name: repo.name,
+                    slug: bitbucketRepositorySlug,
+                    remoteUrl: remoteUrl.href,
+                    repoUrl: repo.links.self[0].href,
+                },
+                requestConfiguration: true,
+            });
+
+        if (!isSuccessCode(createApplicationResult.status)) {
+            logger.error(`Failed to link package. Error: ${JSON.stringify(createApplicationResult)}`);
+            throw new QMError("Failed to link the specified package from bitbucket.");
         }
 
+        return await success();
     }
 
-    private linkLibraryForGluonProject(ctx: HandlerContext,
-                                       slackScreeName: string,
-                                       libraryName: string,
-                                       libraryDescription: string,
-                                       bitbucketRepositorySlug: string,
-                                       gluonProjectName: string): Promise<HandlerResult> {
-        return gluonProjectFromProjectName(ctx, gluonProjectName)
-            .then(project => {
-                logger.debug(`Linking Bitbucket repository: ${bitbucketRepositorySlug}`);
-
-                return this.linkBitbucketRepository(ctx,
-                    slackScreeName,
-                    libraryName,
-                    libraryDescription,
-                    bitbucketRepositorySlug,
-                    project.bitbucketProject.key,
-                    project.projectId);
-            });
-    }
-
-    private linkBitbucketRepository(ctx: HandlerContext,
-                                    slackScreeName: string,
-                                    libraryName: string,
-                                    libraryDescription: string,
-                                    bitbucketRepositorySlug: string,
-                                    bitbucketProjectKey: string,
-                                    gluonProjectId: string): Promise<HandlerResult> {
-        return bitbucketRepositoryForSlug(bitbucketProjectKey, bitbucketRepositorySlug)
-            .then(repo => {
-                return gluonMemberFromScreenName(ctx, slackScreeName)
-                    .then(member => {
-                        const remoteUrl = _.find(repo.links.clone, clone => {
-                            return (clone as any).name === "ssh";
-                        }) as any;
-
-                        return axios.post(`${QMConfig.subatomic.gluon.baseUrl}/applications`,
-                            {
-                                name: libraryName,
-                                description: libraryDescription,
-                                applicationType: ApplicationType.LIBRARY,
-                                projectId: gluonProjectId,
-                                createdBy: member.memberId,
-                                bitbucketRepository: {
-                                    bitbucketId: repo.id,
-                                    name: repo.name,
-                                    slug: bitbucketRepositorySlug,
-                                    remoteUrl: remoteUrl.href,
-                                    repoUrl: repo.links.self[0].href,
-                                },
-                                requestConfiguration: true,
-                            });
-                    })
-                    .then(success)
-                    .catch(error => {
-                        return logErrorAndReturnSuccess(gluonMemberFromScreenName.name, error);
-                    });
-            });
-    }
 }

@@ -48,12 +48,12 @@ subscription ProjectCreatedEvent {
 `)
 export class ProjectCreated implements HandleEvent<any> {
 
-    public handle(event: EventFired<any>, ctx: HandlerContext): Promise<HandlerResult> {
+    public async handle(event: EventFired<any>, ctx: HandlerContext): Promise<HandlerResult> {
         logger.info(`Ingested ProjectCreated event: ${JSON.stringify(event.data)}`);
 
         const projectCreatedEvent = event.data.ProjectCreatedEvent[0];
 
-        return ctx.messageClient.addressChannels({
+        return await ctx.messageClient.addressChannels({
             text: `The *${projectCreatedEvent.project.name}* project has been created successfully.`,
             attachments: [{
                 text: `
@@ -105,7 +105,7 @@ If you would like to associate more teams to the *${projectCreatedEvent.project.
                         {
                             text: "Associate team",
                         },
-                        new AssociateTeam(projectCreatedEvent.project.name, projectCreatedEvent.project.description)),
+                        new AssociateTeam(projectCreatedEvent.project.name)),
                 ],
             }],
         }, projectCreatedEvent.team.slackIdentity.teamChannel);

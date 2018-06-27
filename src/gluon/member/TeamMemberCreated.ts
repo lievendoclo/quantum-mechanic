@@ -26,9 +26,9 @@ subscription TeamMemberCreatedEvent {
 `)
 export class TeamMemberCreated implements HandleEvent<any> {
 
-    public handle(event: EventFired<any>, ctx: HandlerContext): Promise<HandlerResult> {
+    public async handle(event: EventFired<any>, ctx: HandlerContext): Promise<HandlerResult> {
         logger.info(`Ingested TeamMemberCreated event: ${JSON.stringify(event.data)}`);
 
-        return SuccessPromise;
+        return await SuccessPromise;
     }
 }

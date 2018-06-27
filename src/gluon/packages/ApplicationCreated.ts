@@ -66,38 +66,42 @@ subscription ApplicationCreatedEvent {
 `)
 export class ApplicationCreated implements HandleEvent<any> {
 
-    public handle(event: EventFired<any>, ctx: HandlerContext): Promise<HandlerResult> {
+    public async handle(event: EventFired<any>, ctx: HandlerContext): Promise<HandlerResult> {
         logger.info(`Ingested ApplicationCreated event: ${JSON.stringify(event.data)}`);
 
         const applicationCreatedEvent = event.data.ApplicationCreatedEvent[0];
         if (applicationCreatedEvent.requestConfiguration === true) {
-            const applicationType = applicationCreatedEvent.application.applicationType.toLowerCase();
-            const attachmentText = `The ${applicationType} can now be configured. This determines what type of ${applicationType} it is and how it should be deployed/built within your environments.`;
-            return ctx.messageClient.addressChannels({
-                text: `The *${applicationCreatedEvent.application.name}* ${applicationType} in the project *${applicationCreatedEvent.project.name}* has been created successfully.`,
-                attachments: [{
-                    text: attachmentText,
-                    fallback: attachmentText,
-                    footer: `For more information, please read the ${this.docs("configure-component")}`,
-                    color: "#45B254",
-                    actions: [
-                        buttonForCommand(
-                            {text: "Configure Component"},
-                            new ConfigureBasicPackage(),
-                            {
-                                projectName : applicationCreatedEvent.project.name,
-                                applicationName : applicationCreatedEvent.application.name,
-                                teamName: applicationCreatedEvent.owningTeam.name,
-                                screenName : applicationCreatedEvent.requestedBy.slackIdentity.screenName,
-                            }),
-                    ],
-                }],
-            },  applicationCreatedEvent.owningTeam.slackIdentity.teamChannel);
+            return await this.sendConfigurationMessage(ctx, applicationCreatedEvent);
         }
 
         logger.info(`ApplicationCreated event will not request configuration`);
 
-        return Promise.resolve(success());
+        return await success();
+    }
+
+    private async sendConfigurationMessage(ctx: HandlerContext, applicationCreatedEvent) {
+        const applicationType = applicationCreatedEvent.application.applicationType.toLowerCase();
+        const attachmentText = `The ${applicationType} can now be configured. This determines what type of ${applicationType} it is and how it should be deployed/built within your environments.`;
+        return await ctx.messageClient.addressChannels({
+            text: `The *${applicationCreatedEvent.application.name}* ${applicationType} in the project *${applicationCreatedEvent.project.name}* has been created successfully.`,
+            attachments: [{
+                text: attachmentText,
+                fallback: attachmentText,
+                footer: `For more information, please read the ${this.docs("configure-component")}`,
+                color: "#45B254",
+                actions: [
+                    buttonForCommand(
+                        {text: "Configure Component"},
+                        new ConfigureBasicPackage(),
+                        {
+                            projectName: applicationCreatedEvent.project.name,
+                            applicationName: applicationCreatedEvent.application.name,
+                            teamName: applicationCreatedEvent.owningTeam.name,
+                            screenName: applicationCreatedEvent.requestedBy.slackIdentity.screenName,
+                        }),
+                ],
+            }],
+        }, applicationCreatedEvent.owningTeam.slackIdentity.teamChannel);
     }
 
     private docs(extension): string {

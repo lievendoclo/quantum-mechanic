@@ -1,25 +1,31 @@
 import {
     HandleCommand,
     HandlerContext,
-    HandlerResult, logger,
+    HandlerResult,
+    logger,
 } from "@atomist/automation-client";
 import {
     BaseParameter,
     declareParameter,
 } from "@atomist/automation-client/internal/metadata/decoratorSupport";
 import _ = require("lodash");
+import {handleQMError, QMError, ResponderMessageClient} from "./Error";
 
 export abstract class RecursiveParameterRequestCommand implements HandleCommand<HandlerResult> {
 
     private recursiveParameterProperties: string[];
 
-    public handle(ctx: HandlerContext): Promise<HandlerResult> {
+    public async handle(ctx: HandlerContext): Promise<HandlerResult> {
 
         if (!this.recursiveParametersAreSet()) {
-            return this.requestNextUnsetParameter(ctx);
+            try {
+                return await this.requestNextUnsetParameter(ctx);
+            } catch (error) {
+                return await this.handleRequestNextParameterError(ctx, error);
+            }
         }
 
-        return this.runCommand(ctx);
+        return await this.runCommand(ctx);
     }
 
     public addRecursiveParameterProperty(propertyKey: string) {
@@ -29,20 +35,18 @@ export abstract class RecursiveParameterRequestCommand implements HandleCommand<
         this.recursiveParameterProperties.push(propertyKey);
     }
 
-    protected requestNextUnsetParameter(ctx: HandlerContext): Promise<HandlerResult> {
+    protected async requestNextUnsetParameter(ctx: HandlerContext): Promise<HandlerResult> {
         logger.info(`Requesting next unset recursive parameter.`);
         const result: Promise<HandlerResult> = this.setNextParameter(ctx) || null;
 
         if (result !== null) {
-            return result;
+            return await result;
         }
 
-        logger.info(`Recursive parameter request returned a void result. Assuming all recursive parameters are set.`);
-
-        return this.runCommand(ctx);
+        throw new QMError("Recursive parameters could not be set correctly. This is an implementation fault. Please raise an issue.");
     }
 
-    protected abstract setNextParameter(ctx: HandlerContext): Promise<HandlerResult> | void;
+    protected abstract setNextParameter(ctx: HandlerContext): Promise<HandlerResult>;
 
     protected abstract runCommand(ctx: HandlerContext): Promise<HandlerResult>;
 
@@ -57,6 +61,11 @@ export abstract class RecursiveParameterRequestCommand implements HandleCommand<
             }
         }
         return parametersAreSet;
+    }
+
+    private async handleRequestNextParameterError(ctx: HandlerContext, error) {
+        const messageClient = new ResponderMessageClient(ctx);
+        return await handleQMError(messageClient, error);
     }
 }
 

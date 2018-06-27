@@ -1,6 +1,5 @@
 import {
     CommandHandler,
-    failure,
     HandleCommand,
     HandlerContext,
     HandlerResult,
@@ -11,6 +10,7 @@ import {
 } from "@atomist/automation-client";
 import axios from "axios";
 import {QMConfig} from "../../config/QMConfig";
+import {isSuccessCode} from "../shared/Http";
 
 @CommandHandler("Add Slack details to an existing team member", QMConfig.subatomic.commandPrefix + " add slack")
 export class AddSlackDetails implements HandleCommand<HandlerResult> {
@@ -27,51 +27,43 @@ export class AddSlackDetails implements HandleCommand<HandlerResult> {
     })
     public email: string;
 
-    public handle(ctx: HandlerContext): Promise<HandlerResult> {
+    public async handle(ctx: HandlerContext): Promise<HandlerResult> {
         logger.info(`Adding Slack details for member: ${this.email}`);
 
-        return axios.get(`${QMConfig.subatomic.gluon.baseUrl}/members?email=${this.email}`)
-            .then(member => {
-                logger.info(`Found existing member: ${member.data._embedded.teamMemberResources[0].memberId}`);
-                return axios.put(
-                    `${QMConfig.subatomic.gluon.baseUrl}/members/${member.data._embedded.teamMemberResources[0].memberId}`,
-                    {
-                        slack: {
-                            screenName: this.screenName,
-                            userId: this.userId,
-                        },
-                    })
-                    .then(gluonMember => {
-                        return ctx.messageClient.respond({
-                            text: `Thanks *${gluonMember.data.firstName}*, your Slack details have been added to your Subatomic profile. 👍`,
-                        });
+        const memberQueryResult = await this.findGluonMemberByEmail(this.email);
 
-                        // TODO check if they've been added to any teams?
-                        // If not, provide button to JoinTeam
-                    })
-                    // TODO send a response if no member is found
-                    // Include a button to onboard a new member
-                    .catch(err => failure(err));
-            })
-            .catch(err => failure(err));
-    }
-}
+        if (!isSuccessCode(memberQueryResult.status)) {
+            logger.error(`Unable to find gluon member with email ${this.email}. Http request failed with status ${memberQueryResult.status}`);
+            return await ctx.messageClient.respond(`❗No member with email ${this.email} exists.`);
+        }
 
-@CommandHandler("Display your Slack user details", QMConfig.subatomic.commandPrefix + " whoami")
-export class Whoami implements HandleCommand<HandlerResult> {
+        const member = memberQueryResult.data._embedded.teamMemberResources[0];
+        logger.info(`Found existing member: ${member.memberId}`);
 
-    @MappedParameter(MappedParameters.SlackUserName)
-    public screenName: string;
+        const updateMemberResult = await this.updateGluonMemberSlackDetails(this.screenName, this.userId, member.memberId);
 
-    @MappedParameter(MappedParameters.SlackUser)
-    public userId: string;
+        if (!isSuccessCode(updateMemberResult.status)) {
+            logger.error(`Unable to update slack details for gluon member with email ${this.email}. Http request failed with status ${updateMemberResult.status}`);
+            return await ctx.messageClient.respond(`❗Unable to update slack details for the member specified`);
+        }
 
-    public handle(ctx: HandlerContext): Promise<HandlerResult> {
         return ctx.messageClient.respond({
-            text: `
-*Slack screen name:* ${this.screenName}
-*Slack user Id:* ${this.userId}
-                  `,
+            text: `Thanks *${member.firstName}*, your Slack details have been added to your Subatomic profile. 👍`,
         });
+    }
+
+    private async findGluonMemberByEmail(emailAddress: string) {
+        return await axios.get(`${QMConfig.subatomic.gluon.baseUrl}/members?email=${emailAddress}`);
+    }
+
+    private async updateGluonMemberSlackDetails(slackScreenName: string, slackUserId: string, gluonMemberId: string) {
+        return await axios.put(
+            `${QMConfig.subatomic.gluon.baseUrl}/members/${gluonMemberId}`,
+            {
+                slack: {
+                    screenName: slackScreenName,
+                    userId: slackUserId,
+                },
+            });
     }
 }

@@ -1,6 +1,5 @@
 import {
     CommandHandler,
-    failure,
     HandlerContext,
     HandlerResult,
     logger,
@@ -9,6 +8,7 @@ import {
 } from "@atomist/automation-client";
 import * as _ from "lodash";
 import {QMConfig} from "../../config/QMConfig";
+import {OCCommandResult} from "../../openshift/base/OCCommandResult";
 import {SimpleOption} from "../../openshift/base/options/SimpleOption";
 import {OCCommon} from "../../openshift/OCCommon";
 import {
@@ -19,8 +19,12 @@ import {
     gluonProjectsWhichBelongToGluonTeam,
     menuForProjects,
 } from "../project/Projects";
-import {logErrorAndReturnSuccess} from "../shared/Error";
-import {RecursiveParameter, RecursiveParameterRequestCommand} from "../shared/RecursiveParameterRequestCommand";
+import {handleQMError, QMError, ResponderMessageClient} from "../shared/Error";
+import {isSuccessCode} from "../shared/Http";
+import {
+    RecursiveParameter,
+    RecursiveParameterRequestCommand,
+} from "../shared/RecursiveParameterRequestCommand";
 import {
     gluonTeamForSlackTeamChannel,
     gluonTeamsWhoSlackScreenNameBelongsTo,
@@ -55,113 +59,107 @@ export class KickOffJenkinsBuild extends RecursiveParameterRequestCommand {
     })
     public applicationName: string;
 
-    protected runCommand(ctx: HandlerContext) {
-        return this.applicationsForGluonProject(ctx, this.applicationName, this.teamName, this.projectName);
+    protected async runCommand(ctx: HandlerContext) {
+        try {
+            return await this.applicationsForGluonProject(ctx, this.applicationName, this.teamName, this.projectName);
+        } catch (error) {
+            return await handleQMError(new ResponderMessageClient(ctx), error);
+        }
     }
 
-    protected setNextParameter(ctx: HandlerContext): Promise<HandlerResult> | void {
+    protected async setNextParameter(ctx: HandlerContext): Promise<HandlerResult> {
         if (_.isEmpty(this.teamName)) {
-            return gluonTeamForSlackTeamChannel(this.teamChannel)
-                .then(
-                    team => {
-                        this.teamName = team.name;
-                        return this.setNextParameter(ctx) || null;
-                    },
-                    () => {
-                        return gluonTeamsWhoSlackScreenNameBelongsTo(ctx, this.screenName).then(teams => {
-                            return menuForTeams(
-                                ctx,
-                                teams,
-                                this,
-                                "Please select the team which contains the owning project of the application you would like to build");
-                        }).catch(error => {
-                            logErrorAndReturnSuccess(gluonTeamsWhoSlackScreenNameBelongsTo.name, error);
-                        });
-                    },
-                );
+            try {
+                const team = await gluonTeamForSlackTeamChannel(this.teamChannel);
+                this.teamName = team.name;
+                return await this.handle(ctx);
+            } catch (error) {
+                const teams = await gluonTeamsWhoSlackScreenNameBelongsTo(ctx, this.screenName);
+                return await menuForTeams(
+                    ctx,
+                    teams,
+                    this,
+                    "Please select the team which contains the owning project of the application you would like to build");
+            }
         }
         if (_.isEmpty(this.projectName)) {
-            return gluonProjectsWhichBelongToGluonTeam(ctx, this.teamName)
-                .then(projects => {
-                    return menuForProjects(
-                        ctx,
-                        projects,
-                        this,
-                        "Please select a project which contains the application you would like to build");
-                }).catch(error => {
-                    logErrorAndReturnSuccess(gluonProjectsWhichBelongToGluonTeam.name, error);
-                });
+            const projects = await gluonProjectsWhichBelongToGluonTeam(ctx, this.teamName);
+            return menuForProjects(
+                ctx,
+                projects,
+                this,
+                "Please select a project which contains the application you would like to build");
         }
         if (_.isEmpty(this.applicationName)) {
-            return gluonApplicationsLinkedToGluonProject(ctx, this.projectName).then(applications => {
-                return menuForApplications(
-                    ctx,
-                    applications,
-                    this,
-                    "Please select the application you would like to build");
-            }).catch(error => {
-                logErrorAndReturnSuccess(gluonApplicationsLinkedToGluonProject.name, error);
-            });
+            const applications = await gluonApplicationsLinkedToGluonProject(ctx, this.projectName);
+            return await menuForApplications(
+                ctx,
+                applications,
+                this,
+                "Please select the application you would like to build");
         }
-
-        return this.applicationsForGluonProject(ctx, this.applicationName, this.teamName, this.projectName);
     }
 
-    private applicationsForGluonProject(ctx: HandlerContext,
-                                        gluonApplicationName: string,
-                                        gluonTeamName: string,
-                                        gluonProjectName: string): Promise<HandlerResult> {
+    private async applicationsForGluonProject(ctx: HandlerContext,
+                                              gluonApplicationName: string,
+                                              gluonTeamName: string,
+                                              gluonProjectName: string): Promise<HandlerResult> {
         logger.debug(`Kicking off build for application: ${gluonApplicationName}`);
 
         const teamDevOpsProjectId = `${_.kebabCase(gluonTeamName).toLowerCase()}-devops`;
-        return OCCommon.commonCommand("serviceaccounts",
+        const token = await this.getJenkinsServiceAccountToken(teamDevOpsProjectId);
+
+        const jenkinsHost = await this.getJenkinsHost(teamDevOpsProjectId);
+
+        logger.debug(`Using Jenkins Route host [${jenkinsHost.output}] to kick off build`);
+
+        const kickOffBuildResult = await kickOffBuild(
+            jenkinsHost.output,
+            token.output,
+            gluonProjectName,
+            gluonApplicationName,
+        );
+        if (isSuccessCode(kickOffBuildResult.status)) {
+            return await ctx.messageClient.respond({
+                text: `🚀 *${gluonApplicationName}* is being built...`,
+            });
+        } else {
+            if (kickOffBuildResult.status === 404) {
+                logger.warn(`This is probably the first build and therefore a master branch job does not exist`);
+                await kickOffFirstBuild(
+                    jenkinsHost.output,
+                    token.output,
+                    gluonProjectName,
+                    gluonApplicationName,
+                );
+                return await ctx.messageClient.respond({
+                    text: `🚀 *${gluonApplicationName}* is being built for the first time...`,
+                });
+            } else {
+                logger.error(`Failed to kick off JenkinsBuild. Error: ${JSON.stringify(kickOffBuildResult)}`);
+                throw new QMError("Failed to kick off jenkins build. Network failure connecting to Jenkins instance.");
+            }
+        }
+    }
+
+    private async getJenkinsServiceAccountToken(teamDevOpsProjectId: string): Promise<OCCommandResult> {
+        return await OCCommon.commonCommand("serviceaccounts",
             "get-token",
             [
                 "subatomic-jenkins",
             ], [
                 new SimpleOption("-namespace", teamDevOpsProjectId),
-            ])
-            .then(token => {
-                return OCCommon.commonCommand(
-                    "get",
-                    "route/jenkins",
-                    [],
-                    [
-                        new SimpleOption("-output", "jsonpath={.spec.host}"),
-                        new SimpleOption("-namespace", teamDevOpsProjectId),
-                    ])
-                    .then(jenkinsHost => {
-                        logger.debug(`Using Jenkins Route host [${jenkinsHost.output}] to kick off build`);
+            ]);
+    }
 
-                        return kickOffBuild(
-                            jenkinsHost.output,
-                            token.output,
-                            gluonProjectName,
-                            gluonApplicationName,
-                        )
-                            .then(() => {
-                                return ctx.messageClient.respond({
-                                    text: `🚀 *${gluonApplicationName}* is being built...`,
-                                });
-                            }, error => {
-                                if (error.response && error.response.status === 404) {
-                                    logger.warn(`This is probably the first build and therefore a master branch job does not exist`);
-                                    return kickOffFirstBuild(
-                                        jenkinsHost.output,
-                                        token.output,
-                                        gluonProjectName,
-                                        gluonApplicationName,
-                                    )
-                                        .then(() => {
-                                            return ctx.messageClient.respond({
-                                                text: `🚀 *${gluonApplicationName}* is being built for the first time...`,
-                                            });
-                                        });
-                                } else {
-                                    return failure(error);
-                                }
-                            });
-                    });
-            });
+    private async getJenkinsHost(teamDevOpsProjectId: string): Promise<OCCommandResult> {
+        return await OCCommon.commonCommand(
+            "get",
+            "route/jenkins",
+            [],
+            [
+                new SimpleOption("-output", "jsonpath={.spec.host}"),
+                new SimpleOption("-namespace", teamDevOpsProjectId),
+            ]);
     }
 }

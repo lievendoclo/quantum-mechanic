@@ -1,19 +1,28 @@
 import {
     CommandHandler,
+    HandleCommand,
     HandlerContext,
     HandlerResult,
+    logger,
     MappedParameter,
     MappedParameters,
-    Parameter,
 } from "@atomist/automation-client";
 import axios from "axios";
 import * as _ from "lodash";
 import {QMConfig} from "../../config/QMConfig";
-import {gluonMemberFromScreenName} from "../member/Members";
-import {logErrorAndReturnSuccess} from "../shared/Error";
-import {RecursiveParameter, RecursiveParameterRequestCommand} from "../shared/RecursiveParameterRequestCommand";
-import {gluonTeamsWhoSlackScreenNameBelongsTo, menuForTeams} from "../team/Teams";
-import {gluonProjectFromProjectName, gluonProjects, menuForProjects} from "./Projects";
+import {handleQMError, QMError, ResponderMessageClient} from "../shared/Error";
+import {createMenu} from "../shared/GenericMenu";
+import {isSuccessCode} from "../shared/Http";
+import {
+    RecursiveParameter,
+    RecursiveParameterRequestCommand,
+} from "../shared/RecursiveParameterRequestCommand";
+import {gluonTeamsWhoSlackScreenNameBelongsTo} from "../team/Teams";
+import {
+    gluonProjectFromProjectName,
+    gluonProjects,
+    menuForProjects,
+} from "./Projects";
 
 @CommandHandler("Add additional team/s to a project", QMConfig.subatomic.commandPrefix + " associate team")
 export class AssociateTeam extends RecursiveParameterRequestCommand {
@@ -38,85 +47,115 @@ export class AssociateTeam extends RecursiveParameterRequestCommand {
     })
     public projectName: string;
 
-    @Parameter({
-        description: "project description",
-        required: false,
-        displayable: false,
-    })
-    public projectDescription: string;
-
-    public constructor(projectName: string, projectDescription: string) {
+    public constructor(projectName: string) {
         super();
         this.projectName = projectName;
-        this.projectDescription = projectDescription;
     }
 
-    protected runCommand(ctx: HandlerContext) {
-        return gluonProjectFromProjectName(ctx, this.projectName)
-            .then(() => {
-            return this.linkProjectForTeam(ctx, this.screenName, this.teamName);
-        });
+    protected async runCommand(ctx: HandlerContext) {
+        try {
+            return await this.linkProjectForTeam(ctx, this.teamName);
+        } catch (error) {
+            return await this.handleError(ctx, error);
+        }
     }
 
-    protected setNextParameter(ctx: HandlerContext): Promise<HandlerResult> | void {
+    protected async setNextParameter(ctx: HandlerContext): Promise<HandlerResult> {
         if (_.isEmpty(this.projectName)) {
-            return gluonProjects(ctx).then(projects => {
-                return menuForProjects(
-                    ctx,
-                    projects,
-                    this,
-                    `Please select a project you would like to associate this team to.`,
-                );
-            }).catch(error => {
-                logErrorAndReturnSuccess(gluonProjects.name, error);
-            });
+            const projects = await gluonProjects(ctx);
+            return await menuForProjects(
+                ctx,
+                projects,
+                this,
+                `Please select a project you would like to associate this team to.`,
+            );
         }
         if (_.isEmpty(this.teamName)) {
-            return gluonTeamsWhoSlackScreenNameBelongsTo(ctx, this.screenName).then(teams => {
-                return menuForTeams(
-                    ctx,
-                    teams,
-                    this,
-                    `Please select a team you would like to associate to *${this.projectName}*.`,
-                );
-            }).catch(error => {
-                logErrorAndReturnSuccess(gluonTeamsWhoSlackScreenNameBelongsTo.name, error);
-            });
+            const teams = await gluonTeamsWhoSlackScreenNameBelongsTo(ctx, this.screenName);
+            return await this.menuForTeams(
+                ctx,
+                teams,
+                this.projectName,
+                this,
+                `Please select a team you would like to associate to *${this.projectName}*.`,
+            );
         }
     }
 
-    private linkProjectForTeam(ctx: HandlerContext, screenName: string,
-                               teamName: string): Promise<any> {
-        return gluonMemberFromScreenName(ctx, screenName)
-            .then(member => {
-                axios.get(`${QMConfig.subatomic.gluon.baseUrl}/teams?name=${teamName}`)
-                    .then(team => {
-                        if (!_.isEmpty(team.data._embedded)) {
-                            return gluonProjectFromProjectName(ctx, this.projectName)
-                                .then(gluonProject => {
-                                    return axios.put(`${QMConfig.subatomic.gluon.baseUrl}/projects/${gluonProject.projectId}`,
-                                        {
-                                            productId: gluonProject.projectId,
-                                            createdBy: gluonProject.createdBy,
-                                            teams: [{
-                                                teamId: team.data._embedded.teamResources[0].teamId,
-                                                name: team.data._embedded.teamResources[0].name,
-                                            }],
-                                        }).then( () => {
-                                            if (this.teamChannel !== team.data._embedded.teamResources[0].name) {
-                                                return ctx.messageClient.respond(`Team *${team.data._embedded.teamResources[0].name}* has been successfully associated with ${gluonProject.projectId}`);
-                                            }
-                                    })
-                                        .catch(error => {
-                                            return ctx.messageClient.respond(`❗Failed to link project with error: ${JSON.stringify(error.response.data)}.`);
-                                        });
-                                }).catch(error => {
-                                    return ctx.messageClient.respond(`❗Failed to link project with error: ${JSON.stringify(error.response.data)}`);
-                                });
-                        }
-                    });
-            }).catch(error => {
-                logErrorAndReturnSuccess(gluonMemberFromScreenName.name, error);
+    private async linkProjectForTeam(ctx: HandlerContext, teamName: string): Promise<HandlerResult> {
+        const team = await axios.get(`${QMConfig.subatomic.gluon.baseUrl}/teams?name=${teamName}`);
+        const gluonProject = await gluonProjectFromProjectName(ctx, this.projectName);
+        let updateGluonWithProjectDetails;
+        try {
+            updateGluonWithProjectDetails = await this.updateGluonProject(gluonProject.projectId, gluonProject.createdBy, team.data._embedded.teamResources[0].teamId, team.data._embedded.teamResources[0].name);
+        } catch (error) {
+            throw new QMError(`Team *${team.data._embedded.teamResources[0].name}* was already associated with project ${gluonProject.projectId}`);
+        }
+
+        if (isSuccessCode(updateGluonWithProjectDetails.status)) {
+            return await ctx.messageClient.respond(`Team *${team.data._embedded.teamResources[0].name}* has been successfully associated with ${gluonProject.projectId}`);
+        } else {
+            logger.error(`Failed to link project. Error ${updateGluonWithProjectDetails.data}`);
+            throw new QMError(`Failed to link project.`);
+        }
+
+    }
+
+    private async updateGluonProject(projectId: string, createdBy: string, teamId: string, name: string) {
+        return await axios.put(`${QMConfig.subatomic.gluon.baseUrl}/projects/${projectId}`,
+            {
+                productId: `${projectId}`,
+                createdBy: `${createdBy}`,
+                teams: [{
+                    teamId: `${teamId}`,
+                    name: `${name}`,
+                }],
             });
+    }
+
+    private async handleError(ctx: HandlerContext, error) {
+        const messageClient = new ResponderMessageClient(ctx);
+        return await handleQMError(messageClient, error);
+    }
+
+    private async menuForTeams(ctx: HandlerContext, teams: any[],
+                               projectName: string,
+                               command: HandleCommand, message: string = "Please select a team",
+                               projectNameVariable: string = "teamName"): Promise<any> {
+        const allTeams = [];
+        const associatedTeams = [];
+        const unlinked = [];
+
+        for (const team of teams) {
+            allTeams.push(team.name);
+        }
+
+        const projectDetails = await axios.get(`${QMConfig.subatomic.gluon.baseUrl}/projects?name=${projectName}`);
+        if (!isSuccessCode(projectDetails.status)) {
+            throw new QMError("Failed to get project details for the project specified.");
+        }
+        const projectTeams = projectDetails.data._embedded.projectResources[0];
+
+        for (const team of projectTeams.teams) {
+            associatedTeams.push(team.name);
+        }
+        for (const i of allTeams) {
+            if (!associatedTeams.includes(i)) {
+                unlinked.push(i);
+            }
+        }
+
+        return createMenu(ctx,
+            unlinked.map(team => {
+                return {
+                    value: team,
+                    text: team,
+                };
+            }),
+            command,
+            message,
+            "Select Team",
+            projectNameVariable,
+        );
     }
 }

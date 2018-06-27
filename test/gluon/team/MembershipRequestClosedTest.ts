@@ -8,7 +8,7 @@ import {TestGraphClient} from "../TestGraphClient";
 import {TestMessageClient} from "../TestMessageClient";
 
 describe("Close a membership request", () => {
-    it("should approve team member", done => {
+    it("should approve team member", async () => {
         const mock = new MockAdapter(axios);
         const approverUserName = "Approval.User";
         const slackTeam = "A-Team";
@@ -69,14 +69,11 @@ describe("Close a membership request", () => {
 
         };
 
-        subject.handle(fakeContext)
-            .then(() => {
-                assert(fakeContext.messageClient.textMsg.text === `Welcome to the team *@${userScreenName}*!`);
-            })
-            .then(done, done);
+        await subject.handle(fakeContext);
+        assert(fakeContext.messageClient.textMsg.text === `Welcome to the team *@${userScreenName}*!`);
     });
 
-    it("should reject team member", done => {
+    it("should reject team member", async () => {
         const mock = new MockAdapter(axios);
         const approverUserName = "Approval.User";
         const slackTeam = "A-Team";
@@ -137,10 +134,7 @@ describe("Close a membership request", () => {
 
         };
 
-        subject.handle(fakeContext)
-            .then(() => {
-                assert(fakeContext.messageClient.textMsg === `Membership request rejected`);
-            })
-            .then(done, done);
+        await subject.handle(fakeContext);
+        assert(fakeContext.messageClient.textMsg === `Membership request rejected`);
     });
 });

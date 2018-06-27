@@ -14,6 +14,7 @@ export function gluonMemberFromScreenName(ctx: HandlerContext,
             if (!_.isEmpty(members.data._embedded)) {
                 return Promise.resolve(members.data._embedded.teamMemberResources[0]);
             } else {
+                // TODO: This does not make sense. Querying a users details does not make you the user. This should be removed.
                 const msg: SlackMessage = {
                     text: message,
                     attachments: [{

@@ -35,11 +35,8 @@ subscription TeamCreatedEvent {
 `)
 export class TeamCreated implements HandleEvent<any> {
 
-    public handle(event: EventFired<any>, ctx: HandlerContext): Promise<HandlerResult> {
+    public async handle(event: EventFired<any>, ctx: HandlerContext): Promise<HandlerResult> {
         logger.info(`Ingested TeamCreated event: ${JSON.stringify(event.data)}`);
-
-        // TODO if team channel already exists, then send a message there about the new Subatomic team
-        // also update the Team with that existing team channel
 
         const teamCreatedEvent = event.data.TeamCreatedEvent[0];
         const text: string = `
@@ -60,15 +57,11 @@ Next you should configure your team Slack channel and OpenShift DevOps environme
                             teamName: teamCreatedEvent.team.name,
                             teamChannel: _.kebabCase(teamCreatedEvent.team.name),
                         }),
-                    // buttonForCommand(
-                    //     {text: "OpenShift DevOps environment"},
-                    //     new NewDevOpsEnvironment())
                 ],
             }],
         };
 
-        // TODO fix the below if not created from Slack
-        return ctx.messageClient.send(msg,
+        return await ctx.messageClient.send(msg,
             addressSlackUsers(QMConfig.teamId, teamCreatedEvent.createdBy.slackIdentity.screenName));
     }
 

@@ -1,6 +1,5 @@
 import {
     CommandHandler,
-    failure,
     HandleCommand,
     HandlerContext,
     HandlerResult,
@@ -8,14 +7,16 @@ import {
     MappedParameter,
     MappedParameters,
     Parameter,
+    success,
     Tags,
 } from "@atomist/automation-client";
 import {buttonForCommand} from "@atomist/automation-client/spi/message/MessageClient";
 import {SlackMessage, url} from "@atomist/slack-messages";
 import axios from "axios";
-import * as _ from "lodash";
 import {QMConfig} from "../../config/QMConfig";
 import {OnboardMember} from "../member/Onboard";
+import {handleQMError, QMError, ResponderMessageClient} from "../shared/Error";
+import {isSuccessCode} from "../shared/Http";
 
 @CommandHandler("Create a new team", QMConfig.subatomic.commandPrefix + " create team")
 @Tags("subatomic", "team")
@@ -34,44 +35,72 @@ export class CreateTeam implements HandleCommand<HandlerResult> {
     })
     private description: string;
 
-    public handle(ctx: HandlerContext): Promise<HandlerResult> {
+    public async handle(ctx: HandlerContext): Promise<HandlerResult> {
         logger.info(`Creating team for member: ${this.screenName}`);
-        return axios.get(`${QMConfig.subatomic.gluon.baseUrl}/members?slackScreenName=${this.screenName}`)
-            .then(member => {
-                if (!_.isEmpty(member.data._embedded)) {
-                    const memberId: string = member.data._embedded.teamMemberResources[0].memberId;
-                    return axios.post(`${QMConfig.subatomic.gluon.baseUrl}/teams`, {
-                        name: this.name,
-                        description: this.description,
-                        createdBy: memberId,
-                    });
-                } else {
-                    const msg: SlackMessage = {
-                        text: `There was an error creating your ${this.name} team`,
-                        attachments: [{
-                            text: `
+
+        try {
+            const memberQueryResult = await this.getGluonMemberFromScreenName(this.screenName);
+
+            if (!isSuccessCode(memberQueryResult.status)) {
+                logger.info(`Slackname ${this.screenName} is not associated with a gluon identity`);
+                return await this.requestMemberOnboarding(ctx, this.name);
+            }
+
+            const member = memberQueryResult.data._embedded.teamMemberResources[0];
+
+            await this.createTeamInGluon(this.name, this.description, member.memberId);
+
+            return await success();
+        } catch (error) {
+            return await this.handleError(ctx, error);
+        }
+    }
+
+    private async getGluonMemberFromScreenName(screenName: string) {
+        return await axios.get(`${QMConfig.subatomic.gluon.baseUrl}/members?slackScreenName=${screenName}`);
+    }
+
+    private async createTeamInGluon(teamName: string, teamDescription: string, createdBy: string) {
+        const teamCreationResult = await await axios.post(`${QMConfig.subatomic.gluon.baseUrl}/teams`, {
+            name: teamName,
+            description: teamDescription,
+            createdBy,
+        });
+
+        if (!isSuccessCode(teamCreationResult.status)) {
+            logger.error(`Failed to create the team with name ${name}. Error: ${teamCreationResult.status}`);
+            throw new QMError("Unable to create team.");
+        }
+    }
+
+    private async requestMemberOnboarding(ctx: HandlerContext, teamName: string) {
+        const msg: SlackMessage = {
+            text: `There was an error creating your ${teamName} team`,
+            attachments: [{
+                text: `
 Unfortunately you do not seem to have been onboarded to Subatomic.
 To create a team you must first onboard yourself. Click the button below to do that now.
                             `,
-                            fallback: "You are not onboarded to Subatomic",
-                            footer: `For more information, please read the ${this.docs()}`,
-                            color: "#D94649",
-                            mrkdwn_in: ["text"],
-                            thumb_url: "https://raw.githubusercontent.com/absa-subatomic/subatomic-documentation/gh-pages/images/subatomic-logo-colour.png",
-                            actions: [
-                                buttonForCommand(
-                                    {
-                                        text: "Onboard me",
-                                    },
-                                    new OnboardMember()),
-                            ],
-                        }],
-                    };
+                fallback: "You are not onboarded to Subatomic",
+                footer: `For more information, please read the ${this.docs()}`,
+                color: "#D94649",
+                mrkdwn_in: ["text"],
+                thumb_url: "https://raw.githubusercontent.com/absa-subatomic/subatomic-documentation/gh-pages/images/subatomic-logo-colour.png",
+                actions: [
+                    buttonForCommand(
+                        {
+                            text: "Onboard me",
+                        },
+                        new OnboardMember()),
+                ],
+            }],
+        };
 
-                    return ctx.messageClient.respond(msg);
-                }
-            })
-            .catch(err => failure(err));
+        return await ctx.messageClient.respond(msg);
+    }
+
+    private async handleError(ctx: HandlerContext, error) {
+        return await handleQMError(new ResponderMessageClient(ctx), error);
     }
 
     private docs(): string {

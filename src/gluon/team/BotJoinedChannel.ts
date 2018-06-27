@@ -59,7 +59,7 @@ export class BotJoinedChannel implements HandleEvent<any> {
     @MappedParameter(MappedParameters.SlackChannelName)
     public slackChannelName: string;
 
-    public handle(event: EventFired<any>, ctx: HandlerContext): Promise<HandlerResult> {
+    public async handle(event: EventFired<any>, ctx: HandlerContext): Promise<HandlerResult> {
         const botJoinedChannel = event.data.UserJoinedChannel[0];
         logger.info(`BotJoinedChannelEvent: ${JSON.stringify(botJoinedChannel)}`);
         if (botJoinedChannel.user.isAtomistBot === "true") {
@@ -68,34 +68,36 @@ export class BotJoinedChannel implements HandleEvent<any> {
                 // necessary because channel.name is null for private channels
                 channelNameString = `the ${botJoinedChannel.channel.name}`;
             }
-            const msg: SlackMessage = {
-                text: `Welcome to ${channelNameString} team channel!`,
-                attachments: [{
-                    fallback: `Welcome to the ${channelNameString} team channel!`,
-                    footer: `For more information, please read the ${this.docs()}`,
-                    text: `
+            return await this.sendBotTeamWelcomeMessage(ctx, channelNameString, botJoinedChannel.channel.channelId);
+        }
+        return await success();
+    }
+
+    private async sendBotTeamWelcomeMessage(ctx: HandlerContext, channelNameString: string, channelId: string) {
+        const msg: SlackMessage = {
+            text: `Welcome to ${channelNameString} team channel!`,
+            attachments: [{
+                fallback: `Welcome to the ${channelNameString} team channel!`,
+                footer: `For more information, please read the ${this.docs()}`,
+                text: `
 If you haven't already, you might want to:
 
 • create an OpenShift DevOps environment
 • add new team members
                                                           `,
-                    mrkdwn_in: ["text"],
-                    thumb_url: "https://raw.githubusercontent.com/absa-subatomic/subatomic-documentation/gh-pages/images/subatomic-logo-colour.png",
-                    actions: [
-                        buttonForCommand(
-                            {text: "Create DevOps environment"},
-                            new NewDevOpsEnvironment()),
-                        buttonForCommand(
-                            {text: "Add team members"},
-                            new AddMemberToTeam()),
-                    ],
-                }],
-            };
-            return ctx.messageClient.addressChannels(msg, botJoinedChannel.channel.channelId);
-        } else {
-            return Promise.resolve(success());
-        }
-
+                mrkdwn_in: ["text"],
+                thumb_url: "https://raw.githubusercontent.com/absa-subatomic/subatomic-documentation/gh-pages/images/subatomic-logo-colour.png",
+                actions: [
+                    buttonForCommand(
+                        {text: "Create DevOps environment"},
+                        new NewDevOpsEnvironment()),
+                    buttonForCommand(
+                        {text: "Add team members"},
+                        new AddMemberToTeam()),
+                ],
+            }],
+        };
+        return ctx.messageClient.addressChannels(msg, channelId);
     }
 
     private docs(): string {

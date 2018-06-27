@@ -6,10 +6,10 @@ import {OnboardMember} from "../../../src/gluon/member/Onboard";
 import {TestMessageClient} from "../TestMessageClient";
 
 describe("Onboard new member test", () => {
-    it("should welcome new user", done => {
+    it("should welcome new user", async () => {
         const mock = new MockAdapter(axios);
 
-        mock.onPost(`${QMConfig.subatomic.gluon.baseUrl}/members`).reply(200, {
+        mock.onPost(`${QMConfig.subatomic.gluon.baseUrl}/members`).reply(201, {
             firstName: "Test",
             lastName: "User",
             email: "test.user@foo.co.za",
@@ -33,11 +33,7 @@ describe("Onboard new member test", () => {
             messageClient: new TestMessageClient(),
         };
 
-        subject.handle(fakeContext)
-            .then(() => {
-                assert(fakeContext.messageClient.textMsg.text.trim() === "Welcome to the Subatomic environment *Test*!\nNext steps are to either join an existing team or create a new one.");
-                return Promise.resolve();
-            })
-            .then(done, done);
+        await subject.handle(fakeContext);
+        assert(fakeContext.messageClient.textMsg.text.trim() === "Welcome to the Subatomic environment *Test*!\nNext steps are to either join an existing team or create a new one.");
     });
 });

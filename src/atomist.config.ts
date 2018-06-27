@@ -11,7 +11,7 @@ import {BitbucketProjectAdded} from "./gluon/bitbucket/BitbucketProjectAdded";
 import {BitbucketProjectRequested} from "./gluon/bitbucket/BitbucketProjectRequested";
 import {KickOffJenkinsBuild} from "./gluon/jenkins/JenkinsBuild";
 import {OnboardMember} from "./gluon/member/Onboard";
-import {AddSlackDetails, Whoami} from "./gluon/member/Slack";
+import {AddSlackDetails} from "./gluon/member/Slack";
 import {TeamMemberCreated} from "./gluon/member/TeamMemberCreated";
 import {TeamMemberCreatedEvent} from "./gluon/member/teamMemberIngester";
 import {ApplicationCreated} from "./gluon/packages/ApplicationCreated";
@@ -99,7 +99,6 @@ export const configuration: any = {
         NewBitbucketProject,
         NewProjectEnvironments,
         CreateApplication,
-        Whoami,
         CreateMembershipRequestToTeam,
         MembershipRequestClosed,
         ListExistingBitbucketProject,

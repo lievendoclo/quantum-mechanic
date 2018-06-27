@@ -7,7 +7,7 @@ import {CreateTeam} from "../../../src/gluon/team/CreateTeam";
 import {TestMessageClient} from "../TestMessageClient";
 
 describe("Create Team test", () => {
-    it("should create team", done => {
+    it("should create team", async () => {
         const mock = new MockAdapter(axios);
         const screenName = "Test.User";
 
@@ -25,7 +25,7 @@ describe("Create Team test", () => {
             },
         });
 
-        mock.onPost(`${QMConfig.subatomic.gluon.baseUrl}/teams`).reply(200, {
+        mock.onPost(`${QMConfig.subatomic.gluon.baseUrl}/teams`).reply(201, {
             name: "A Team",
             description: "Best team alive!",
             createdBy: "3d01d401-abb3-4eee-8884-2ed5a472172d",
@@ -40,19 +40,32 @@ describe("Create Team test", () => {
             messageClient: new TestMessageClient(),
         };
 
-        subject.handle(fakeContext)
-            .then(() => {
-                assert(JSON.stringify(fakeContext.messageClient) === "{}");
-            })
-            .then(done, done);
+        await subject.handle(fakeContext);
+        assert(JSON.stringify(fakeContext.messageClient) === "{}");
     });
 
-    it("should fail creating team", done => {
+    it("should fail creating team", async () => {
         const mock = new MockAdapter(axios);
         const screenName = "Test.User";
 
         mock.onGet(`${QMConfig.subatomic.gluon.baseUrl}/members?slackScreenName=${screenName}`).reply(200, {
-            _embedded: {},
+            _embedded: {
+                teamMemberResources: [
+                    {
+                        memberId: "3d01d401-abb3-4eee-8884-2ed5a472172d",
+                        slack: {
+                            screenName: `${screenName}`,
+                            userId: "9USDA7D6dH",
+                        },
+                    },
+                ],
+            },
+        });
+
+        mock.onPost(`${QMConfig.subatomic.gluon.baseUrl}/teams`).reply(400, {
+            name: "A Team",
+            description: "Best team alive!",
+            createdBy: "3d01d401-abb3-4eee-8884-2ed5a472172d",
         });
 
         const subject = new CreateTeam();
@@ -64,10 +77,7 @@ describe("Create Team test", () => {
             messageClient: new TestMessageClient(),
         };
 
-        subject.handle(fakeContext)
-            .then(() => {
-                assert(fakeContext.messageClient.textMsg.text === "There was an error creating your undefined team");
-            })
-            .then(done, done);
+        await subject.handle(fakeContext);
+        assert(fakeContext.messageClient.textMsg === "❗Unhandled exception occurred. Please alert your system admin to check the logs and correct the issue accordingly.");
     });
 });

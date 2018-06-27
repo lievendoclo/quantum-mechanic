@@ -3,7 +3,7 @@ import * as assert from "power-assert";
 const MockAdapter = require("axios-mock-adapter");
 import axios from "axios";
 import {QMConfig} from "../../../src/config/QMConfig";
-import {AddSlackDetails, Whoami} from "../../../src/gluon/member/Slack";
+import {AddSlackDetails} from "../../../src/gluon/member/Slack";
 import {TestMessageClient} from "../TestMessageClient";
 
 describe("Add slack details to existing team member", () => {
@@ -18,7 +18,10 @@ describe("Add slack details to existing team member", () => {
         mock.onGet(`${QMConfig.subatomic.gluon.baseUrl}/members?email=${email}`).reply(200, {
             _embedded: {
                 teamMemberResources: [
-                    {memberId: `${memberId}`},
+                    {
+                     memberId: `${memberId}`,
+                     firstName: `${firstName}`,
+                    },
                 ],
             },
         });
@@ -50,28 +53,4 @@ describe("Add slack details to existing team member", () => {
             })
             .then(done, done);
     });
-});
-
-describe("Whoami command handler", () => {
-
-    it("should return user's slack details", done => {
-
-        const subject = new Whoami();
-        subject.screenName = "TestUser";
-        subject.userId = "U675675";
-
-        const fakeContext = {
-            teamId: "TEST",
-            correlationId: "1231343234234",
-            messageClient: new TestMessageClient(),
-        };
-
-        subject.handle(fakeContext)
-            .then(() => {
-                assert(fakeContext.messageClient.textMsg.text.trim() === "*Slack screen name:* TestUser\n*Slack user Id:* U675675");
-                return Promise.resolve();
-            })
-            .then(done, done);
-    });
-
 });
