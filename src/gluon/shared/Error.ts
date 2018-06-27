@@ -17,7 +17,7 @@ export function logErrorAndReturnSuccess(method, error): HandlerResult {
 
 export async function handleQMError(messageClient: QMMessageClient, error) {
     logger.error("Trying to handle QM error.");
-    if ("code" in error && error.code === "ECONNREFUSED") {
+    if (error && "code" in error && error.code === "ECONNREFUSED") {
         logger.error(`Error code suggests and external service is down.\nError: ${util.inspect(error)}`);
         return await messageClient.send(`❗Unexpected failure. An external service dependency appears to be down.`);
     } else if (error instanceof Error) {
