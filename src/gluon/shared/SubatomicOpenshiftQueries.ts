@@ -29,6 +29,7 @@ export function subatomicImageStreamTags(namespace: string): Promise<any> {
                 return OCCommon.commonCommand("get", "istag",
                     [],
                     [
+                        new SimpleOption("l", "usage=subatomic-is"),
                         new SimpleOption("-namespace", namespace),
                         new SimpleOption("-output", "json"),
                     ],

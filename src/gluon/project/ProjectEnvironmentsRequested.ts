@@ -349,8 +349,8 @@ export class ProjectEnvironmentsRequested implements HandleEvent<any> {
                 ]);
         } catch (error) {
             if (error instanceof OCCommandResult) {
-                const multitenantNetworkPluginMissingError = "error: Managing pod network is only supported for openshift multitenant network plugin";
-                if (!_.isEmpty(error.error) && error.error.indexOf(multitenantNetworkPluginMissingError) > -1) {
+                const multitenantNetworkPluginMissingError = "error: managing pod network is only supported for openshift multitenant network plugin";
+                if (!_.isEmpty(error.error) && error.error.toLowerCase().indexOf(multitenantNetworkPluginMissingError) > -1) {
                     logger.warn("Openshift multitenant network plugin not found. Assuming running on Minishift test environment");
                 } else {
                     throw new OCResultError(error, "Failed to configure multitenant pod network");
