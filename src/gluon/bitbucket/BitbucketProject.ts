@@ -213,7 +213,7 @@ export class ListExistingBitbucketProject extends RecursiveParameterRequestComma
         const bitbucketProjectRequestResult = await bitbucketAxios().get(bitbucketProjectRestUrl);
 
         if (!isSuccessCode(bitbucketProjectRequestResult.status)) {
-            throw new QMError("Unable find the specified project in Bitbucket. Please make sure it exists.");
+            throw new QMError("Unable to find the specified project in Bitbucket. Please make sure it exists.");
         }
 
         return bitbucketProjectRequestResult.data;
@@ -233,7 +233,7 @@ export class ListExistingBitbucketProject extends RecursiveParameterRequestComma
             });
 
         if (!isSuccessCode(updateGluonProjectResult.status)) {
-            throw new QMError(`Failed to update the Subatomic project with specified Bibucket details.`);
+            throw new QMError(`Failed to update the Subatomic project with the specified Bitbucket details.`);
         }
     }
 

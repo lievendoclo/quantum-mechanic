@@ -3,7 +3,8 @@ import {
     EventHandler,
     HandleEvent,
     HandlerContext,
-    HandlerResult, logger,
+    HandlerResult,
+    logger,
     MappedParameter,
     MappedParameters,
     success,
@@ -11,7 +12,10 @@ import {
 } from "@atomist/automation-client";
 import {buttonForCommand} from "@atomist/automation-client/spi/message/MessageClient";
 import {SlackMessage, url} from "@atomist/slack-messages";
+import axios from "axios";
 import {QMConfig} from "../../config/QMConfig";
+import {ChannelMessageClient, handleQMError, QMError} from "../shared/Error";
+import {isSuccessCode} from "../shared/Http";
 import {NewDevOpsEnvironment} from "./DevOpsEnvironment";
 import {AddMemberToTeam} from "./JoinTeam";
 
@@ -62,15 +66,25 @@ export class BotJoinedChannel implements HandleEvent<any> {
     public async handle(event: EventFired<any>, ctx: HandlerContext): Promise<HandlerResult> {
         const botJoinedChannel = event.data.UserJoinedChannel[0];
         logger.info(`BotJoinedChannelEvent: ${JSON.stringify(botJoinedChannel)}`);
-        if (botJoinedChannel.user.isAtomistBot === "true") {
-            let channelNameString = "your";
-            if (botJoinedChannel.channel.name !== null) {
-                // necessary because channel.name is null for private channels
-                channelNameString = `the ${botJoinedChannel.channel.name}`;
+
+        try {
+            const teams = await this.getTeams(botJoinedChannel.channel.name);
+            if (!JSON.stringify(teams.data).includes("_embedded")) {
+                return await success();
             }
-            return await this.sendBotTeamWelcomeMessage(ctx, channelNameString, botJoinedChannel.channel.channelId);
+
+            if (botJoinedChannel.user.isAtomistBot === "true") {
+                let channelNameString = "your";
+                if (botJoinedChannel.channel.name !== null) {
+                    // necessary because channel.name is null for private channels
+                    channelNameString = `the ${botJoinedChannel.channel.name}`;
+                }
+                return await this.sendBotTeamWelcomeMessage(ctx, channelNameString, botJoinedChannel.channel.channelId);
+            }
+            return await success();
+        } catch (error) {
+            return await handleQMError(new ChannelMessageClient(ctx).addDestination(botJoinedChannel.channel.channelId), error);
         }
-        return await success();
     }
 
     private async sendBotTeamWelcomeMessage(ctx: HandlerContext, channelNameString: string, channelId: string) {
@@ -98,6 +112,16 @@ If you haven't already, you might want to:
             }],
         };
         return ctx.messageClient.addressChannels(msg, channelId);
+    }
+
+    private async getTeams(channelName: string) {
+        const teams = await axios.get(`${QMConfig.subatomic.gluon.baseUrl}/teams?slackTeamChannel=${channelName}`);
+
+        if (!isSuccessCode(teams.status)) {
+            throw new QMError("Unable to connect to Subatomic. Please check your connection");
+        }
+
+        return teams;
     }
 
     private docs(): string {
