@@ -178,4 +178,5 @@ git-info.json
 
 # Do not commit local configuration
 config/local.json
+config/settings.xml
 

@@ -1,6 +1,5 @@
 import {
     CommandHandler,
-    HandleCommand,
     HandlerContext,
     HandlerResult,
     logger,
@@ -11,13 +10,12 @@ import axios from "axios";
 import * as _ from "lodash";
 import {QMConfig} from "../../config/QMConfig";
 import {handleQMError, QMError, ResponderMessageClient} from "../shared/Error";
-import {createMenu} from "../shared/GenericMenu";
 import {isSuccessCode} from "../shared/Http";
 import {
     RecursiveParameter,
     RecursiveParameterRequestCommand,
 } from "../shared/RecursiveParameterRequestCommand";
-import {gluonTeamsWhoSlackScreenNameBelongsTo} from "../team/Teams";
+import {gluonTeamsWhoSlackScreenNameBelongsTo, menuForTeams} from "../team/Teams";
 import {
     gluonProjectFromProjectName,
     gluonProjects,
@@ -72,10 +70,15 @@ export class AssociateTeam extends RecursiveParameterRequestCommand {
         }
         if (_.isEmpty(this.teamName)) {
             const teams = await gluonTeamsWhoSlackScreenNameBelongsTo(ctx, this.screenName);
-            return await this.menuForTeams(
+            const availTeams = await this.availableTeamsToAssociate(teams, this.projectName);
+
+            if (_.isEmpty(availTeams)) {
+                return await ctx.messageClient.respond("Unfortunately there are no available teams to associate to.");
+            }
+
+            return await menuForTeams(
                 ctx,
-                teams,
-                this.projectName,
+                availTeams,
                 this,
                 `Please select a team you would like to associate to *${this.projectName}*.`,
             );
@@ -118,10 +121,7 @@ export class AssociateTeam extends RecursiveParameterRequestCommand {
         return await handleQMError(messageClient, error);
     }
 
-    private async menuForTeams(ctx: HandlerContext, teams: any[],
-                               projectName: string,
-                               command: HandleCommand, message: string = "Please select a team",
-                               projectNameVariable: string = "teamName"): Promise<any> {
+    private async availableTeamsToAssociate(teams: any[], projectName: string): Promise<any[]> {
         const allTeams = [];
         const associatedTeams = [];
         const unlinked = [];
@@ -145,17 +145,10 @@ export class AssociateTeam extends RecursiveParameterRequestCommand {
             }
         }
 
-        return createMenu(ctx,
-            unlinked.map(team => {
-                return {
-                    value: team,
-                    text: team,
-                };
-            }),
-            command,
-            message,
-            "Select Team",
-            projectNameVariable,
-        );
+        return unlinked.map(team => {
+            return {
+                name: team,
+            };
+        });
     }
 }
