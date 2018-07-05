@@ -152,7 +152,7 @@ export class ListProjectDetails implements HandleCommand<HandlerResult> {
         try {
             let applications;
             try {
-                applications = gluonApplicationsLinkedToGluonProjectId(this.projectId);
+                applications = await gluonApplicationsLinkedToGluonProjectId(this.projectId);
             } catch (error) {
                 return await logErrorAndReturnSuccess(gluonApplicationsLinkedToGluonProjectId.name, error);
             }
