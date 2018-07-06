@@ -2,7 +2,7 @@ import * as assert from "power-assert";
 const MockAdapter = require("axios-mock-adapter");
 import axios from "axios";
 import {QMConfig} from "../../../src/config/QMConfig";
-import {OnboardMember} from "../../../src/gluon/member/Onboard";
+import {OnboardMember} from "../../../src/gluon/commands/member/Onboard";
 import {TestMessageClient} from "../TestMessageClient";
 
 describe("Onboard new member test", () => {
