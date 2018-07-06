@@ -10,10 +10,11 @@ import {
 import axios from "axios";
 import * as _ from "lodash";
 import {QMConfig} from "../../config/QMConfig";
-import {gluonMemberFromScreenName} from "../member/Members";
+import {MemberService} from "../member/Members";
 import {
     handleQMError,
-    logErrorAndReturnSuccess, QMError,
+    logErrorAndReturnSuccess,
+    QMError,
     ResponderMessageClient,
 } from "../shared/Error";
 import {isSuccessCode} from "../shared/Http";
@@ -21,16 +22,8 @@ import {
     RecursiveParameter,
     RecursiveParameterRequestCommand,
 } from "../shared/RecursiveParameterRequestCommand";
-import {
-    gluonTenantFromTenantName,
-    gluonTenantList,
-    menuForTenants,
-} from "../shared/Tenant";
-import {
-    gluonTeamForSlackTeamChannel,
-    gluonTeamsWhoSlackScreenNameBelongsTo,
-    menuForTeams,
-} from "../team/Teams";
+import {menuForTenants, TenantService} from "../shared/TenantService";
+import {menuForTeams, TeamService} from "../team/TeamService";
 
 @CommandHandler("Create a new project", QMConfig.subatomic.commandPrefix + " create project")
 export class CreateProject extends RecursiveParameterRequestCommand {
@@ -61,9 +54,15 @@ export class CreateProject extends RecursiveParameterRequestCommand {
     })
     public tenantName: string;
 
+    constructor(private teamService = new TeamService(),
+                private tenantService = new TenantService(),
+                private memberService = new MemberService()) {
+        super();
+    }
+
     protected async runCommand(ctx: HandlerContext) {
         try {
-            const tenant = await gluonTenantFromTenantName(this.tenantName);
+            const tenant = await this.tenantService.gluonTenantFromTenantName(this.tenantName);
             return await this.requestNewProjectForTeamAndTenant(ctx, this.screenName, this.teamName, tenant.tenantId);
         } catch (error) {
             return await handleQMError(new ResponderMessageClient(ctx), error);
@@ -73,11 +72,11 @@ export class CreateProject extends RecursiveParameterRequestCommand {
     protected async setNextParameter(ctx: HandlerContext): Promise<HandlerResult> {
         if (_.isEmpty(this.teamName)) {
             try {
-                const team = await gluonTeamForSlackTeamChannel(this.teamChannel);
+                const team = await this.teamService.gluonTeamForSlackTeamChannel(this.teamChannel);
                 this.teamName = team.name;
                 return await this.handle(ctx);
             } catch (error) {
-                const teams = await gluonTeamsWhoSlackScreenNameBelongsTo(ctx, this.screenName);
+                const teams = await this.teamService.gluonTeamsWhoSlackScreenNameBelongsTo(ctx, this.screenName);
                 return await menuForTeams(
                     ctx,
                     teams,
@@ -87,7 +86,7 @@ export class CreateProject extends RecursiveParameterRequestCommand {
             }
         }
         if (_.isEmpty(this.tenantName)) {
-            const tenants = await gluonTenantList();
+            const tenants = await this.tenantService.gluonTenantList();
             return await menuForTenants(ctx,
                 tenants,
                 this,
@@ -100,9 +99,9 @@ export class CreateProject extends RecursiveParameterRequestCommand {
                                                     teamName: string, tenantId: string): Promise<any> {
         let member;
         try {
-            member = await gluonMemberFromScreenName(ctx, screenName);
+            member = await this.memberService.gluonMemberFromScreenName(ctx, screenName);
         } catch (error) {
-            return await logErrorAndReturnSuccess(gluonMemberFromScreenName.name, error);
+            return await logErrorAndReturnSuccess(this.memberService.gluonMemberFromScreenName.name, error);
         }
 
         const team = await this.getGluonTeamFromName(teamName);
@@ -138,7 +137,7 @@ export class CreateProject extends RecursiveParameterRequestCommand {
             throw new QMError(`Failed to create project since the project name is already in use. Please retry using a different project name.`);
         } else if (!isSuccessCode(projectCreationResult.status)) {
             logger.error(`Failed to create project with error: ${JSON.stringify(projectCreationResult.data)}`);
-            throw new QMError(`❗Failed to create project.`);
+            throw new QMError(`Failed to create project.`);
         }
     }
 }

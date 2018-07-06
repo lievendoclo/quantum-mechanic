@@ -22,11 +22,8 @@ import {
     RecursiveParameter,
     RecursiveParameterRequestCommand,
 } from "../shared/RecursiveParameterRequestCommand";
-import {
-    gluonTeamForSlackTeamChannel,
-    gluonTeamsWhoSlackScreenNameBelongsTo,
-} from "../team/Teams";
-import {gluonProjectsWhichBelongToGluonTeam} from "./Projects";
+import {TeamService} from "../team/TeamService";
+import {ProjectService} from "./ProjectService";
 
 @CommandHandler("Create a new OpenShift Persistent Volume Claim", QMConfig.subatomic.commandPrefix + " create openshift pvc")
 export class CreateOpenShiftPvc extends RecursiveParameterRequestCommand {
@@ -59,6 +56,11 @@ export class CreateOpenShiftPvc extends RecursiveParameterRequestCommand {
         required: true,
     })
     public pvcName: string;
+
+    constructor(private teamService = new TeamService(),
+                private projectService = new ProjectService()) {
+        super();
+    }
 
     protected async runCommand(ctx: HandlerContext): Promise<HandlerResult> {
         try {
@@ -93,7 +95,7 @@ export class CreateOpenShiftPvc extends RecursiveParameterRequestCommand {
 
     protected async setNextParameter(ctx: HandlerContext): Promise<HandlerResult> {
         if (_.isEmpty(this.gluonProjectName)) {
-            const team = await gluonTeamForSlackTeamChannel(this.teamChannel);
+            const team = await this.teamService.gluonTeamForSlackTeamChannel(this.teamChannel);
 
             if (!_.isEmpty(team)) {
                 return await this.presentMenuToSelectProjectToCreatePvcFor(ctx);
@@ -126,7 +128,7 @@ Now that your PVCs have been created, you can add this PVC as storage to an appl
 
     private async presentMenuToSelectProjectAssociatedTeam(ctx: HandlerContext): Promise<HandlerResult> {
         try {
-            const teams = await gluonTeamsWhoSlackScreenNameBelongsTo(ctx, this.screenName);
+            const teams = await this.teamService.gluonTeamsWhoSlackScreenNameBelongsTo(ctx, this.screenName);
             const msg: SlackMessage = {
                 text: "Please select a team associated with the project you wish to create a PVC for",
                 attachments: [{
@@ -149,13 +151,13 @@ Now that your PVCs have been created, you can add this PVC as storage to an appl
 
             return await ctx.messageClient.respond(msg);
         } catch (error) {
-            return await logErrorAndReturnSuccess(gluonTeamsWhoSlackScreenNameBelongsTo.name, error);
+            return await logErrorAndReturnSuccess(this.teamService.gluonTeamsWhoSlackScreenNameBelongsTo.name, error);
         }
     }
 
     private async presentMenuToSelectProjectToCreatePvcFor(ctx: HandlerContext): Promise<HandlerResult> {
         try {
-            const teams = await gluonProjectsWhichBelongToGluonTeam(ctx, this.gluonTeamName);
+            const teams = await this.projectService.gluonProjectsWhichBelongToGluonTeam(ctx, this.gluonTeamName);
 
             const msg: SlackMessage = {
                 text: "Please select the project, whose OpenShift environments the PVCs will be created in",
@@ -182,7 +184,7 @@ Now that your PVCs have been created, you can add this PVC as storage to an appl
 
             return await ctx.messageClient.respond(msg);
         } catch (error) {
-            return await logErrorAndReturnSuccess(gluonProjectsWhichBelongToGluonTeam.name, error);
+            return await logErrorAndReturnSuccess(this.projectService.gluonProjectsWhichBelongToGluonTeam.name, error);
         }
     }
 

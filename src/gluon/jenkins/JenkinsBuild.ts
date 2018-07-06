@@ -12,25 +12,18 @@ import {OCCommandResult} from "../../openshift/base/OCCommandResult";
 import {SimpleOption} from "../../openshift/base/options/SimpleOption";
 import {OCCommon} from "../../openshift/OCCommon";
 import {
-    gluonApplicationsLinkedToGluonProject,
+    ApplicationService,
     menuForApplications,
 } from "../packages/Applications";
-import {
-    gluonProjectsWhichBelongToGluonTeam,
-    menuForProjects,
-} from "../project/Projects";
+import {menuForProjects, ProjectService} from "../project/ProjectService";
 import {handleQMError, QMError, ResponderMessageClient} from "../shared/Error";
 import {isSuccessCode} from "../shared/Http";
 import {
     RecursiveParameter,
     RecursiveParameterRequestCommand,
 } from "../shared/RecursiveParameterRequestCommand";
-import {
-    gluonTeamForSlackTeamChannel,
-    gluonTeamsWhoSlackScreenNameBelongsTo,
-    menuForTeams,
-} from "../team/Teams";
-import {kickOffBuild, kickOffFirstBuild} from "./Jenkins";
+import {menuForTeams, TeamService} from "../team/TeamService";
+import {JenkinsService} from "./Jenkins";
 
 @CommandHandler("Kick off a Jenkins build", QMConfig.subatomic.commandPrefix + " jenkins build")
 export class KickOffJenkinsBuild extends RecursiveParameterRequestCommand {
@@ -59,6 +52,13 @@ export class KickOffJenkinsBuild extends RecursiveParameterRequestCommand {
     })
     public applicationName: string;
 
+    constructor(private teamService = new TeamService(),
+                private projectService = new ProjectService(),
+                private applicationService = new ApplicationService(),
+                private jenkinsService = new JenkinsService()) {
+        super();
+    }
+
     protected async runCommand(ctx: HandlerContext) {
         try {
             return await this.applicationsForGluonProject(ctx, this.applicationName, this.teamName, this.projectName);
@@ -70,11 +70,11 @@ export class KickOffJenkinsBuild extends RecursiveParameterRequestCommand {
     protected async setNextParameter(ctx: HandlerContext): Promise<HandlerResult> {
         if (_.isEmpty(this.teamName)) {
             try {
-                const team = await gluonTeamForSlackTeamChannel(this.teamChannel);
+                const team = await this.teamService.gluonTeamForSlackTeamChannel(this.teamChannel);
                 this.teamName = team.name;
                 return await this.handle(ctx);
             } catch (error) {
-                const teams = await gluonTeamsWhoSlackScreenNameBelongsTo(ctx, this.screenName);
+                const teams = await this.teamService.gluonTeamsWhoSlackScreenNameBelongsTo(ctx, this.screenName);
                 return await menuForTeams(
                     ctx,
                     teams,
@@ -83,7 +83,7 @@ export class KickOffJenkinsBuild extends RecursiveParameterRequestCommand {
             }
         }
         if (_.isEmpty(this.projectName)) {
-            const projects = await gluonProjectsWhichBelongToGluonTeam(ctx, this.teamName);
+            const projects = await this.projectService.gluonProjectsWhichBelongToGluonTeam(ctx, this.teamName);
             return menuForProjects(
                 ctx,
                 projects,
@@ -91,7 +91,7 @@ export class KickOffJenkinsBuild extends RecursiveParameterRequestCommand {
                 "Please select a project which contains the application you would like to build");
         }
         if (_.isEmpty(this.applicationName)) {
-            const applications = await gluonApplicationsLinkedToGluonProject(ctx, this.projectName);
+            const applications = await this.applicationService.gluonApplicationsLinkedToGluonProject(ctx, this.projectName);
             return await menuForApplications(
                 ctx,
                 applications,
@@ -113,7 +113,7 @@ export class KickOffJenkinsBuild extends RecursiveParameterRequestCommand {
 
         logger.debug(`Using Jenkins Route host [${jenkinsHost.output}] to kick off build`);
 
-        const kickOffBuildResult = await kickOffBuild(
+        const kickOffBuildResult = await this.jenkinsService.kickOffBuild(
             jenkinsHost.output,
             token.output,
             gluonProjectName,
@@ -126,7 +126,7 @@ export class KickOffJenkinsBuild extends RecursiveParameterRequestCommand {
         } else {
             if (kickOffBuildResult.status === 404) {
                 logger.warn(`This is probably the first build and therefore a master branch job does not exist`);
-                await kickOffFirstBuild(
+                await this.jenkinsService.kickOffFirstBuild(
                     jenkinsHost.output,
                     token.output,
                     gluonProjectName,

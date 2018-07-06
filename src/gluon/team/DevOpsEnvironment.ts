@@ -11,18 +11,14 @@ import {
 import axios from "axios";
 import * as _ from "lodash";
 import {QMConfig} from "../../config/QMConfig";
-import {gluonMemberFromScreenName} from "../member/Members";
+import {MemberService} from "../member/Members";
 import {logErrorAndReturnSuccess} from "../shared/Error";
 import {isSuccessCode} from "../shared/Http";
 import {
     RecursiveParameter,
     RecursiveParameterRequestCommand,
 } from "../shared/RecursiveParameterRequestCommand";
-import {
-    gluonTeamForSlackTeamChannel,
-    gluonTeamsWhoSlackScreenNameBelongsTo,
-    menuForTeams,
-} from "./Teams";
+import {menuForTeams, TeamService} from "./TeamService";
 
 @CommandHandler("Check whether to create a new OpenShift DevOps environment or use an existing one", QMConfig.subatomic.commandPrefix + " request devops environment")
 @Tags("subatomic", "slack", "team", "openshift", "devops")
@@ -39,6 +35,11 @@ export class NewDevOpsEnvironment extends RecursiveParameterRequestCommand {
     })
     public teamName: string;
 
+    constructor(private teamService = new TeamService(),
+                private memberService = new MemberService()) {
+        super();
+    }
+
     protected runCommand(ctx: HandlerContext) {
         return this.requestDevOpsEnvironment(
             ctx,
@@ -51,11 +52,11 @@ export class NewDevOpsEnvironment extends RecursiveParameterRequestCommand {
     protected async setNextParameter(ctx: HandlerContext): Promise<HandlerResult> {
         if (_.isEmpty(this.teamName)) {
             try {
-                const team = await gluonTeamForSlackTeamChannel(this.teamChannel);
+                const team = await this.teamService.gluonTeamForSlackTeamChannel(this.teamChannel);
                 this.teamName = team.name;
                 return await this.handle(ctx);
             } catch (slackChannelError) {
-                const teams = await gluonTeamsWhoSlackScreenNameBelongsTo(ctx, this.screenName);
+                const teams = await this.teamService.gluonTeamsWhoSlackScreenNameBelongsTo(ctx, this.screenName);
                 return await menuForTeams(
                     ctx,
                     teams,
@@ -75,9 +76,9 @@ export class NewDevOpsEnvironment extends RecursiveParameterRequestCommand {
 
         let member;
         try {
-            member = await gluonMemberFromScreenName(ctx, screenName);
+            member = await this.memberService.gluonMemberFromScreenName(ctx, screenName);
         } catch (error) {
-            return logErrorAndReturnSuccess(gluonMemberFromScreenName.name, error);
+            return logErrorAndReturnSuccess(this.memberService.gluonMemberFromScreenName.name, error);
         }
 
         const teamQueryResult = await this.getGluonTeamFromTeamName(teamName);

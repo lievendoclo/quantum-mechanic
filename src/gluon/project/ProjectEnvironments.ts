@@ -5,16 +5,18 @@ import {
     logger,
     MappedParameter,
     MappedParameters,
-    Parameter, success,
+    Parameter,
+    success,
     Tags,
 } from "@atomist/automation-client";
 import axios from "axios";
 import _ = require("lodash");
 import {QMConfig} from "../../config/QMConfig";
-import {gluonMemberFromScreenName} from "../member/Members";
+import {MemberService} from "../member/Members";
 import {
     handleQMError,
-    logErrorAndReturnSuccess, QMError,
+    logErrorAndReturnSuccess,
+    QMError,
     ResponderMessageClient,
 } from "../shared/Error";
 import {isSuccessCode} from "../shared/Http";
@@ -22,16 +24,8 @@ import {
     RecursiveParameter,
     RecursiveParameterRequestCommand,
 } from "../shared/RecursiveParameterRequestCommand";
-import {
-    gluonTeamForSlackTeamChannel,
-    gluonTeamsWhoSlackScreenNameBelongsTo,
-    menuForTeams,
-} from "../team/Teams";
-import {
-    gluonProjectFromProjectName,
-    gluonProjectsWhichBelongToGluonTeam,
-    menuForProjects,
-} from "./Projects";
+import {menuForTeams, TeamService} from "../team/TeamService";
+import {menuForProjects, ProjectService} from "./ProjectService";
 
 @CommandHandler("Create new OpenShift environments for a project", QMConfig.subatomic.commandPrefix + " request project environments")
 @Tags("subatomic", "openshift", "project")
@@ -55,6 +49,12 @@ export class NewProjectEnvironments extends RecursiveParameterRequestCommand {
     })
     public teamName: string = null;
 
+    constructor(private teamService = new TeamService(),
+                private projectService = new ProjectService(),
+                private memberService = new MemberService()) {
+        super();
+    }
+
     protected async runCommand(ctx: HandlerContext) {
         logger.info("Creating new OpenShift environments...");
 
@@ -65,16 +65,16 @@ export class NewProjectEnvironments extends RecursiveParameterRequestCommand {
 
             let member;
             try {
-                member = await gluonMemberFromScreenName(ctx, this.screenName);
+                member = await this.memberService.gluonMemberFromScreenName(ctx, this.screenName);
             } catch (error) {
-                return await logErrorAndReturnSuccess(gluonMemberFromScreenName.name, error);
+                return await logErrorAndReturnSuccess(this.memberService.gluonMemberFromScreenName.name, error);
             }
 
             let project;
             try {
-                project = await gluonProjectFromProjectName(ctx, this.projectName);
+                project = await this.projectService.gluonProjectFromProjectName(ctx, this.projectName);
             } catch (error) {
-                return await logErrorAndReturnSuccess(gluonProjectFromProjectName.name, error);
+                return await logErrorAndReturnSuccess(this.projectService.gluonProjectFromProjectName.name, error);
             }
 
             await this.requestProjectEnvironment(project.projectId, member.memberId);
@@ -88,11 +88,11 @@ export class NewProjectEnvironments extends RecursiveParameterRequestCommand {
     protected async setNextParameter(ctx: HandlerContext): Promise<HandlerResult> {
         if (_.isEmpty(this.teamName)) {
             try {
-                const team = await gluonTeamForSlackTeamChannel(this.teamChannel);
+                const team = await this.teamService.gluonTeamForSlackTeamChannel(this.teamChannel);
                 this.teamName = team.name;
                 return await this.handle(ctx);
             } catch (error) {
-                const teams = await gluonTeamsWhoSlackScreenNameBelongsTo(ctx, this.screenName);
+                const teams = await this.teamService.gluonTeamsWhoSlackScreenNameBelongsTo(ctx, this.screenName);
                 return await menuForTeams(
                     ctx,
                     teams,
@@ -102,7 +102,7 @@ export class NewProjectEnvironments extends RecursiveParameterRequestCommand {
             }
         }
         if (_.isEmpty(this.projectName)) {
-            const projects = await gluonProjectsWhichBelongToGluonTeam(ctx, this.teamName);
+            const projects = await this.projectService.gluonProjectsWhichBelongToGluonTeam(ctx, this.teamName);
             return await menuForProjects(
                 ctx,
                 projects,

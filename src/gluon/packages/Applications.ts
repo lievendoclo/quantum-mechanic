@@ -13,78 +13,80 @@ export enum ApplicationType {
     LIBRARY = "LIBRARY",
 }
 
-export function gluonApplicationsLinkedToGluonProject(ctx: HandlerContext, gluonProjectName: string): Promise<any> {
-    return axios.get(`${QMConfig.subatomic.gluon.baseUrl}/applications?projectName=${gluonProjectName}`)
-        .then(applications => {
-            if (!_.isEmpty(applications.data._embedded)) {
-                return Promise.resolve(applications.data._embedded.applicationResources);
-            }
+export class ApplicationService {
+    public gluonApplicationsLinkedToGluonProject(ctx: HandlerContext, gluonProjectName: string): Promise<any> {
+        return axios.get(`${QMConfig.subatomic.gluon.baseUrl}/applications?projectName=${gluonProjectName}`)
+            .then(applications => {
+                if (!_.isEmpty(applications.data._embedded)) {
+                    return Promise.resolve(applications.data._embedded.applicationResources);
+                }
 
-            return ctx.messageClient.respond({
-                text: "Unfortunately there are no applications linked to this project.",
-                attachments: [{
-                    text: "Would you like to create a new application?",
-                    actions: [
-                        buttonForCommand(
-                            {
-                                text: "Create application",
-                            },
-                            new CreateApplication()),
-                    ],
-                }],
-            })
-                .then(() => Promise.reject(`${gluonProjectName} project does not have any applications linked to it`));
-        });
-}
-
-export function gluonApplicationForNameAndProjectName(ctx: HandlerContext,
-                                                      applicationName: string,
-                                                      projectName: string,
-                                                      message: string = "This command requires an existing application"): Promise<any> {
-    return axios.get(`${QMConfig.subatomic.gluon.baseUrl}/applications?name=${applicationName}&projectName=${projectName}`)
-        .then(applications => {
-            if (!_.isEmpty(applications.data._embedded)) {
-                return Promise.resolve(applications.data._embedded.applicationResources[0]);
-            } else {
-                const msg: SlackMessage = {
-                    text: message,
+                return ctx.messageClient.respond({
+                    text: "Unfortunately there are no applications linked to this project.",
                     attachments: [{
-                        text: `
-Unfortunately Subatomic does not manage this project.
-Consider creating a new application called ${applicationName}. Click the button below to do that now.
-                            `,
-                        fallback: "Application not managed by Subatomic",
-                        footer: `For more information, please read the ${url(`${QMConfig.subatomic.docs.baseUrl}/quantum-mechanic/command-reference#create-bitbucket-project`,
-                            "documentation")}`,
-                        color: "#ffcc00",
-                        mrkdwn_in: ["text"],
+                        text: "Would you like to create a new application?",
                         actions: [
                             buttonForCommand(
                                 {
                                     text: "Create application",
                                 },
-                                new CreateApplication(), {
-                                    name: applicationName,
-                                }),
+                                new CreateApplication()),
                         ],
                     }],
-                };
+                })
+                    .then(() => Promise.reject(`${gluonProjectName} project does not have any applications linked to it`));
+            });
+    }
 
-                return ctx.messageClient.respond(msg)
-                    .then(() => Promise.reject(
-                        `Application with name ${applicationName} does not exist`));
-            }
-        });
-}
+    public gluonApplicationForNameAndProjectName(ctx: HandlerContext,
+                                                 applicationName: string,
+                                                 projectName: string,
+                                                 message: string = "This command requires an existing application"): Promise<any> {
+        return axios.get(`${QMConfig.subatomic.gluon.baseUrl}/applications?name=${applicationName}&projectName=${projectName}`)
+            .then(applications => {
+                if (!_.isEmpty(applications.data._embedded)) {
+                    return Promise.resolve(applications.data._embedded.applicationResources[0]);
+                } else {
+                    const msg: SlackMessage = {
+                        text: message,
+                        attachments: [{
+                            text: `
+Unfortunately Subatomic does not manage this project.
+Consider creating a new application called ${applicationName}. Click the button below to do that now.
+                            `,
+                            fallback: "Application not managed by Subatomic",
+                            footer: `For more information, please read the ${url(`${QMConfig.subatomic.docs.baseUrl}/quantum-mechanic/command-reference#create-bitbucket-project`,
+                                "documentation")}`,
+                            color: "#ffcc00",
+                            mrkdwn_in: ["text"],
+                            actions: [
+                                buttonForCommand(
+                                    {
+                                        text: "Create application",
+                                    },
+                                    new CreateApplication(), {
+                                        name: applicationName,
+                                    }),
+                            ],
+                        }],
+                    };
 
-export function gluonApplicationsLinkedToGluonProjectId(gluonProjectId: string): Promise<any[]> {
-    return axios.get(`${QMConfig.subatomic.gluon.baseUrl}/applications?projectId=${gluonProjectId}`)
-        .then(applications => {
-            if (!_.isEmpty(applications.data._embedded)) {
-                return Promise.resolve(applications.data._embedded.applicationResources);
-            }
-            return [];
-        });
+                    return ctx.messageClient.respond(msg)
+                        .then(() => Promise.reject(
+                            `Application with name ${applicationName} does not exist`));
+                }
+            });
+    }
+
+    public gluonApplicationsLinkedToGluonProjectId(gluonProjectId: string): Promise<any[]> {
+        return axios.get(`${QMConfig.subatomic.gluon.baseUrl}/applications?projectId=${gluonProjectId}`)
+            .then(applications => {
+                if (!_.isEmpty(applications.data._embedded)) {
+                    return Promise.resolve(applications.data._embedded.applicationResources);
+                }
+                return [];
+            });
+    }
 }
 
 export function menuForApplications(ctx: HandlerContext, applications: any[],

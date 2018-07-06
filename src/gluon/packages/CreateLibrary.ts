@@ -12,19 +12,15 @@ import axios from "axios";
 import * as _ from "lodash";
 import {QMConfig} from "../../config/QMConfig";
 import {
-    bitbucketRepositoriesForProjectKey,
-    bitbucketRepositoryForSlug,
+    BitbucketService,
     menuForBitbucketRepositories,
 } from "../bitbucket/Bitbucket";
-import {gluonMemberFromScreenName} from "../member/Members";
-import {
-    gluonProjectFromProjectName,
-    gluonProjectsWhichBelongToGluonTeam,
-    menuForProjects,
-} from "../project/Projects";
+import {MemberService} from "../member/Members";
+import {menuForProjects, ProjectService} from "../project/ProjectService";
 import {
     handleQMError,
-    logErrorAndReturnSuccess, QMError,
+    logErrorAndReturnSuccess,
+    QMError,
     ResponderMessageClient,
 } from "../shared/Error";
 import {isSuccessCode} from "../shared/Http";
@@ -32,11 +28,7 @@ import {
     RecursiveParameter,
     RecursiveParameterRequestCommand,
 } from "../shared/RecursiveParameterRequestCommand";
-import {
-    gluonTeamForSlackTeamChannel,
-    gluonTeamsWhoSlackScreenNameBelongsTo,
-    menuForTeams,
-} from "../team/Teams";
+import {menuForTeams, TeamService} from "../team/TeamService";
 import {ApplicationType} from "./Applications";
 
 @CommandHandler("Link an existing library", QMConfig.subatomic.commandPrefix + " link library")
@@ -75,6 +67,13 @@ export class LinkExistingLibrary extends RecursiveParameterRequestCommand {
     })
     public bitbucketRepositorySlug: string;
 
+    constructor(private teamService = new TeamService(),
+                private projectService = new ProjectService(),
+                private memberService = new MemberService(),
+                private bitbucketService = new BitbucketService()) {
+        super();
+    }
+
     protected async runCommand(ctx: HandlerContext): Promise<HandlerResult> {
         try {
             await ctx.messageClient.addressChannels({
@@ -97,11 +96,11 @@ export class LinkExistingLibrary extends RecursiveParameterRequestCommand {
     protected async setNextParameter(ctx: HandlerContext): Promise<HandlerResult> {
         if (_.isEmpty(this.teamName)) {
             try {
-                const team = await gluonTeamForSlackTeamChannel(this.teamChannel);
+                const team = await this.teamService.gluonTeamForSlackTeamChannel(this.teamChannel);
                 this.teamName = team.name;
                 return await this.handle(ctx);
             } catch (error) {
-                const teams = await gluonTeamsWhoSlackScreenNameBelongsTo(ctx, this.screenName);
+                const teams = await this.teamService.gluonTeamsWhoSlackScreenNameBelongsTo(ctx, this.screenName);
                 return menuForTeams(
                     ctx,
                     teams,
@@ -111,7 +110,7 @@ export class LinkExistingLibrary extends RecursiveParameterRequestCommand {
             }
         }
         if (_.isEmpty(this.projectName)) {
-            const projects = await gluonProjectsWhichBelongToGluonTeam(ctx, this.teamName);
+            const projects = await this.projectService.gluonProjectsWhichBelongToGluonTeam(ctx, this.teamName);
             return menuForProjects(
                 ctx,
                 projects,
@@ -119,11 +118,13 @@ export class LinkExistingLibrary extends RecursiveParameterRequestCommand {
                 "Please select a project to which you would like to link a library to");
         }
         if (_.isEmpty(this.bitbucketRepositorySlug)) {
-            const project = await gluonProjectFromProjectName(ctx, this.projectName);
+            const project = await this.projectService.gluonProjectFromProjectName(ctx, this.projectName);
             if (_.isEmpty(project.bitbucketProject)) {
                 throw new QMError(`The selected project does not have an associated bitbucket project. Please first associate a bitbucket project using the \`${QMConfig.subatomic.commandPrefix} link bitbucket project\` command.`);
             }
-            const bitbucketRepos = await bitbucketRepositoriesForProjectKey(project.bitbucketProject.key);
+
+            const bitbucketRepos = await this.bitbucketService.bitbucketRepositoriesForProjectKey(project.bitbucketProject.key);
+
             logger.debug(`Bitbucket project [${project.bitbucketProject.name}] has repositories: ${JSON.stringify(bitbucketRepos)}`);
 
             return await menuForBitbucketRepositories(
@@ -143,7 +144,7 @@ export class LinkExistingLibrary extends RecursiveParameterRequestCommand {
                                              libraryDescription: string,
                                              bitbucketRepositorySlug: string,
                                              gluonProjectName: string): Promise<HandlerResult> {
-        const project = await gluonProjectFromProjectName(ctx, gluonProjectName);
+        const project = await this.projectService.gluonProjectFromProjectName(ctx, gluonProjectName);
         logger.debug(`Linking Bitbucket repository: ${bitbucketRepositorySlug}`);
 
         return await this.linkBitbucketRepository(ctx,
@@ -162,12 +163,19 @@ export class LinkExistingLibrary extends RecursiveParameterRequestCommand {
                                           bitbucketRepositorySlug: string,
                                           bitbucketProjectKey: string,
                                           gluonProjectId: string): Promise<HandlerResult> {
-        const repo = await bitbucketRepositoryForSlug(bitbucketProjectKey, bitbucketRepositorySlug);
+        const repoResult = await this.bitbucketService.bitbucketRepositoryForSlug(bitbucketProjectKey, bitbucketRepositorySlug);
+
+        if (!isSuccessCode(repoResult.status)) {
+            throw new QMError("Unable to find the specified repository in Bitbucket. Please make sure it exists.");
+        }
+
+        const repo = repoResult.data;
+
         let member;
         try {
-            member = await gluonMemberFromScreenName(ctx, slackScreeName);
+            member = await this.memberService.gluonMemberFromScreenName(ctx, slackScreeName);
         } catch (error) {
-            return await logErrorAndReturnSuccess(gluonMemberFromScreenName.name, error);
+            return await logErrorAndReturnSuccess(this.memberService.gluonMemberFromScreenName.name, error);
         }
         const remoteUrl = _.find(repo.links.clone, clone => {
             return (clone as any).name === "ssh";

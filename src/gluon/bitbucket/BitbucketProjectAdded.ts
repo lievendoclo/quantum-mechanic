@@ -12,7 +12,7 @@ import {QMConfig} from "../../config/QMConfig";
 import {AssociateTeam} from "../project/AssociateTeam";
 import {NewProjectEnvironments} from "../project/ProjectEnvironments";
 import {handleQMError, QMError, UserMessageClient} from "../shared/Error";
-import {addBitbucketProjectAccessKeys} from "./BitbucketConfiguration";
+import {BitbucketService} from "./Bitbucket";
 
 @EventHandler("Receive BitbucketProjectAddedEvent events", `
 subscription BitbucketProjectAddedEvent {
@@ -48,6 +48,9 @@ subscription BitbucketProjectAddedEvent {
 `)
 export class BitbucketProjectAdded implements HandleEvent<any> {
 
+    constructor(private bitbucketService = new BitbucketService()) {
+    }
+
     public async handle(event: EventFired<any>, ctx: HandlerContext): Promise<HandlerResult> {
         logger.info(`Ingested BitbucketProjectAddedEvent event: ${JSON.stringify(event.data)}`);
 
@@ -64,7 +67,7 @@ export class BitbucketProjectAdded implements HandleEvent<any> {
 
     private async addBitbucketProjectAccessKeys(bitbucketProjectKey: string, projectName: string) {
         try {
-            await addBitbucketProjectAccessKeys(bitbucketProjectKey);
+            await this.bitbucketService.addBitbucketProjectAccessKeys(bitbucketProjectKey);
         } catch (error) {
             logger.error(`Failed to configure Bitbucket Project ${projectName} with error: ${JSON.stringify(error)}`);
             throw new QMError(`There was an error adding SSH keys for ${projectName} Bitbucket project`);
@@ -72,6 +75,10 @@ export class BitbucketProjectAdded implements HandleEvent<any> {
     }
 
     private async sendBitbucketAddedSuccessfullyMessage(ctx: HandlerContext, addedEvent) {
+
+        const associateTeamCommand: AssociateTeam = new AssociateTeam();
+        associateTeamCommand.projectName = addedEvent.project.name;
+
         return await ctx.messageClient.addressChannels({
             text: `
 The *${addedEvent.bitbucketProject.name}* Bitbucket project has been configured successfully and linked to the *${addedEvent.project.name}* Subatomic project.
@@ -107,7 +114,7 @@ If you would like to associate more teams to the *${addedEvent.project.name}* pr
                             {
                                 text: "Associate team",
                             },
-                            new AssociateTeam(addedEvent.project.name)),
+                            associateTeamCommand),
                     ],
                 }],
         }, addedEvent.teams.map(team => team.slackIdentity.teamChannel));
