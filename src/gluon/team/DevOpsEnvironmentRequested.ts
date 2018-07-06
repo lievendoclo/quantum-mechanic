@@ -14,15 +14,12 @@ import {QMConfig} from "../../config/QMConfig";
 import {SimpleOption} from "../../openshift/base/options/SimpleOption";
 import {OCClient} from "../../openshift/OCClient";
 import {OCCommon} from "../../openshift/OCCommon";
-import {
-    createGlobalCredentials,
-    createGlobalCredentialsWithFile,
-} from "../jenkins/Jenkins";
+import {JenkinsService} from "../jenkins/Jenkins";
 import {AddConfigServer} from "../project/AddConfigServer";
 import {CreateProject} from "../project/CreateProject";
 import {ChannelMessageClient, handleQMError, QMError} from "../shared/Error";
 import {isSuccessCode} from "../shared/Http";
-import {subatomicImageStreamTags} from "../shared/SubatomicOpenshiftQueries";
+import {SubatomicOpenshiftService} from "../shared/SubatomicOpenshiftService";
 import {TaskListMessage, TaskStatus} from "../shared/TaskListMessage";
 
 const promiseRetry = require("promise-retry");
@@ -62,6 +59,10 @@ subscription DevOpsEnvironmentRequestedEvent {
 }
 `)
 export class DevOpsEnvironmentRequested implements HandleEvent<any> {
+
+    constructor(private subatomicOpenshiftService = new SubatomicOpenshiftService(),
+                private jenkinsService = new JenkinsService()) {
+    }
 
     public async handle(event: EventFired<any>, ctx: HandlerContext): Promise<HandlerResult> {
         logger.info(`Ingested DevOpsEnvironmentRequestedEvent event: ${JSON.stringify(event.data)}`);
@@ -225,7 +226,7 @@ export class DevOpsEnvironmentRequested implements HandleEvent<any> {
     }
 
     private async copyImageStreamsToDevOpsEnvironment(projectId) {
-        const imageStreamTags = await subatomicImageStreamTags("subatomic");
+        const imageStreamTags = await this.subatomicOpenshiftService.subatomicImageStreamTags("subatomic");
 
         for (const imageStreamTag of imageStreamTags) {
             const imageStreamTagName = imageStreamTag.metadata.name;
@@ -369,7 +370,7 @@ export class DevOpsEnvironmentRequested implements HandleEvent<any> {
 
     private async addJenkinsCredentials(projectId: string, jenkinsHost: string, token: string) {
         logger.debug(`Using Jenkins Route host [${jenkinsHost}] to add Bitbucket credentials`);
-        const createBitbucketGlobalCredentialsResult = await createGlobalCredentials(
+        const createBitbucketGlobalCredentialsResult = await this.jenkinsService.createGlobalCredentials(
             jenkinsHost,
             token,
             projectId,
@@ -389,7 +390,7 @@ export class DevOpsEnvironmentRequested implements HandleEvent<any> {
             throw new QMError("Failed to created Bitbucket Global Credentials in Jenkins");
         }
 
-        const createNexusGlobalCredentialsResult = await createGlobalCredentials(
+        const createNexusGlobalCredentialsResult = await this.jenkinsService.createGlobalCredentials(
             jenkinsHost,
             token,
             projectId,
@@ -408,7 +409,7 @@ export class DevOpsEnvironmentRequested implements HandleEvent<any> {
             throw new QMError("Failed to create Nexus Global Credentials in Jenkins");
         }
 
-        const createMavenGlobalCredentialsResult = await createGlobalCredentialsWithFile(
+        const createMavenGlobalCredentialsResult = await this.jenkinsService.createGlobalCredentialsWithFile(
             jenkinsHost,
             token,
             projectId,

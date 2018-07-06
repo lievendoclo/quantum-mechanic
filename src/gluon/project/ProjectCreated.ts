@@ -53,6 +53,9 @@ export class ProjectCreated implements HandleEvent<any> {
 
         const projectCreatedEvent = event.data.ProjectCreatedEvent[0];
 
+        const associateTeamCommand = new AssociateTeam();
+        associateTeamCommand.projectName = projectCreatedEvent.project.name;
+
         return await ctx.messageClient.addressChannels({
             text: `The *${projectCreatedEvent.project.name}* project has been created successfully.`,
             attachments: [{
@@ -105,7 +108,7 @@ If you would like to associate more teams to the *${projectCreatedEvent.project.
                         {
                             text: "Associate team",
                         },
-                        new AssociateTeam(projectCreatedEvent.project.name)),
+                        associateTeamCommand),
                 ],
             }],
         }, projectCreatedEvent.team.slackIdentity.teamChannel);

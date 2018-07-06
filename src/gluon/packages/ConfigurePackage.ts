@@ -20,18 +20,15 @@ import {StandardOption} from "../../openshift/base/options/StandardOption";
 import {OCClient} from "../../openshift/OCClient";
 import {OCCommon} from "../../openshift/OCCommon";
 import {QMTemplate} from "../../template/QMTemplate";
-import {jenkinsAxios} from "../jenkins/Jenkins";
+import {JenkinsService} from "../jenkins/Jenkins";
 import {KickOffJenkinsBuild} from "../jenkins/JenkinsBuild";
 import {getProjectDevOpsId, getProjectId} from "../project/Project";
-import {
-    gluonProjectFromProjectName,
-    gluonProjectsWhichBelongToGluonTeam,
-    menuForProjects,
-} from "../project/Projects";
+import {menuForProjects, ProjectService} from "../project/ProjectService";
 import {
     handleQMError,
     logErrorAndReturnSuccess,
-    QMError, ResponderMessageClient,
+    QMError,
+    ResponderMessageClient,
 } from "../shared/Error";
 import {createMenu} from "../shared/GenericMenu";
 import {isSuccessCode} from "../shared/Http";
@@ -39,17 +36,12 @@ import {
     RecursiveParameter,
     RecursiveParameterRequestCommand,
 } from "../shared/RecursiveParameterRequestCommand";
-import {subatomicApplicationTemplates} from "../shared/SubatomicOpenshiftQueries";
-import {gluonTenantFromTenantId} from "../shared/Tenant";
+import {SubatomicOpenshiftService} from "../shared/SubatomicOpenshiftService";
+import {TenantService} from "../shared/TenantService";
+import {menuForTeams, TeamService} from "../team/TeamService";
 import {
-    gluonTeamForSlackTeamChannel,
-    gluonTeamsWhoSlackScreenNameBelongsTo,
-    menuForTeams,
-} from "../team/Teams";
-import {
+    ApplicationService,
     ApplicationType,
-    gluonApplicationForNameAndProjectName,
-    gluonApplicationsLinkedToGluonProject,
     menuForApplications,
 } from "./Applications";
 import {PackageDefinition} from "./PackageDefinition";
@@ -205,6 +197,15 @@ export class ConfigurePackage extends RecursiveParameterRequestCommand {
     private readonly JENKINSFILE_FOLDER = "resources/templates/jenkins/jenkinsfile-repo/";
     private readonly JENKINSFILE_EXISTS = "JENKINS_FILE_EXISTS";
 
+    constructor(private teamService = new TeamService(),
+                private tenantService = new TenantService(),
+                private subatomicOpenshiftService = new SubatomicOpenshiftService(),
+                private projectService = new ProjectService(),
+                private applicationService = new ApplicationService(),
+                private jenkinsService = new JenkinsService()) {
+        super();
+    }
+
     protected async runCommand(ctx: HandlerContext): Promise<HandlerResult> {
         try {
             await ctx.messageClient.addressChannels({
@@ -219,11 +220,11 @@ export class ConfigurePackage extends RecursiveParameterRequestCommand {
     protected async setNextParameter(ctx: HandlerContext): Promise<HandlerResult> {
         if (_.isEmpty(this.teamName)) {
             try {
-                const team = await gluonTeamForSlackTeamChannel(this.teamChannel);
+                const team = await this.teamService.gluonTeamForSlackTeamChannel(this.teamChannel);
                 this.teamName = team.name;
                 return await this.handle(ctx);
             } catch (error) {
-                const teams = await gluonTeamsWhoSlackScreenNameBelongsTo(ctx, this.screenName);
+                const teams = await this.teamService.gluonTeamsWhoSlackScreenNameBelongsTo(ctx, this.screenName);
                 return await menuForTeams(
                     ctx,
                     teams,
@@ -233,16 +234,16 @@ export class ConfigurePackage extends RecursiveParameterRequestCommand {
 
         }
         if (_.isEmpty(this.projectName)) {
-            const projects = await gluonProjectsWhichBelongToGluonTeam(ctx, this.teamName);
+            const projects = await this.projectService.gluonProjectsWhichBelongToGluonTeam(ctx, this.teamName);
             return await menuForProjects(ctx, projects, this, "Please select the owning project of the package you wish to configure");
         }
         if (_.isEmpty(this.applicationName)) {
-            const applications = await gluonApplicationsLinkedToGluonProject(ctx, this.projectName);
+            const applications = await this.applicationService.gluonApplicationsLinkedToGluonProject(ctx, this.projectName);
             return await menuForApplications(ctx, applications, this, "Please select the package you wish to configure");
         }
         if (_.isEmpty(this.openshiftTemplate)) {
             const namespace = `${_.kebabCase(this.teamName).toLowerCase()}-devops`;
-            const templates = await subatomicApplicationTemplates(namespace);
+            const templates = await this.subatomicOpenshiftService.subatomicApplicationTemplates(namespace);
             return await createMenu(ctx, templates.map(template => {
                     return {
                         value: template.metadata.name,
@@ -261,8 +262,8 @@ export class ConfigurePackage extends RecursiveParameterRequestCommand {
 
     private async requestJenkinsFileParameter(ctx: HandlerContext): Promise<HandlerResult> {
 
-        const project = await gluonProjectFromProjectName(ctx, this.projectName);
-        const application = await gluonApplicationForNameAndProjectName(ctx, this.applicationName, this.projectName);
+        const project = await this.projectService.gluonProjectFromProjectName(ctx, this.projectName);
+        const application = await this.applicationService.gluonApplicationForNameAndProjectName(ctx, this.applicationName, this.projectName);
         const username = QMConfig.subatomic.bitbucket.auth.username;
         const password = QMConfig.subatomic.bitbucket.auth.password;
         const gitProject: GitProject = await GitCommandGitProject.cloned({
@@ -270,11 +271,11 @@ export class ConfigurePackage extends RecursiveParameterRequestCommand {
                 password,
             },
             new BitBucketServerRepoRef(
-                QMConfig.subatomic.bitbucket.baseUrl.replace(/^(https?:|)\/\//, ""),
+                QMConfig.subatomic.bitbucket.baseUrl,
                 project.bitbucketProject.key,
                 application.bitbucketRepository.name));
         try {
-            gitProject.findFile("Jenkinsfile");
+            await gitProject.findFile("Jenkinsfile");
             this.jenkinsfileName = this.JENKINSFILE_EXISTS;
             return success();
         } catch (error) {
@@ -320,16 +321,16 @@ export class ConfigurePackage extends RecursiveParameterRequestCommand {
     private async configurePackage(ctx: HandlerContext): Promise<HandlerResult> {
         let project;
         try {
-            project = await gluonProjectFromProjectName(ctx, this.projectName);
+            project = await this.projectService.gluonProjectFromProjectName(ctx, this.projectName);
         } catch (error) {
-            return await logErrorAndReturnSuccess(gluonProjectFromProjectName.name, error);
+            return await logErrorAndReturnSuccess(this.projectService.gluonProjectFromProjectName.name, error);
         }
 
         let application;
         try {
-            application = await gluonApplicationForNameAndProjectName(ctx, this.applicationName, this.projectName);
+            application = await this.applicationService.gluonApplicationForNameAndProjectName(ctx, this.applicationName, this.projectName);
         } catch (error) {
-            return await logErrorAndReturnSuccess(gluonApplicationForNameAndProjectName.name, error);
+            return await logErrorAndReturnSuccess(this.applicationService.gluonApplicationForNameAndProjectName.name, error);
         }
         return await this.doConfiguration(
             ctx,
@@ -355,7 +356,7 @@ export class ConfigurePackage extends RecursiveParameterRequestCommand {
                     password,
                 },
                 new BitBucketServerRepoRef(
-                    QMConfig.subatomic.bitbucket.baseUrl.replace(/^(https?:|)\/\//, ""),
+                    QMConfig.subatomic.bitbucket.baseUrl,
                     bitbucketProjectKey,
                     bitbucketRepoName));
             try {
@@ -493,9 +494,9 @@ export class ConfigurePackage extends RecursiveParameterRequestCommand {
 
             await this.createApplicationBuildConfig(bitbucketRepoRemoteUrl, appBuildName, this.baseS2IImage, teamDevOpsProjectId);
 
-            const project = await gluonProjectFromProjectName(ctx, projectName);
+            const project = await this.projectService.gluonProjectFromProjectName(ctx, projectName);
             logger.info(`Trying to find tenant: ${project.owningTenant}`);
-            const tenant = await gluonTenantFromTenantId(project.owningTenant);
+            const tenant = await this.tenantService.gluonTenantFromTenantId(project.owningTenant);
             logger.info(`Found tenant: ${tenant}`);
             await this.createApplicationOpenshiftResources(tenant.name, project.name, packageName);
 
@@ -646,15 +647,14 @@ You can kick off the build pipeline for your library by clicking the button belo
                 bitbucketRepositoryName,
             },
         );
-        const axios = jenkinsAxios();
-        const createJenkinsJobResponse = await axios.post(`https://${jenkinsHost.output}/job/${_.kebabCase(gluonProjectName).toLowerCase()}/createItem?name=${_.kebabCase(gluonApplicationName).toLowerCase()}`,
-            builtTemplate,
-            {
-                headers: {
-                    "Content-Type": "application/xml",
-                    "Authorization": `Bearer ${token.output}`,
-                },
-            });
+
+        const createJenkinsJobResponse = await this.jenkinsService.createJenkinsJob(
+            jenkinsHost.output,
+            token.output,
+            gluonProjectName,
+            gluonApplicationName,
+            builtTemplate);
+
         if (!isSuccessCode(createJenkinsJobResponse.status)) {
             if (createJenkinsJobResponse.status === 400) {
                 logger.warn(`Multibranch job for [${gluonApplicationName}] probably already created`);

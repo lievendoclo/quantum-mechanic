@@ -9,7 +9,6 @@ import {
 import {buttonForCommand} from "@atomist/automation-client/spi/message/MessageClient";
 import {SlackMessage, url} from "@atomist/slack-messages";
 import * as _ from "lodash";
-import * as qs from "query-string";
 import {QMConfig} from "../../config/QMConfig";
 import {OCCommandResult} from "../../openshift/base/OCCommandResult";
 import {SimpleOption} from "../../openshift/base/options/SimpleOption";
@@ -17,12 +16,13 @@ import {StandardOption} from "../../openshift/base/options/StandardOption";
 import {OCClient} from "../../openshift/OCClient";
 import {OCCommon} from "../../openshift/OCCommon";
 import {QMTemplate} from "../../template/QMTemplate";
-import {jenkinsAxios} from "../jenkins/Jenkins";
+import {JenkinsService} from "../jenkins/Jenkins";
 import {LinkExistingApplication} from "../packages/CreateApplication";
 import {LinkExistingLibrary} from "../packages/CreateLibrary";
 import {
     ChannelMessageClient,
-    handleQMError, OCResultError,
+    handleQMError,
+    OCResultError,
     QMError,
     QMMessageClient,
 } from "../shared/Error";
@@ -78,6 +78,9 @@ export class ProjectEnvironmentsRequested implements HandleEvent<any> {
 
     private qmMessageClient: ChannelMessageClient;
     private taskList: TaskListMessage;
+
+    constructor(private jenkinsService = new JenkinsService()) {
+    }
 
     public async handle(event: EventFired<any>, ctx: HandlerContext): Promise<HandlerResult> {
         logger.info(`Ingested ProjectEnvironmentsRequestedEvent event: ${JSON.stringify(event.data)}`);
@@ -186,8 +189,7 @@ export class ProjectEnvironmentsRequested implements HandleEvent<any> {
     }
 
     private async createJenkinsBuildTemplate(environmentsRequestedEvent, teamDevOpsProjectId: string, jenkinsHost: string, token: string) {
-        const axios = jenkinsAxios();
-        const projectTemplate: QMTemplate = new QMTemplate("resources/templates/openshift/openshift-environment-setup.xml");
+        const projectTemplate: QMTemplate = new QMTemplate("resources/templates/jenkins/jenkins-openshift-environment-credentials.xml");
         const builtTemplate: string = projectTemplate.build(
             {
                 projectName: environmentsRequestedEvent.project.name,
@@ -199,14 +201,7 @@ export class ProjectEnvironmentsRequested implements HandleEvent<any> {
             },
         );
         logger.info("Template found and built successfully.");
-        const jenkinsCreateItemResult = await axios.post(`https://${jenkinsHost}/createItem?name=${_.kebabCase(environmentsRequestedEvent.project.name).toLowerCase()}`,
-            builtTemplate,
-            {
-                headers: {
-                    "Content-Type": "application/xml",
-                    "Authorization": `Bearer ${token}`,
-                },
-            });
+        const jenkinsCreateItemResult = await this.jenkinsService.createOpenshiftEnvironmentCredentials(jenkinsHost, token, environmentsRequestedEvent.project.name, builtTemplate);
 
         if (!isSuccessCode(jenkinsCreateItemResult.status)) {
             if (jenkinsCreateItemResult.status === 400) {
@@ -310,25 +305,8 @@ export class ProjectEnvironmentsRequested implements HandleEvent<any> {
                 $class: "com.cloudbees.plugins.credentials.impl.UsernamePasswordCredentialsImpl",
             },
         };
-        const axios = jenkinsAxios();
-        axios.interceptors.request.use(request => {
-            if (request.data && (request.headers["Content-Type"].indexOf("application/x-www-form-urlencoded") !== -1)) {
-                logger.debug(`Stringifying URL encoded data: ${qs.stringify(request.data)}`);
-                request.data = qs.stringify(request.data);
-            }
-            return request;
-        });
+        const createCredentialsResult = await this.jenkinsService.createGlobalCredentials(jenkinsHost, token, teamDevOpsProjectId, jenkinsCredentials);
 
-        const createCredentialsResult = await axios.post(`https://${jenkinsHost}/credentials/store/system/domain/_/createCredentials`,
-            {
-                json: `${JSON.stringify(jenkinsCredentials)}`,
-            },
-            {
-                headers: {
-                    "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
-                    "Authorization": `Bearer ${token}`,
-                },
-            });
         if (!isSuccessCode(createCredentialsResult.status)) {
             throw new QMError("Failed to create Jenkins credentials for project");
         }

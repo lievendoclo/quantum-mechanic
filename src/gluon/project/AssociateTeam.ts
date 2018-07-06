@@ -15,12 +15,8 @@ import {
     RecursiveParameter,
     RecursiveParameterRequestCommand,
 } from "../shared/RecursiveParameterRequestCommand";
-import {gluonTeamsWhoSlackScreenNameBelongsTo, menuForTeams} from "../team/Teams";
-import {
-    gluonProjectFromProjectName,
-    gluonProjects,
-    menuForProjects,
-} from "./Projects";
+import {menuForTeams, TeamService} from "../team/TeamService";
+import {menuForProjects, ProjectService} from "./ProjectService";
 
 @CommandHandler("Add additional team/s to a project", QMConfig.subatomic.commandPrefix + " associate team")
 export class AssociateTeam extends RecursiveParameterRequestCommand {
@@ -45,9 +41,9 @@ export class AssociateTeam extends RecursiveParameterRequestCommand {
     })
     public projectName: string;
 
-    public constructor(projectName: string) {
+    public constructor(private teamService = new TeamService(),
+                       private projectService = new ProjectService()) {
         super();
-        this.projectName = projectName;
     }
 
     protected async runCommand(ctx: HandlerContext) {
@@ -60,7 +56,7 @@ export class AssociateTeam extends RecursiveParameterRequestCommand {
 
     protected async setNextParameter(ctx: HandlerContext): Promise<HandlerResult> {
         if (_.isEmpty(this.projectName)) {
-            const projects = await gluonProjects(ctx);
+            const projects = await this.projectService.gluonProjectList(ctx);
             return await menuForProjects(
                 ctx,
                 projects,
@@ -69,7 +65,7 @@ export class AssociateTeam extends RecursiveParameterRequestCommand {
             );
         }
         if (_.isEmpty(this.teamName)) {
-            const teams = await gluonTeamsWhoSlackScreenNameBelongsTo(ctx, this.screenName);
+            const teams = await this.teamService.gluonTeamsWhoSlackScreenNameBelongsTo(ctx, this.screenName);
             const availTeams = await this.availableTeamsToAssociate(teams, this.projectName);
 
             if (_.isEmpty(availTeams)) {
@@ -87,7 +83,7 @@ export class AssociateTeam extends RecursiveParameterRequestCommand {
 
     private async linkProjectForTeam(ctx: HandlerContext, teamName: string): Promise<HandlerResult> {
         const team = await axios.get(`${QMConfig.subatomic.gluon.baseUrl}/teams?name=${teamName}`);
-        const gluonProject = await gluonProjectFromProjectName(ctx, this.projectName);
+        const gluonProject = await this.projectService.gluonProjectFromProjectName(ctx, this.projectName);
         let updateGluonWithProjectDetails;
         try {
             updateGluonWithProjectDetails = await this.updateGluonProject(gluonProject.projectId, gluonProject.createdBy, team.data._embedded.teamResources[0].teamId, team.data._embedded.teamResources[0].name);

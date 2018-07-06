@@ -13,11 +13,8 @@ import * as _ from "lodash";
 import {QMConfig} from "../../config/QMConfig";
 import {handleQMError, QMError, UserMessageClient} from "../shared/Error";
 import {isSuccessCode} from "../shared/Http";
-import {bitbucketAxios, bitbucketProjectFromKey} from "./Bitbucket";
-import {
-    addBitbucketProjectAccessKeys,
-    BitbucketConfiguration,
-} from "./BitbucketConfiguration";
+import {BitbucketService} from "./Bitbucket";
+import {BitbucketConfiguration} from "./BitbucketConfiguration";
 
 @EventHandler("Receive BitbucketProjectRequestedEvent events", `
 subscription BitbucketProjectRequestedEvent {
@@ -69,6 +66,9 @@ export class BitbucketProjectRequested implements HandleEvent<any> {
 
     private bitbucketProjectUrl: string;
 
+    constructor(private bitbucketService = new BitbucketService()) {
+    }
+
     public async handle(event: EventFired<any>, ctx: HandlerContext): Promise<HandlerResult> {
         logger.info(`Ingested BitbucketProjectRequested event: ${JSON.stringify(event.data)}`);
 
@@ -88,6 +88,7 @@ export class BitbucketProjectRequested implements HandleEvent<any> {
             const bitbucketConfiguration = new BitbucketConfiguration(
                 teamOwners,
                 teamMembers,
+                this.bitbucketService,
             );
 
             await this.createBitbucketProject(key, name, description);
@@ -104,7 +105,7 @@ export class BitbucketProjectRequested implements HandleEvent<any> {
     }
 
     private async createBitbucketProject(projectKey: string, projectName: string, projectDescription: string) {
-        const createBitbucketProjectRequest = await bitbucketAxios().post(`${QMConfig.subatomic.bitbucket.restUrl}/api/1.0/projects`,
+        const createBitbucketProjectRequest = await this.bitbucketService.createBitbucketProject(
             {
                 projectKey,
                 projectName,
@@ -120,7 +121,7 @@ export class BitbucketProjectRequested implements HandleEvent<any> {
             logger.warn(`Error creating project: ${createBitbucketProjectRequest.status}`);
             if (createBitbucketProjectRequest.status === 201 || createBitbucketProjectRequest.status === 409) {
                 logger.warn(`Project probably already exists.`);
-                const bitbucketProject = await bitbucketProjectFromKey(projectKey);
+                const bitbucketProject = await this.getBitbucketProject(projectKey);
                 this.bitbucketProjectId = bitbucketProject.id;
                 this.bitbucketProjectUrl = bitbucketProject.links.self[0].href;
             } else {
@@ -130,9 +131,21 @@ export class BitbucketProjectRequested implements HandleEvent<any> {
         }
     }
 
+    private async getBitbucketProject(bitbucketProjectKey: string) {
+        const bitbucketProjectRequestResult = await this.bitbucketService.bitbucketProjectFromKey(
+            bitbucketProjectKey,
+        );
+
+        if (!isSuccessCode(bitbucketProjectRequestResult.status)) {
+            throw new QMError("Unable to find the specified project in Bitbucket. Please make sure it exists.");
+        }
+
+        return bitbucketProjectRequestResult.data;
+    }
+
     private async addBitbucketProjectAccessKeys(bitbucketProjectKey: string, projectName: string) {
         try {
-            await addBitbucketProjectAccessKeys(bitbucketProjectKey);
+            await this.bitbucketService.addBitbucketProjectAccessKeys(bitbucketProjectKey);
         } catch (error) {
             logger.error(`Failed to configure Bitbucket Project ${projectName} with error: ${JSON.stringify(error)}`);
             throw new QMError(`There was an error adding SSH keys for ${projectName} Bitbucket project`);

@@ -11,7 +11,7 @@ import {buttonForCommand} from "@atomist/automation-client/spi/message/MessageCl
 import {SlackMessage} from "@atomist/slack-messages";
 import _ = require("lodash");
 import {QMConfig} from "../../config/QMConfig";
-import {gluonApplicationsLinkedToGluonProjectId} from "../packages/Applications";
+import {ApplicationService} from "../packages/Applications";
 import {
     handleQMError,
     logErrorAndReturnSuccess,
@@ -21,12 +21,8 @@ import {
     RecursiveParameter,
     RecursiveParameterRequestCommand,
 } from "../shared/RecursiveParameterRequestCommand";
-import {
-    gluonTeamForSlackTeamChannel,
-    gluonTeamsWhoSlackScreenNameBelongsTo,
-    menuForTeams,
-} from "../team/Teams";
-import {gluonProjectsWhichBelongToGluonTeam} from "./Projects";
+import {menuForTeams, TeamService} from "../team/TeamService";
+import {ProjectService} from "./ProjectService";
 
 @CommandHandler("List projects belonging to a team", QMConfig.subatomic.commandPrefix + " list projects")
 export class ListTeamProjects extends RecursiveParameterRequestCommand {
@@ -42,6 +38,11 @@ export class ListTeamProjects extends RecursiveParameterRequestCommand {
     })
     public teamName: string;
 
+    constructor(private teamService = new TeamService(),
+                private projectService = new ProjectService()) {
+        super();
+    }
+
     protected async runCommand(ctx: HandlerContext) {
         try {
             return await this.listTeamProjects(ctx, this.teamName);
@@ -53,11 +54,11 @@ export class ListTeamProjects extends RecursiveParameterRequestCommand {
     protected async setNextParameter(ctx: HandlerContext): Promise<HandlerResult> {
         if (_.isEmpty(this.teamName)) {
             try {
-                const team = await gluonTeamForSlackTeamChannel(this.teamChannel);
+                const team = await this.teamService.gluonTeamForSlackTeamChannel(this.teamChannel);
                 this.teamName = team.name;
                 return await this.handle(ctx);
             } catch (error) {
-                const teams = await gluonTeamsWhoSlackScreenNameBelongsTo(ctx, this.screenName);
+                const teams = await this.teamService.gluonTeamsWhoSlackScreenNameBelongsTo(ctx, this.screenName);
                 return await menuForTeams(
                     ctx,
                     teams,
@@ -71,9 +72,9 @@ export class ListTeamProjects extends RecursiveParameterRequestCommand {
     private async listTeamProjects(ctx: HandlerContext, teamName: string): Promise<HandlerResult> {
         let projects;
         try {
-            projects = await gluonProjectsWhichBelongToGluonTeam(ctx, teamName);
+            projects = await this.projectService.gluonProjectsWhichBelongToGluonTeam(ctx, teamName);
         } catch (error) {
-            return await logErrorAndReturnSuccess(gluonProjectsWhichBelongToGluonTeam.name, error);
+            return await logErrorAndReturnSuccess(this.projectService.gluonProjectsWhichBelongToGluonTeam.name, error);
         }
         const attachments = [];
 
@@ -148,13 +149,16 @@ export class ListProjectDetails implements HandleCommand<HandlerResult> {
     })
     public projectBitbucketKey: string;
 
+    constructor(private applicationService = new ApplicationService()) {
+    }
+
     public async handle(ctx: HandlerContext): Promise<HandlerResult> {
         try {
             let applications;
             try {
-                applications = gluonApplicationsLinkedToGluonProjectId(this.projectId);
+                applications = await this.applicationService.gluonApplicationsLinkedToGluonProjectId(this.projectId);
             } catch (error) {
-                return await logErrorAndReturnSuccess(gluonApplicationsLinkedToGluonProjectId.name, error);
+                return await logErrorAndReturnSuccess(this.applicationService.gluonApplicationsLinkedToGluonProjectId.name, error);
             }
 
             let bitbucketURL = "None";

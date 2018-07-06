@@ -11,24 +11,16 @@ import {
 import axios from "axios";
 import * as _ from "lodash";
 import {QMConfig} from "../../config/QMConfig";
-import {gluonMemberFromScreenName} from "../member/Members";
-import {
-    gluonProjectFromProjectName,
-    gluonProjectsWhichBelongToGluonTeam,
-    menuForProjects,
-} from "../project/Projects";
+import {MemberService} from "../member/Members";
+import {menuForProjects, ProjectService} from "../project/ProjectService";
 import {handleQMError, QMError, ResponderMessageClient} from "../shared/Error";
 import {isSuccessCode} from "../shared/Http";
 import {
     RecursiveParameter,
     RecursiveParameterRequestCommand,
 } from "../shared/RecursiveParameterRequestCommand";
-import {
-    gluonTeamForSlackTeamChannel,
-    gluonTeamsWhoSlackScreenNameBelongsTo,
-    menuForTeams,
-} from "../team/Teams";
-import {bitbucketAxios} from "./Bitbucket";
+import {menuForTeams, TeamService} from "../team/TeamService";
+import {BitbucketService} from "./Bitbucket";
 
 @CommandHandler("Create a new Bitbucket project", QMConfig.subatomic.commandPrefix + " create bitbucket project")
 export class NewBitbucketProject extends RecursiveParameterRequestCommand {
@@ -56,13 +48,19 @@ export class NewBitbucketProject extends RecursiveParameterRequestCommand {
     })
     public teamName: string;
 
+    constructor(private teamService = new TeamService(),
+                private projectService = new ProjectService(),
+                private memberService = new MemberService()) {
+        super();
+    }
+
     protected async runCommand(ctx: HandlerContext): Promise<HandlerResult> {
         logger.info(`Team: ${this.teamName}, Project: ${this.projectName}`);
 
         try {
-            const member = await gluonMemberFromScreenName(ctx, this.screenName);
+            const member = await this.memberService.gluonMemberFromScreenName(ctx, this.screenName);
 
-            const project = await gluonProjectFromProjectName(ctx, this.projectName);
+            const project = await this.projectService.gluonProjectFromProjectName(ctx, this.projectName);
 
             await this.updateGluonWithBitbucketDetails(project.projectId, this.projectName, project.description, member.memberId);
 
@@ -76,11 +74,11 @@ export class NewBitbucketProject extends RecursiveParameterRequestCommand {
         if (_.isEmpty(this.teamName)) {
             logger.info("Team name is empty");
             try {
-                const team = await gluonTeamForSlackTeamChannel(this.teamChannel);
+                const team = await this.teamService.gluonTeamForSlackTeamChannel(this.teamChannel);
                 this.teamName = team.name;
                 return await this.handle(ctx);
             } catch (error) {
-                const teams = await gluonTeamsWhoSlackScreenNameBelongsTo(ctx, this.screenName);
+                const teams = await this.teamService.gluonTeamsWhoSlackScreenNameBelongsTo(ctx, this.screenName);
                 return await menuForTeams(
                     ctx,
                     teams,
@@ -91,7 +89,7 @@ export class NewBitbucketProject extends RecursiveParameterRequestCommand {
         }
         if (_.isEmpty(this.projectName)) {
             logger.info("Project name is empty");
-            const projects = await gluonProjectsWhichBelongToGluonTeam(ctx, this.teamName);
+            const projects = await this.projectService.gluonProjectsWhichBelongToGluonTeam(ctx, this.teamName);
             return await menuForProjects(
                 ctx,
                 projects,
@@ -151,6 +149,13 @@ export class ListExistingBitbucketProject extends RecursiveParameterRequestComma
     })
     public teamName: string;
 
+    constructor(private teamService = new TeamService(),
+                private projectService = new ProjectService(),
+                private memberService = new MemberService(),
+                private bitbucketService = new BitbucketService()) {
+        super();
+    }
+
     protected async runCommand(ctx: HandlerContext) {
         try {
             return await this.configBitbucket(ctx);
@@ -163,11 +168,11 @@ export class ListExistingBitbucketProject extends RecursiveParameterRequestComma
         if (_.isEmpty(this.teamName)) {
             logger.info("Team name is empty");
             try {
-                const team = await gluonTeamForSlackTeamChannel(this.teamChannel);
+                const team = await this.teamService.gluonTeamForSlackTeamChannel(this.teamChannel);
                 this.teamName = team.name;
                 return await this.handle(ctx);
             } catch (error) {
-                const teams = await gluonTeamsWhoSlackScreenNameBelongsTo(ctx, this.screenName);
+                const teams = await this.teamService.gluonTeamsWhoSlackScreenNameBelongsTo(ctx, this.screenName);
                 return await menuForTeams(
                     ctx,
                     teams,
@@ -178,7 +183,7 @@ export class ListExistingBitbucketProject extends RecursiveParameterRequestComma
         }
         if (_.isEmpty(this.projectName)) {
             logger.info("Project name is empty");
-            const projects = await gluonProjectsWhichBelongToGluonTeam(ctx, this.teamName);
+            const projects = await this.projectService.gluonProjectsWhichBelongToGluonTeam(ctx, this.teamName);
 
             return await menuForProjects(
                 ctx,
@@ -192,25 +197,26 @@ export class ListExistingBitbucketProject extends RecursiveParameterRequestComma
     private async configBitbucket(ctx: HandlerContext): Promise<HandlerResult> {
         logger.info(`Team: ${this.teamName}, Project: ${this.projectName}`);
 
-        const member = await gluonMemberFromScreenName(ctx, this.screenName);
-        const gluonProject = await gluonProjectFromProjectName(ctx, this.projectName);
+        const member = await this.memberService.gluonMemberFromScreenName(ctx, this.screenName);
+        const gluonProject = await this.projectService.gluonProjectFromProjectName(ctx, this.projectName);
 
-        const projectRestUrl = `${QMConfig.subatomic.bitbucket.restUrl}/api/1.0/projects/${this.bitbucketProjectKey}`;
         const projectUiUrl = `${QMConfig.subatomic.bitbucket.baseUrl}/projects/${this.bitbucketProjectKey}`;
 
         await ctx.messageClient.addressChannels({
             text: `🚀 The Bitbucket project with key ${this.bitbucketProjectKey} is being configured...`,
         }, this.teamChannel);
 
-        const bitbucketProject = await this.getBitbucketProject(projectRestUrl);
+        const bitbucketProject = await this.getBitbucketProject(this.bitbucketProjectKey);
 
         await this.updateGluonProjectWithBitbucketDetails(projectUiUrl, member.memberId, gluonProject, bitbucketProject);
 
         return await success();
     }
 
-    private async getBitbucketProject(bitbucketProjectRestUrl: string) {
-        const bitbucketProjectRequestResult = await bitbucketAxios().get(bitbucketProjectRestUrl);
+    private async getBitbucketProject(bitbucketProjectKey: string) {
+        const bitbucketProjectRequestResult = await this.bitbucketService.bitbucketProjectFromKey(
+            bitbucketProjectKey,
+        );
 
         if (!isSuccessCode(bitbucketProjectRequestResult.status)) {
             throw new QMError("Unable to find the specified project in Bitbucket. Please make sure it exists.");

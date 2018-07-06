@@ -1,15 +1,13 @@
-import {logger, SuccessPromise} from "@atomist/automation-client";
-import {AxiosInstance, AxiosPromise} from "axios-https-proxy-fix";
+import {logger} from "@atomist/automation-client";
+import {AxiosPromise} from "axios-https-proxy-fix";
 import * as _ from "lodash";
 import {QMConfig} from "../../config/QMConfig";
 import {usernameFromDomainUsername} from "../member/Members";
-import {bitbucketAxios, bitbucketUserFromUsername} from "./Bitbucket";
+import {BitbucketService} from "./Bitbucket";
 
 export class BitbucketConfiguration {
 
-    private axios: AxiosInstance = bitbucketAxios();
-
-    constructor(private owners: string[], private teamMembers: string[]) {
+    constructor(private owners: string[], private teamMembers: string[], private bitbucketService = new BitbucketService()) {
         logger.debug(`Configuring with team owners: ${JSON.stringify(owners)}`);
         logger.debug(`Configuring with team members: ${JSON.stringify(teamMembers)}`);
 
@@ -27,7 +25,7 @@ export class BitbucketConfiguration {
             this.addHooks(bitbucketProjectKey),
 
             _.zipWith(this.owners, this.teamMembers, (owner, member) => {
-                this.axios.get(`${QMConfig.subatomic.bitbucket.restUrl}/default-reviewers/1.0/projects/${bitbucketProjectKey}/conditions`)
+                this.bitbucketService.getDefaultReviewers(bitbucketProjectKey)
                     .then(reviewers => {
                         const jsonLength = reviewers.data.length;
                         let reviewerExists = false;
@@ -50,76 +48,69 @@ export class BitbucketConfiguration {
     }
 
     private addAdminProjectPermission(projectKey: string, user: string): AxiosPromise {
-        return this.addProjectPermission(projectKey, user, "PROJECT_ADMIN");
+        return this.bitbucketService.addProjectPermission(projectKey, user, "PROJECT_ADMIN");
     }
 
     private addWriteProjectPermission(projectKey: string, user: string): AxiosPromise {
-        return this.addProjectPermission(projectKey, user, "PROJECT_WRITE");
+        return this.bitbucketService.addProjectPermission(projectKey, user, "PROJECT_WRITE");
     }
 
-    private addProjectPermission(projectKey: string, user: string, permission: string = "PROJECT_READ"): AxiosPromise {
-        return this.axios.put(`${QMConfig.subatomic.bitbucket.restUrl}/api/1.0/projects/${projectKey}/permissions/users?name=${user}&permission=${permission}`,
-            {});
-    }
-
-    private addBranchPermissions(bitbucketProjectKey: string, owners: string[], additional: string[] = []): Promise<any[]> {
+    private async addBranchPermissions(bitbucketProjectKey: string, owners: string[], additional: string[] = []) {
         const allUsers = owners.concat(additional);
-        return Promise.all([
-            this.axios.post(`${QMConfig.subatomic.bitbucket.restUrl}/branch-permissions/2.0/projects/${bitbucketProjectKey}/restrictions`,
-                {
-                    type: "fast-forward-only",
-                    matcher: {
-                        id: "master",
-                        displayId: "master",
-                        type: {
-                            id: "BRANCH",
-                            name: "Branch",
-                        },
+
+        await this.bitbucketService.addBranchPermissions(bitbucketProjectKey,
+            {
+                type: "fast-forward-only",
+                matcher: {
+                    id: "master",
+                    displayId: "master",
+                    type: {
+                        id: "BRANCH",
+                        name: "Branch",
                     },
-                    users: allUsers,
-                }),
-            this.axios.post(`${QMConfig.subatomic.bitbucket.restUrl}/branch-permissions/2.0/projects/${bitbucketProjectKey}/restrictions`,
-                {
-                    type: "no-deletes",
-                    matcher: {
-                        id: "master",
-                        displayId: "master",
-                        type: {
-                            id: "BRANCH",
-                            name: "Branch",
-                        },
+                },
+                users: allUsers,
+            });
+
+        await this.bitbucketService.addBranchPermissions(bitbucketProjectKey,
+            {
+                type: "no-deletes",
+                matcher: {
+                    id: "master",
+                    displayId: "master",
+                    type: {
+                        id: "BRANCH",
+                        name: "Branch",
                     },
-                    users: allUsers,
-                }),
-            this.axios.post(`${QMConfig.subatomic.bitbucket.restUrl}/branch-permissions/2.0/projects/${bitbucketProjectKey}/restrictions`,
-                {
-                    type: "pull-request-only",
-                    matcher: {
-                        id: "master",
-                        displayId: "master",
-                        type: {
-                            id: "BRANCH",
-                            name: "Branch",
-                        },
+                },
+                users: allUsers,
+            });
+
+        await this.bitbucketService.addBranchPermissions(bitbucketProjectKey,
+            {
+                type: "pull-request-only",
+                matcher: {
+                    id: "master",
+                    displayId: "master",
+                    type: {
+                        id: "BRANCH",
+                        name: "Branch",
                     },
-                    users: allUsers,
-                }),
-        ]);
+                },
+                users: allUsers,
+            });
     }
 
     private addHooks(bitbucketProjectKey: string): Promise<any[]> {
         // Enable and configure hooks
         return Promise.all([
-            this.axios.put(`${QMConfig.subatomic.bitbucket.restUrl}/api/1.0/projects/${bitbucketProjectKey}/settings/hooks/com.atlassian.bitbucket.server.bitbucket-bundled-hooks:verify-committer-hook/enabled`,
-                {}),
+            this.bitbucketService.addProjectWebHook(bitbucketProjectKey, "com.atlassian.bitbucket.server.bitbucket-bundled-hooks:verify-committer-hook"),
             // Enable and configure hooks
-            this.axios.put(`${QMConfig.subatomic.bitbucket.restUrl}/api/1.0/projects/${bitbucketProjectKey}/settings/hooks/com.atlassian.bitbucket.server.bitbucket-bundled-hooks:incomplete-tasks-merge-check/enabled`,
-                {}),
+            this.bitbucketService.addProjectWebHook(bitbucketProjectKey, "com.atlassian.bitbucket.server.bitbucket-bundled-hooks:incomplete-tasks-merge-check"),
             // Enable and configure merge checks
-            this.axios.put(`${QMConfig.subatomic.bitbucket.restUrl}/api/1.0/projects/${bitbucketProjectKey}/settings/hooks/com.atlassian.bitbucket.server.bitbucket-build:requiredBuildsMergeCheck/enabled`,
-                {
-                    requiredCount: 1,
-                }),
+            this.bitbucketService.addProjectWebHook(bitbucketProjectKey, "com.atlassian.bitbucket.server.bitbucket-build:requiredBuildsMergeCheck", {
+                requiredCount: 1,
+            }),
         ]);
     }
 
@@ -129,14 +120,14 @@ export class BitbucketConfiguration {
         // TODO Add default reviewers (the team owners - in future everyone with 'reviewer' role?)
 
         if (!_.isEmpty(bitbucketUsername)) {
-            return bitbucketUserFromUsername(bitbucketUsername)
+            return this.bitbucketService.bitbucketUserFromUsername(bitbucketUsername)
                 .then(user => {
-                    logger.debug(`Adding to the default reviewers the Bitbucket user: ${JSON.stringify(user)}`);
-                    return this.axios.post(`${QMConfig.subatomic.bitbucket.restUrl}/default-reviewers/1.0/projects/${bitbucketProjectKey}/condition`,
+                    logger.debug(`Adding to the default reviewers the Bitbucket user: ${JSON.stringify(user.data)}`);
+                    return this.bitbucketService.addDefaultReviewers(bitbucketProjectKey,
                         {
                             reviewers: [
                                 {
-                                    id: user.values[0].id,
+                                    id: user.data.values[0].id,
                                 },
                             ],
                             sourceMatcher: {
@@ -160,24 +151,4 @@ export class BitbucketConfiguration {
                 });
         }
     }
-}
-
-export function addBitbucketProjectAccessKeys(bitbucketProjectKey: string): Promise<any> {
-
-    return bitbucketAxios().post(`${QMConfig.subatomic.bitbucket.restUrl}/keys/1.0/projects/${bitbucketProjectKey}/ssh`,
-        {
-            key: {
-                text: QMConfig.subatomic.bitbucket.cicdKey,
-            },
-            permission: "PROJECT_READ",
-        }).catch(error => {
-        logger.warn(`Could not add SSH keys to Bitbucket project: [${error.response.status}-${JSON.stringify(error.response.data)}]`);
-        if (error.response && error.response.status === 409) {
-            // it's ok, it's already done 👍
-            logger.warn(`Probably failed due to keys already existing.`);
-            return SuccessPromise;
-        }
-        return Promise.reject(error);
-    });
-
 }

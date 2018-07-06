@@ -20,7 +20,8 @@ import * as _ from "lodash";
 import {QMConfig} from "../../config/QMConfig";
 import {
     handleQMError,
-    logErrorAndReturnSuccess, QMError,
+    logErrorAndReturnSuccess,
+    QMError,
     ResponderMessageClient,
 } from "../shared/Error";
 import {isSuccessCode} from "../shared/Http";
@@ -29,7 +30,7 @@ import {
     RecursiveParameterRequestCommand,
 } from "../shared/RecursiveParameterRequestCommand";
 import {CreateTeam} from "./CreateTeam";
-import {gluonTeamsWhoSlackScreenNameBelongsTo, menuForTeams} from "./Teams";
+import {menuForTeams, TeamService} from "./TeamService";
 
 @CommandHandler("Check whether to create a new team channel or use an existing channel")
 @Tags("subatomic", "slack", "channel", "team")
@@ -145,6 +146,10 @@ export class LinkExistingTeamSlackChannel extends RecursiveParameterRequestComma
     })
     public teamChannel: string;
 
+    constructor(private teamService = new TeamService()) {
+        super();
+    }
+
     protected async runCommand(ctx: HandlerContext) {
         return await linkSlackChannelToGluonTeam(ctx, this.teamName, this.teamId, this.teamChannel, this.docs(), false);
     }
@@ -152,14 +157,14 @@ export class LinkExistingTeamSlackChannel extends RecursiveParameterRequestComma
     protected async setNextParameter(ctx: HandlerContext): Promise<HandlerResult> {
         if (_.isEmpty(this.teamName)) {
             try {
-                const teams = await gluonTeamsWhoSlackScreenNameBelongsTo(ctx, this.slackScreenName);
+                const teams = await this.teamService.gluonTeamsWhoSlackScreenNameBelongsTo(ctx, this.slackScreenName);
                 return await menuForTeams(
                     ctx,
                     teams,
                     this,
                     "Please select the team you would like to link the slack channel to");
             } catch (error) {
-                return await logErrorAndReturnSuccess(gluonTeamsWhoSlackScreenNameBelongsTo.name, error);
+                return await logErrorAndReturnSuccess(this.teamService.gluonTeamsWhoSlackScreenNameBelongsTo.name, error);
             }
         }
     }
@@ -189,11 +194,11 @@ async function linkSlackChannelToGluonTeam(ctx: HandlerContext,
         logger.info(`Updating team channel [${finalisedSlackChannelName}]: ${team.teamId}`);
 
         await axios.put(`${QMConfig.subatomic.gluon.baseUrl}/teams/${team.teamId}`,
-        {
-            slack: {
-                teamChannel: finalisedSlackChannelName,
-            },
-        });
+            {
+                slack: {
+                    teamChannel: finalisedSlackChannelName,
+                },
+            });
 
         return await createTeamSlackChannel(ctx, slackTeamId, slackChannelName, team);
     } else {

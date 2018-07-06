@@ -8,9 +8,10 @@ import {
 } from "@atomist/automation-client";
 import * as _ from "lodash";
 import {OCCommandResult} from "../../openshift/base/OCCommandResult";
+import {BitbucketService} from "../bitbucket/Bitbucket";
 import {BitbucketConfiguration} from "../bitbucket/BitbucketConfiguration";
 import {getProjectDisplayName} from "../project/Project";
-import {gluonProjectsWhichBelongToGluonTeam} from "../project/Projects";
+import {ProjectService} from "../project/ProjectService";
 import {
     ChannelMessageClient,
     handleQMError,
@@ -49,6 +50,9 @@ subscription MembersAddedToTeamEvent {
 `)
 export class MembersAddedToTeam implements HandleEvent<any> {
 
+    constructor(private projectService = new ProjectService(), private bitbucketService = new BitbucketService()) {
+    }
+
     public async handle(event: EventFired<any>, ctx: HandlerContext): Promise<HandlerResult> {
         logger.info(`Ingested MembersAddedToTeamEvent event: ${JSON.stringify(event.data)}`);
 
@@ -59,10 +63,10 @@ export class MembersAddedToTeam implements HandleEvent<any> {
 
             let projects;
             try {
-                projects = await gluonProjectsWhichBelongToGluonTeam(ctx, team.name);
+                projects = await this.projectService.gluonProjectsWhichBelongToGluonTeam(ctx, team.name);
             } catch (error) {
                 // TODO: We probably dont want to have the gluonProjectsWhichBelong to team thing catch these errors for events
-                return logErrorAndReturnSuccess(gluonProjectsWhichBelongToGluonTeam.name, error);
+                return logErrorAndReturnSuccess(this.projectService.gluonProjectsWhichBelongToGluonTeam.name, error);
             }
 
             const bitbucketConfiguration = this.getBitbucketConfiguration(membersAddedToTeamEvent);
@@ -81,7 +85,7 @@ export class MembersAddedToTeam implements HandleEvent<any> {
 
         teamOwnersUsernames = _.union(teamOwnersUsernames, membersAddedToTeamEvent.owners.map(owner => owner.domainUsername));
         teamMembersUsernames = _.union(teamMembersUsernames, membersAddedToTeamEvent.members.map(member => member.domainUsername));
-        return new BitbucketConfiguration(teamOwnersUsernames, teamMembersUsernames);
+        return new BitbucketConfiguration(teamOwnersUsernames, teamMembersUsernames, this.bitbucketService);
     }
 
     private async addPermissionsForUserToTeams(bitbucketConfiguration: BitbucketConfiguration, teamName: string, projects, membersAddedToTeamEvent) {
