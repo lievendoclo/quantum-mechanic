@@ -3,7 +3,7 @@ import * as assert from "power-assert";
 const MockAdapter = require("axios-mock-adapter");
 import axios from "axios";
 import {QMConfig} from "../../../src/config/QMConfig";
-import {CreateTeam} from "../../../src/gluon/team/CreateTeam";
+import {CreateTeam} from "../../../src/gluon/commands/team/CreateTeam";
 import {TestMessageClient} from "../TestMessageClient";
 
 describe("Create Team test", () => {
