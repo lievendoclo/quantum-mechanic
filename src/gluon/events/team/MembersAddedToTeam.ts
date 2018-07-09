@@ -10,6 +10,7 @@ import * as _ from "lodash";
 import {OCCommandResult} from "../../../openshift/base/OCCommandResult";
 import {BitbucketService} from "../../util/bitbucket/Bitbucket";
 import {BitbucketConfiguration} from "../../util/bitbucket/BitbucketConfiguration";
+import {OCService} from "../../util/openshift/OCService";
 import {getProjectDisplayName} from "../../util/project/Project";
 import {ProjectService} from "../../util/project/ProjectService";
 import {
@@ -18,7 +19,6 @@ import {
     logErrorAndReturnSuccess,
     OCResultError,
 } from "../../util/shared/Error";
-import {addOpenshiftMembershipPermissions} from "./DevOpsEnvironmentRequested";
 
 @EventHandler("Receive MembershipRequestCreated events", `
 subscription MembersAddedToTeamEvent {
@@ -50,7 +50,9 @@ subscription MembersAddedToTeamEvent {
 `)
 export class MembersAddedToTeam implements HandleEvent<any> {
 
-    constructor(private projectService = new ProjectService(), private bitbucketService = new BitbucketService()) {
+    constructor(private projectService = new ProjectService(),
+                private bitbucketService = new BitbucketService(),
+                private ocService = new OCService()) {
     }
 
     public async handle(event: EventFired<any>, ctx: HandlerContext): Promise<HandlerResult> {
@@ -91,7 +93,7 @@ export class MembersAddedToTeam implements HandleEvent<any> {
     private async addPermissionsForUserToTeams(bitbucketConfiguration: BitbucketConfiguration, teamName: string, projects, membersAddedToTeamEvent) {
         try {
             const devopsProject = `${_.kebabCase(teamName).toLowerCase()}-devops`;
-            await addOpenshiftMembershipPermissions(devopsProject, membersAddedToTeamEvent);
+            await this.ocService.addTeamMembershipPermissionsToProject(devopsProject, membersAddedToTeamEvent);
             for (const project of projects) {
                 logger.info(`Configuring permissions for project: ${project}`);
                 // Add to bitbucket
@@ -99,7 +101,7 @@ export class MembersAddedToTeam implements HandleEvent<any> {
                 // Add to openshift environments
                 for (const environment of ["dev", "sit", "uat"]) {
                     const projectId = getProjectDisplayName(project.owningTenant, project.name, environment);
-                    await addOpenshiftMembershipPermissions(projectId, membersAddedToTeamEvent);
+                    await this.ocService.addTeamMembershipPermissionsToProject(projectId, membersAddedToTeamEvent);
                 }
             }
         } catch (error) {

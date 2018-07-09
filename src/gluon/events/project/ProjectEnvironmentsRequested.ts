@@ -11,15 +11,12 @@ import {SlackMessage, url} from "@atomist/slack-messages";
 import * as _ from "lodash";
 import {QMConfig} from "../../../config/QMConfig";
 import {OCCommandResult} from "../../../openshift/base/OCCommandResult";
-import {SimpleOption} from "../../../openshift/base/options/SimpleOption";
-import {StandardOption} from "../../../openshift/base/options/StandardOption";
-import {OCClient} from "../../../openshift/OCClient";
-import {OCCommon} from "../../../openshift/OCCommon";
 import {QMTemplate} from "../../../template/QMTemplate";
 import {LinkExistingApplication} from "../../commands/packages/CreateApplication";
 import {LinkExistingLibrary} from "../../commands/packages/CreateLibrary";
 import {JenkinsService} from "../../util/jenkins/Jenkins";
-import {getProjectDisplayName, getProjectId} from "../../util/project/Project";
+import {OCService} from "../../util/openshift/OCService";
+import {getProjectId} from "../../util/project/Project";
 import {
     ChannelMessageClient,
     handleQMError,
@@ -79,7 +76,8 @@ export class ProjectEnvironmentsRequested implements HandleEvent<any> {
     private qmMessageClient: ChannelMessageClient;
     private taskList: TaskListMessage;
 
-    constructor(private jenkinsService = new JenkinsService()) {
+    constructor(private jenkinsService = new JenkinsService(),
+                private ocService = new OCService()) {
     }
 
     public async handle(event: EventFired<any>, ctx: HandlerContext): Promise<HandlerResult> {
@@ -99,8 +97,8 @@ export class ProjectEnvironmentsRequested implements HandleEvent<any> {
 
             logger.debug(`Using owning team DevOps project: ${teamDevOpsProjectId}`);
 
-            const token = await this.getJenkinsServiceAccountToken(teamDevOpsProjectId);
-            const jenkinsHost = await this.getJenkinsHost(teamDevOpsProjectId);
+            const token = await this.ocService.getServiceAccountToken("subatomic-jenkins", teamDevOpsProjectId);
+            const jenkinsHost = await this.ocService.getJenkinsHost(teamDevOpsProjectId);
 
             logger.debug(`Using Jenkins Route host [${jenkinsHost.output}] to add Bitbucket credentials`);
 
@@ -144,7 +142,7 @@ export class ProjectEnvironmentsRequested implements HandleEvent<any> {
             ["sit", "Integration testing"],
             ["uat", "User acceptance"]];
 
-        await OCClient.login(QMConfig.subatomic.openshift.masterUrl, QMConfig.subatomic.openshift.auth.token);
+        await this.ocService.login();
 
         for (const environment of environments) {
             const projectId = getProjectId(environmentsRequestedEvent.owningTenant.name, environmentsRequestedEvent.project.name, environment[0]);
@@ -157,35 +155,10 @@ export class ProjectEnvironmentsRequested implements HandleEvent<any> {
     }
 
     private async addEditRoleToJenkinsServiceAccount(teamDevOpsProjectId: string, projectId: string) {
-        return await OCCommon.commonCommand(
-            "policy add-role-to-user",
+        return await this.ocService.addRoleToUserInNamespace(
+            `system:serviceaccount:${teamDevOpsProjectId}:jenkins`,
             "edit",
-            [
-                `system:serviceaccount:${teamDevOpsProjectId}:jenkins`,
-            ], [
-                new SimpleOption("-namespace", projectId),
-            ]);
-    }
-
-    private async getJenkinsHost(teamDevOpsProjectId: string) {
-        return await OCCommon.commonCommand(
-            "get",
-            "route/jenkins",
-            [],
-            [
-                new SimpleOption("-output", "jsonpath={.spec.host}"),
-                new SimpleOption("-namespace", teamDevOpsProjectId),
-            ]);
-    }
-
-    private async getJenkinsServiceAccountToken(teamDevOpsProjectId: string) {
-        return await OCCommon.commonCommand("serviceaccounts",
-            "get-token",
-            [
-                "subatomic-jenkins",
-            ], [
-                new SimpleOption("-namespace", teamDevOpsProjectId),
-            ]);
+            projectId);
     }
 
     private async createJenkinsBuildTemplate(environmentsRequestedEvent, teamDevOpsProjectId: string, jenkinsHost: string, token: string) {
@@ -214,83 +187,25 @@ export class ProjectEnvironmentsRequested implements HandleEvent<any> {
 
     private async createOpenshiftProject(projectId: string, environmentsRequestedEvent, environment) {
         try {
-            await OCClient.newProject(projectId,
-                getProjectDisplayName(environmentsRequestedEvent.owningTenant.name, environmentsRequestedEvent.project.name, environment[0]),
-                `${environment[1]} environment for ${environmentsRequestedEvent.project.name} [managed by Subatomic]`);
+            return await this.ocService.newSubatomicProject(
+                projectId,
+                environmentsRequestedEvent.project.name,
+                environmentsRequestedEvent.owningTenant.name,
+                environment);
         } catch (err) {
             logger.warn(err);
         } finally {
-            await this.addMembershipPermissions(projectId,
-                environmentsRequestedEvent.teams);
+            await environmentsRequestedEvent.teams.map(async team => {
+                await this.ocService.addTeamMembershipPermissionsToProject(projectId, team);
+            });
         }
 
         await this.createProjectQuotasAndLimits(projectId);
     }
 
     private async createProjectQuotasAndLimits(projectId: string) {
-        await OCCommon.createFromData({
-            apiVersion: "v1",
-            kind: "ResourceQuota",
-            metadata: {
-                name: "default-quota",
-            },
-            spec: {
-                hard: {
-                    "limits.cpu": "80", // 20 * 4m
-                    "limits.memory": "20480Mi", // 20 * 1024Mi
-                    "pods": "20",
-                    "replicationcontrollers": "20",
-                    "services": "20",
-                },
-            },
-        }, [
-            new SimpleOption("-namespace", projectId),
-        ]);
-        await OCCommon.createFromData({
-            apiVersion: "v1",
-            kind: "LimitRange",
-            metadata: {
-                name: "default-limits",
-            },
-            spec: {
-                limits: [{
-                    type: "Container",
-                    max: {
-                        cpu: "8",
-                        memory: "4096Mi",
-                    },
-                    default: {
-                        cpu: "4",
-                        memory: "1024Mi",
-                    },
-                    defaultRequest: {
-                        cpu: "0",
-                        memory: "0Mi",
-                    },
-                }],
-            },
-        }, [
-            new SimpleOption("-namespace", projectId),
-        ]);
-    }
-
-    private async addMembershipPermissions(projectId: string, teams: any[]) {
-        await teams.map(async team => {
-            await team.owners.map(async owner => {
-                const ownerUsername = /[^\\]*$/.exec(owner.domainUsername)[0];
-                logger.info(`Adding role to project [${projectId}] and owner [${owner.domainUsername}]: ${ownerUsername}`);
-                await OCClient.policy.addRoleToUser(ownerUsername,
-                    "admin",
-                    projectId);
-            });
-            await team.members.map(async member => {
-                const memberUsername = /[^\\]*$/.exec(member.domainUsername)[0];
-                logger.info(`Adding role to project [${projectId}] and member [${member.domainUsername}]: ${memberUsername}`);
-                await OCClient.policy.addRoleToUser(memberUsername,
-                    "view",
-                    projectId);
-            });
-        });
+        await this.ocService.createProjectDefaultResourceQuota(projectId);
+        await this.ocService.createProjectDefaultLimits(projectId);
     }
 
     private async createJenkinsCredentials(teamDevOpsProjectId: string, jenkinsHost: string, token: string) {
@@ -318,13 +233,7 @@ export class ProjectEnvironmentsRequested implements HandleEvent<any> {
         const projectIdSit = getProjectId(tenantName, projectName, "sit");
         const projectIdUat = getProjectId(tenantName, projectName, "uat");
         try {
-            await OCCommon.commonCommand(
-                "adm pod-network",
-                "join-projects",
-                [projectIdDev, projectIdSit, projectIdUat],
-                [
-                    new StandardOption("to", `${teamDevOpsProjectId}`),
-                ]);
+            await this.ocService.createPodNetwork([projectIdDev, projectIdSit, projectIdUat], teamDevOpsProjectId);
         } catch (error) {
             if (error instanceof OCCommandResult) {
                 const multitenantNetworkPluginMissingError = "error: managing pod network is only supported for openshift multitenant network plugin";

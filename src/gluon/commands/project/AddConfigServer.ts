@@ -10,10 +10,7 @@ import {
 import {SlackMessage, url} from "@atomist/slack-messages";
 import * as _ from "lodash";
 import {QMConfig} from "../../../config/QMConfig";
-import {NamedSimpleOption} from "../../../openshift/base/options/NamedSimpleOption";
-import {SimpleOption} from "../../../openshift/base/options/SimpleOption";
-import {OCClient} from "../../../openshift/OCClient";
-import {OCCommon} from "../../../openshift/OCCommon";
+import {OCService} from "../../util/openshift/OCService";
 import {handleQMError, ResponderMessageClient} from "../../util/shared/Error";
 import {
     RecursiveParameter,
@@ -40,12 +37,14 @@ export class AddConfigServer extends RecursiveParameterRequestCommand {
     })
     public gitUri: string;
 
-    constructor(private teamService = new TeamService()) {
+    constructor(private teamService = new TeamService(),
+                private ocService = new OCService()) {
         super();
     }
 
     protected async runCommand(ctx: HandlerContext): Promise<HandlerResult> {
         try {
+            await this.ocService.login();
             return await this.addConfigServer(
                 ctx,
                 this.gluonTeamName,
@@ -93,21 +92,14 @@ export class AddConfigServer extends RecursiveParameterRequestCommand {
 
     private async addConfigServerSecretToDevOpsEnvironment(devOpsProjectId: string) {
         try {
-            await OCCommon.commonCommand("create secret generic",
-                "subatomic-config-server",
-                [],
-                [
-                    new NamedSimpleOption("-from-literal=spring.cloud.config.server.git.hostKey", QMConfig.subatomic.bitbucket.cicdKey),
-                    new NamedSimpleOption("-from-file=spring.cloud.config.server.git.privateKey", QMConfig.subatomic.bitbucket.cicdPrivateKeyPath),
-                    new SimpleOption("-namespace", devOpsProjectId),
-                ]);
+            await this.ocService.createConfigServerSecret(devOpsProjectId);
         } catch (error) {
             logger.warn("Secret subatomic-config-server probably already exists");
         }
     }
 
     private async createConfigServerConfigurationMap(devOpsProjectId: string) {
-        return await OCCommon.createFromData({
+        const configurationMapDefintion = {
             apiVersion: "v1",
             kind: "ConfigMap",
             metadata: {
@@ -125,20 +117,19 @@ spring:
           hostKeyAlgorithm: ssh-rsa
 `,
             },
-        }, [
-            new SimpleOption("-namespace", devOpsProjectId),
-        ]);
+        };
+        return await this.ocService.createResourceFromDataInNamespace(configurationMapDefintion, devOpsProjectId);
     }
 
     private async tagConfigServerImageToDevOpsEnvironment(devOpsProjectId: string) {
-        return await OCCommon.commonCommand("tag",
-            "subatomic/subatomic-config-server:1.1",
-            [`${devOpsProjectId}/subatomic-config-server:1.0`],
-        );
+        return await this.ocService.tagSubatomicImageToNamespace(
+            "subatomic-config-server:1.1",
+            devOpsProjectId,
+            "subatomic-config-server:1.0");
     }
 
     private async addViewRoleToDevOpsEnvironmentDefaultServiceAccount(devOpsProjectId: string) {
-        return await OCClient.policy.addRoleToUser(
+        return await this.ocService.addRoleToUserInNamespace(
             `system:serviceaccount:${devOpsProjectId}:default`,
             "view",
             devOpsProjectId);
@@ -146,30 +137,26 @@ spring:
 
     private async createConfigServerDeploymentConfig(gitUri: string, devOpsProjectId: string) {
         try {
-            await OCCommon.commonCommand("get", `dc/subatomic-config-server`, [],
-                [
-                    new SimpleOption("-namespace", devOpsProjectId),
-                ]);
+            await this.ocService.getDeploymentConfigInNamespace("subatomic-config-server", devOpsProjectId);
             logger.warn(`Subatomic Config Server Template has already been processed, deployment exists`);
         } catch (error) {
             const saneGitUri = _.replace(gitUri, /(<)|>/g, "");
-            const appTemplate = await OCCommon.commonCommand("process",
+
+            const templateParameters = [
+                `GIT_URI=${saneGitUri}`,
+                `IMAGE_STREAM_PROJECT=${devOpsProjectId}`,
+                // TODO relook once we have a designed https://github.com/orgs/absa-subatomic/projects/2#card-7672800
+                `IMAGE_STREAM_TAG=1.0`,
+            ];
+
+            const appTemplate = await this.ocService.processOpenshiftTemplate(
                 "subatomic-config-server-template",
-                [],
-                [
-                    new SimpleOption("p", `GIT_URI=${saneGitUri}`),
-                    new SimpleOption("p", `IMAGE_STREAM_PROJECT=${devOpsProjectId}`),
-                    // TODO relook once we have a designed https://github.com/orgs/absa-subatomic/projects/2#card-7672800
-                    new SimpleOption("p", `IMAGE_STREAM_TAG=1.0`),
-                    new SimpleOption("-namespace", "subatomic"),
-                ],
-            );
+                "subatomic",
+                templateParameters);
+
             logger.debug(`Processed Subatomic Config Server Template: ${appTemplate.output}`);
 
-            await OCCommon.createFromData(JSON.parse(appTemplate.output),
-                [
-                    new SimpleOption("-namespace", devOpsProjectId),
-                ]);
+            await this.ocService.createResourceFromDataInNamespace(JSON.parse(appTemplate.output), devOpsProjectId);
         }
     }
 

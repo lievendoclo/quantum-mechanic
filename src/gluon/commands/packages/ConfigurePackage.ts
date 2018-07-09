@@ -15,12 +15,9 @@ import {buttonForCommand} from "@atomist/automation-client/spi/message/MessageCl
 import {url} from "@atomist/slack-messages";
 import * as _ from "lodash";
 import {QMConfig} from "../../../config/QMConfig";
-import {SimpleOption} from "../../../openshift/base/options/SimpleOption";
-import {StandardOption} from "../../../openshift/base/options/StandardOption";
-import {OCClient} from "../../../openshift/OCClient";
-import {OCCommon} from "../../../openshift/OCCommon";
 import {QMTemplate} from "../../../template/QMTemplate";
 import {JenkinsService} from "../../util/jenkins/Jenkins";
+import {OCService} from "../../util/openshift/OCService";
 import {
     ApplicationService,
     ApplicationType,
@@ -28,7 +25,10 @@ import {
 } from "../../util/packages/Applications";
 import {PackageDefinition} from "../../util/packages/PackageDefinition";
 import {getProjectDevOpsId, getProjectId} from "../../util/project/Project";
-import {menuForProjects, ProjectService} from "../../util/project/ProjectService";
+import {
+    menuForProjects,
+    ProjectService,
+} from "../../util/project/ProjectService";
 import {
     handleQMError,
     logErrorAndReturnSuccess,
@@ -41,7 +41,6 @@ import {
     RecursiveParameter,
     RecursiveParameterRequestCommand,
 } from "../../util/shared/RecursiveParameterRequestCommand";
-import {SubatomicOpenshiftService} from "../../util/shared/SubatomicOpenshiftService";
 import {TenantService} from "../../util/shared/TenantService";
 import {menuForTeams, TeamService} from "../../util/team/TeamService";
 import {KickOffJenkinsBuild} from "../jenkins/JenkinsBuild";
@@ -199,10 +198,10 @@ export class ConfigurePackage extends RecursiveParameterRequestCommand {
 
     constructor(private teamService = new TeamService(),
                 private tenantService = new TenantService(),
-                private subatomicOpenshiftService = new SubatomicOpenshiftService(),
                 private projectService = new ProjectService(),
                 private applicationService = new ApplicationService(),
-                private jenkinsService = new JenkinsService()) {
+                private jenkinsService = new JenkinsService(),
+                private ocService = new OCService()) {
         super();
     }
 
@@ -243,7 +242,8 @@ export class ConfigurePackage extends RecursiveParameterRequestCommand {
         }
         if (_.isEmpty(this.openshiftTemplate)) {
             const namespace = `${_.kebabCase(this.teamName).toLowerCase()}-devops`;
-            const templates = await this.subatomicOpenshiftService.subatomicApplicationTemplates(namespace);
+            const templatesResult = await this.ocService.getSubatomicAppTemplates(namespace);
+            const templates = JSON.parse(templatesResult.output).items;
             return await createMenu(ctx, templates.map(template => {
                     return {
                         value: template.metadata.name,
@@ -387,15 +387,13 @@ export class ConfigurePackage extends RecursiveParameterRequestCommand {
     }
 
     private async createApplicationImageStream(appBuildName: string, teamDevOpsProjectId: string) {
-        await OCCommon.createFromData({
+        await this.ocService.createResourceFromDataInNamespace({
             apiVersion: "v1",
             kind: "ImageStream",
             metadata: {
                 name: appBuildName,
             },
-        }, [
-            new SimpleOption("-namespace", teamDevOpsProjectId),
-        ]);
+        }, teamDevOpsProjectId);
     }
 
     private getBuildConfigData(bitbucketRepoRemoteUrl: string, appBuildName: string, baseS2IImage: string): { [key: string]: any } {
@@ -453,11 +451,10 @@ export class ConfigurePackage extends RecursiveParameterRequestCommand {
         }
 
         // TODO this should be extracted to a configurable QMTemplate
-        await OCCommon.createFromData(buildConfig,
-            [
-                new SimpleOption("-namespace", teamDevOpsProjectId),
-            ], true); // TODO clean up this hack - cannot be a boolean (magic)
-
+        await this.ocService.createResourceFromDataInNamespace(
+            buildConfig,
+            teamDevOpsProjectId,
+            true);  // TODO clean up this hack - cannot be a boolean (magic)
     }
 
     private async doConfiguration(ctx: HandlerContext,
@@ -475,7 +472,7 @@ export class ConfigurePackage extends RecursiveParameterRequestCommand {
         logger.debug(`Using owning team DevOps project: ${teamDevOpsProjectId}`);
         logger.debug(`Teams are: ${JSON.stringify(associatedTeams)}`);
 
-        await OCClient.login(QMConfig.subatomic.openshift.masterUrl, QMConfig.subatomic.openshift.auth.token);
+        await this.ocService.login();
 
         await this.addJenkinsFile(bitbucketProjectKey, bitbucketRepoName);
 
@@ -569,44 +566,33 @@ You can kick off the build pipeline for your library by clicking the button belo
             const devOpsProjectId = getProjectDevOpsId(this.teamName);
             logger.info(`Processing app [${appName}] Template for: ${projectId}`);
 
-            const template = await OCCommon.commonCommand("get", "templates",
-                [this.openshiftTemplate],
-                [
-                    new SimpleOption("-namespace", "subatomic"),
-                    new SimpleOption("-output", "json"),
-                ],
-            );
+            const template = await this.ocService.getSubatomicTemplate(this.openshiftTemplate);
             const appBaseTemplate: any = JSON.parse(template.output);
             appBaseTemplate.metadata.namespace = projectId;
-            await OCCommon.createFromData(appBaseTemplate,
-                [
-                    new SimpleOption("-namespace", projectId),
-                ]
-                , );
-            const appProcessedTemplate = await OCCommon.commonCommand("process",
+            await this.ocService.createResourceFromDataInNamespace(appBaseTemplate, projectId);
+
+            const templateParameters = [
+                `APP_NAME=${appName}`,
+                `IMAGE_STREAM_PROJECT=${projectId}`,
+                `DEVOPS_NAMESPACE=${devOpsProjectId}`,
+            ];
+
+            const appProcessedTemplate = await this.ocService.processOpenshiftTemplate(
                 this.openshiftTemplate,
-                [],
-                [
-                    new StandardOption("ignore-unknown-parameters", "true"),
-                    new SimpleOption("p", `APP_NAME=${appName}`),
-                    new SimpleOption("p", `IMAGE_STREAM_PROJECT=${projectId}`),
-                    new SimpleOption("p", `DEVOPS_NAMESPACE=${devOpsProjectId}`),
-                    new SimpleOption("-namespace", projectId),
-                ],
-            );
+                projectId,
+                templateParameters,
+                true);
+
             logger.debug(`Processed app [${appName}] Template: ${appProcessedTemplate.output}`);
 
             try {
-                await OCCommon.commonCommand("get", `dc/${appName}`, [],
-                    [
-                        new SimpleOption("-namespace", projectId),
-                    ]);
+                await this.ocService.getDeploymentConfigInNamespace(appName, projectId);
                 logger.warn(`App [${appName}] Template has already been processed, deployment exists`);
             } catch (error) {
-                await OCCommon.createFromData(JSON.parse(appProcessedTemplate.output),
-                    [
-                        new SimpleOption("-namespace", projectId),
-                    ]);
+                await this.ocService.createResourceFromDataInNamespace(
+                    JSON.parse(appProcessedTemplate.output),
+                    projectId,
+                );
             }
         }
         return await success();
@@ -618,21 +604,8 @@ You can kick off the build pipeline for your library by clicking the button belo
                                    gluonApplicationName: string,
                                    bitbucketProjectKey: string,
                                    bitbucketRepositoryName: string): Promise<HandlerResult> {
-        const token = await OCCommon.commonCommand("serviceaccounts",
-            "get-token",
-            [
-                "subatomic-jenkins",
-            ], [
-                new SimpleOption("-namespace", teamDevOpsProjectId),
-            ]);
-        const jenkinsHost = await OCCommon.commonCommand(
-            "get",
-            "route/jenkins",
-            [],
-            [
-                new SimpleOption("-output", "jsonpath={.spec.host}"),
-                new SimpleOption("-namespace", teamDevOpsProjectId),
-            ]);
+        const token = await this.ocService.getServiceAccountToken("subatomic-jenkins", teamDevOpsProjectId);
+        const jenkinsHost = await this.ocService.getJenkinsHost(teamDevOpsProjectId);
         logger.debug(`Using Jenkins Route host [${jenkinsHost.output}] to add Bitbucket credentials`);
 
         const jenkinsTemplate: QMTemplate = new QMTemplate("resources/templates/jenkins/jenkins-multi-branch-project.xml");

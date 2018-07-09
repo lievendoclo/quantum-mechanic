@@ -8,16 +8,21 @@ import {
 } from "@atomist/automation-client";
 import * as _ from "lodash";
 import {QMConfig} from "../../../config/QMConfig";
-import {OCCommandResult} from "../../../openshift/base/OCCommandResult";
-import {SimpleOption} from "../../../openshift/base/options/SimpleOption";
-import {OCCommon} from "../../../openshift/OCCommon";
 import {JenkinsService} from "../../util/jenkins/Jenkins";
+import {OCService} from "../../util/openshift/OCService";
 import {
     ApplicationService,
     menuForApplications,
 } from "../../util/packages/Applications";
-import {menuForProjects, ProjectService} from "../../util/project/ProjectService";
-import {handleQMError, QMError, ResponderMessageClient} from "../../util/shared/Error";
+import {
+    menuForProjects,
+    ProjectService,
+} from "../../util/project/ProjectService";
+import {
+    handleQMError,
+    QMError,
+    ResponderMessageClient,
+} from "../../util/shared/Error";
 import {isSuccessCode} from "../../util/shared/Http";
 import {
     RecursiveParameter,
@@ -55,12 +60,14 @@ export class KickOffJenkinsBuild extends RecursiveParameterRequestCommand {
     constructor(private teamService = new TeamService(),
                 private projectService = new ProjectService(),
                 private applicationService = new ApplicationService(),
-                private jenkinsService = new JenkinsService()) {
+                private jenkinsService = new JenkinsService(),
+                private ocService = new OCService()) {
         super();
     }
 
     protected async runCommand(ctx: HandlerContext) {
         try {
+            await this.ocService.login();
             return await this.applicationsForGluonProject(ctx, this.applicationName, this.teamName, this.projectName);
         } catch (error) {
             return await handleQMError(new ResponderMessageClient(ctx), error);
@@ -107,9 +114,9 @@ export class KickOffJenkinsBuild extends RecursiveParameterRequestCommand {
         logger.debug(`Kicking off build for application: ${gluonApplicationName}`);
 
         const teamDevOpsProjectId = `${_.kebabCase(gluonTeamName).toLowerCase()}-devops`;
-        const token = await this.getJenkinsServiceAccountToken(teamDevOpsProjectId);
+        const token = await this.ocService.getServiceAccountToken("subatomic-jenkins", teamDevOpsProjectId);
 
-        const jenkinsHost = await this.getJenkinsHost(teamDevOpsProjectId);
+        const jenkinsHost = await this.ocService.getJenkinsHost(teamDevOpsProjectId);
 
         logger.debug(`Using Jenkins Route host [${jenkinsHost.output}] to kick off build`);
 
@@ -140,26 +147,5 @@ export class KickOffJenkinsBuild extends RecursiveParameterRequestCommand {
                 throw new QMError("Failed to kick off jenkins build. Network failure connecting to Jenkins instance.");
             }
         }
-    }
-
-    private async getJenkinsServiceAccountToken(teamDevOpsProjectId: string): Promise<OCCommandResult> {
-        return await OCCommon.commonCommand("serviceaccounts",
-            "get-token",
-            [
-                "subatomic-jenkins",
-            ], [
-                new SimpleOption("-namespace", teamDevOpsProjectId),
-            ]);
-    }
-
-    private async getJenkinsHost(teamDevOpsProjectId: string): Promise<OCCommandResult> {
-        return await OCCommon.commonCommand(
-            "get",
-            "route/jenkins",
-            [],
-            [
-                new SimpleOption("-output", "jsonpath={.spec.host}"),
-                new SimpleOption("-namespace", teamDevOpsProjectId),
-            ]);
     }
 }

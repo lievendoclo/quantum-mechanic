@@ -11,15 +11,16 @@ import {SlackMessage, url} from "@atomist/slack-messages";
 import * as _ from "lodash";
 import {timeout, TimeoutError} from "promise-timeout";
 import {QMConfig} from "../../../config/QMConfig";
-import {SimpleOption} from "../../../openshift/base/options/SimpleOption";
-import {OCClient} from "../../../openshift/OCClient";
-import {OCCommon} from "../../../openshift/OCCommon";
 import {AddConfigServer} from "../../commands/project/AddConfigServer";
 import {CreateProject} from "../../commands/project/CreateProject";
 import {JenkinsService} from "../../util/jenkins/Jenkins";
-import {ChannelMessageClient, handleQMError, QMError} from "../../util/shared/Error";
+import {OCService} from "../../util/openshift/OCService";
+import {
+    ChannelMessageClient,
+    handleQMError,
+    QMError,
+} from "../../util/shared/Error";
 import {isSuccessCode} from "../../util/shared/Http";
-import {SubatomicOpenshiftService} from "../../util/shared/SubatomicOpenshiftService";
 import {TaskListMessage, TaskStatus} from "../../util/shared/TaskListMessage";
 
 const promiseRetry = require("promise-retry");
@@ -60,8 +61,8 @@ subscription DevOpsEnvironmentRequestedEvent {
 `)
 export class DevOpsEnvironmentRequested implements HandleEvent<any> {
 
-    constructor(private subatomicOpenshiftService = new SubatomicOpenshiftService(),
-                private jenkinsService = new JenkinsService()) {
+    constructor(private jenkinsService = new JenkinsService(),
+                private ocService = new OCService()) {
     }
 
     public async handle(event: EventFired<any>, ctx: HandlerContext): Promise<HandlerResult> {
@@ -84,13 +85,13 @@ export class DevOpsEnvironmentRequested implements HandleEvent<any> {
 
             await taskList.display();
 
-            await OCClient.login(QMConfig.subatomic.openshift.masterUrl, QMConfig.subatomic.openshift.auth.token);
+            await this.ocService.login();
 
             await this.createDevOpsEnvironment(projectId, devOpsRequestedEvent.team.name);
 
             await taskList.setTaskStatus("OpenshiftEnv", TaskStatus.Successful);
 
-            await addOpenshiftMembershipPermissions(projectId,
+            await this.ocService.addTeamMembershipPermissionsToProject(projectId,
                 devOpsRequestedEvent.team);
 
             await taskList.setTaskStatus("OpenshiftPermissions", TaskStatus.Successful);
@@ -132,148 +133,61 @@ export class DevOpsEnvironmentRequested implements HandleEvent<any> {
 
     private async createDevOpsEnvironment(projectId: string, teamName: string) {
         try {
-            await OCClient.newProject(projectId,
-                `${teamName} DevOps`,
-                `DevOps environment for ${teamName} [managed by Subatomic]`);
+            await this.ocService.newDevOpsProject(projectId, teamName);
         } catch (error) {
             logger.warn("DevOps project already seems to exist. Trying to continue.");
         }
 
-        await OCCommon.createFromData({
-            apiVersion: "v1",
-            kind: "ResourceQuota",
-            metadata: {
-                name: "default-quota",
-            },
-            spec: {
-                hard: {
-                    "limits.cpu": "16", // 4 * 4m
-                    "limits.memory": "4096Mi", // 4 * 1024Mi
-                    "pods": "4",
-                },
-            },
-        }, [
-            new SimpleOption("-namespace", projectId),
-        ]);
+        await this.ocService.createDevOpsDefaultResourceQuota(projectId);
 
-        await OCCommon.createFromData({
-            apiVersion: "v1",
-            kind: "LimitRange",
-            metadata: {
-                name: "default-limits",
-            },
-            spec: {
-                limits: [{
-                    type: "Container",
-                    max: {
-                        cpu: "4",
-                        memory: "1024Mi",
-                    },
-                    default: {
-                        cpu: "4",
-                        memory: "1024Mi",
-                    },
-                    defaultRequest: {
-                        cpu: "0",
-                        memory: "0Mi",
-                    },
-                }],
-            },
-        }, [
-            new SimpleOption("-namespace", projectId),
-        ]);
+        await this.ocService.createDevOpsDefaultLimits(projectId);
     }
 
     private async copySubatomicAppTemplatesToDevOpsEnvironment(projectId: string) {
         logger.info(`Finding templates in subatomic namespace`);
 
-        const appTemplatesJSON = await OCCommon.commonCommand("get", "templates",
-            [],
-            [
-                new SimpleOption("l", "usage=subatomic-app"),
-                new SimpleOption("-namespace", "subatomic"),
-                new SimpleOption("-output", "json"),
-            ],
-        );
+        const appTemplatesJSON = await this.ocService.getSubatomicAppTemplates();
 
         const appTemplates: any = JSON.parse(appTemplatesJSON.output);
         for (const item of appTemplates.items) {
             item.metadata.namespace = projectId;
         }
-        await OCCommon.createFromData(appTemplates,
-            [
-                new SimpleOption("-namespace", projectId),
-            ]
-            , );
+        await this.ocService.createResourceFromDataInNamespace(appTemplates, projectId);
     }
 
     private async copyJenkinsTemplateToDevOpsEnvironment(projectId: string) {
-        const jenkinsTemplateJSON = await OCCommon.commonCommand("get", "templates",
-            ["jenkins-persistent-subatomic"],
-            [
-                new SimpleOption("-namespace", "subatomic"),
-                new SimpleOption("-output", "json"),
-            ],
-        );
+        const jenkinsTemplateJSON = await this.ocService.getJenkinsTemplate();
 
         const jenkinsTemplate: any = JSON.parse(jenkinsTemplateJSON.output);
         jenkinsTemplate.metadata.namespace = projectId;
-        await OCCommon.createFromData(jenkinsTemplate,
-            [
-                new SimpleOption("-namespace", projectId),
-            ]
-            , );
+        await this.ocService.createResourceFromDataInNamespace(jenkinsTemplate, projectId);
     }
 
     private async copyImageStreamsToDevOpsEnvironment(projectId) {
-        const imageStreamTags = await this.subatomicOpenshiftService.subatomicImageStreamTags("subatomic");
+        const imageStreamTagsResult = await this.ocService.getSubatomicImageStreamTags();
+        const imageStreamTags = JSON.parse(imageStreamTagsResult.output).items;
 
         for (const imageStreamTag of imageStreamTags) {
             const imageStreamTagName = imageStreamTag.metadata.name;
-            await OCCommon.commonCommand("tag",
-                `subatomic/${imageStreamTagName}`,
-                [`${projectId}/${imageStreamTagName}`]);
+            await this.ocService.tagSubatomicImageToNamespace(imageStreamTagName, projectId);
         }
     }
 
     private async createJenkinsDeploymentConfig(projectId: string) {
         logger.info("Processing Jenkins QMTemplate...");
-        const jenkinsTemplateResultJSON = await OCCommon.commonCommand("process",
-            "jenkins-persistent-subatomic",
-            [],
-            [
-                new SimpleOption("p", `NAMESPACE=${projectId}`),
-                new SimpleOption("p", "JENKINS_IMAGE_STREAM_TAG=jenkins-subatomic:2.0"),
-                new SimpleOption("p", "BITBUCKET_NAME=Subatomic Bitbucket"),
-                new SimpleOption("p", `BITBUCKET_URL=${QMConfig.subatomic.bitbucket.baseUrl}`),
-                new SimpleOption("p", `BITBUCKET_CREDENTIALS_ID=${projectId}-bitbucket`),
-                // TODO this should be a property on Team. I.e. teamEmail
-                // If no team email then the address of the createdBy member
-                new SimpleOption("p", "JENKINS_ADMIN_EMAIL=subatomic@local"),
-                // TODO the registry Cluster IP we will have to get by introspecting the registry Service
-                new SimpleOption("p", `MAVEN_SLAVE_IMAGE=${QMConfig.subatomic.openshift.dockerRepoUrl}/${projectId}/jenkins-slave-maven-subatomic:2.0`),
-                new SimpleOption("p", `NODEJS_SLAVE_IMAGE=${QMConfig.subatomic.openshift.dockerRepoUrl}/${projectId}/jenkins-slave-nodejs-subatomic:2.0`),
-                new SimpleOption("-namespace", projectId),
-            ],
-        );
+        const jenkinsTemplateResultJSON = await this.ocService.processJenkinsTemplateForDevOpsProject(projectId);
         logger.debug(`Processed Jenkins Template: ${jenkinsTemplateResultJSON.output}`);
 
         try {
-            await OCCommon.commonCommand("get", "dc/jenkins", [],
-                [
-                    new SimpleOption("-namespace", projectId),
-                ]);
+            await this.ocService.getDeploymentConfigInNamespace("jenkins", projectId);
             logger.warn("Jenkins QMTemplate has already been processed, deployment exists");
         } catch (error) {
-            await OCCommon.createFromData(JSON.parse(jenkinsTemplateResultJSON.output),
-                [
-                    new SimpleOption("-namespace", projectId),
-                ]);
+            await this.ocService.createResourceFromDataInNamespace(JSON.parse(jenkinsTemplateResultJSON.output), projectId);
         }
     }
 
     private async createJenkinsServiceAccount(projectId: string) {
-        await OCCommon.createFromData({
+        const serviceAccountDefinition = {
             apiVersion: "v1",
             kind: "ServiceAccount",
             metadata: {
@@ -283,11 +197,10 @@ export class DevOpsEnvironmentRequested implements HandleEvent<any> {
                 },
                 name: "subatomic-jenkins",
             },
-        }, [
-            new SimpleOption("-namespace", projectId),
-        ]);
+        };
+        await this.ocService.createResourceFromDataInNamespace(serviceAccountDefinition, projectId);
 
-        await OCCommon.createFromData({
+        const roleBindingDefinition = {
             apiVersion: "rbac.authorization.k8s.io/v1beta1",
             kind: "RoleBinding",
             metadata: {
@@ -305,23 +218,16 @@ export class DevOpsEnvironmentRequested implements HandleEvent<any> {
                 kind: "ServiceAccount",
                 name: "subatomic-jenkins",
             }],
-        }, [
-            new SimpleOption("-namespace", projectId),
-        ], true);
+        };
+
+        await this.ocService.createResourceFromDataInNamespace(roleBindingDefinition, projectId, true);
     }
 
     private async rolloutJenkinsDeployment(projectId) {
         await promiseRetry((retryFunction, attemptCount: number) => {
             logger.debug(`Jenkins rollout status check attempt number ${attemptCount}`);
 
-            return OCCommon.commonCommand(
-                "rollout status",
-                "dc/jenkins",
-                [],
-                [
-                    new SimpleOption("-namespace", projectId),
-                    new SimpleOption("-watch=false"),
-                ], true)
+            return this.ocService.rolloutDeploymentConfigInNamespace("jenkins", projectId)
                 .then(rolloutStatus => {
                     logger.debug(JSON.stringify(rolloutStatus.output));
 
@@ -338,32 +244,14 @@ export class DevOpsEnvironmentRequested implements HandleEvent<any> {
     }
 
     private async getJenkinsServiceAccountToken(projectId: string) {
-        const tokenResult = await OCCommon.commonCommand("serviceaccounts",
-            "get-token",
-            [
-                "subatomic-jenkins",
-            ], [
-                new SimpleOption("-namespace", projectId),
-            ]);
+        const tokenResult = await this.ocService.getServiceAccountToken("subatomic-jenkins", projectId);
         return tokenResult.output;
     }
 
     private async createJenkinsRoute(projectId: string): Promise<string> {
-        await OCCommon.commonCommand("annotate route",
-            "jenkins",
-            [],
-            [
-                new SimpleOption("-overwrite", "haproxy.router.openshift.io/timeout=120s"),
-                new SimpleOption("-namespace", projectId),
-            ]);
-        const jenkinsHost = await OCCommon.commonCommand(
-            "get",
-            "route/jenkins",
-            [],
-            [
-                new SimpleOption("-output", "jsonpath={.spec.host}"),
-                new SimpleOption("-namespace", projectId),
-            ]);
+
+        await this.ocService.annotateJenkinsRoute(projectId);
+        const jenkinsHost = await this.ocService.getJenkinsHost(projectId);
 
         return jenkinsHost.output;
     }
@@ -434,22 +322,10 @@ export class DevOpsEnvironmentRequested implements HandleEvent<any> {
 
     private async addBitbucketSSHSecret(projectId: string) {
         try {
-            await OCCommon.commonCommand("get secrets",
-                "bitbucket-ssh",
-                [],
-                [
-                    new SimpleOption("-namespace", projectId),
-                ]);
+            await this.ocService.getSecretFromNamespace("bitbucket-ssh", projectId);
             logger.warn("Bitbucket SSH secret must already exist");
         } catch (error) {
-            await OCCommon.commonCommand("secrets new-sshauth",
-                "bitbucket-ssh",
-                [],
-                [
-                    new SimpleOption("-ssh-privatekey", QMConfig.subatomic.bitbucket.cicdPrivateKeyPath),
-                    new SimpleOption("-ca-cert", QMConfig.subatomic.bitbucket.caPath),
-                    new SimpleOption("-namespace", projectId),
-                ]);
+            await this.ocService.createBitbucketSSHAuthSecret("bitbucket-ssh", projectId);
         }
     }
 
@@ -496,21 +372,4 @@ If your applications will require a Spring Cloud Config Server, you can add a Su
     private async handleError(ctx: HandlerContext, error, teamChannel: string) {
         return await handleQMError(new ChannelMessageClient(ctx).addDestination(teamChannel), error);
     }
-}
-
-export async function addOpenshiftMembershipPermissions(projectId: string, team: { owners: Array<{ domainUsername }>, members: Array<{ domainUsername }> }) {
-    await team.owners.map(async owner => {
-        const ownerUsername = /[^\\]*$/.exec(owner.domainUsername)[0];
-        logger.info(`Adding role to project [${projectId}] and owner [${owner.domainUsername}]: ${ownerUsername}`);
-        return await OCClient.policy.addRoleToUser(ownerUsername,
-            "admin",
-            projectId);
-    });
-    await team.members.map(async member => {
-        const memberUsername = /[^\\]*$/.exec(member.domainUsername)[0];
-        await logger.info(`Adding role to project [${projectId}] and member [${member.domainUsername}]: ${memberUsername}`);
-        return await OCClient.policy.addRoleToUser(memberUsername,
-            "view",
-            projectId);
-    });
 }
