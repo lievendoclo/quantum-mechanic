@@ -17,7 +17,7 @@ import {
     ChannelMessageClient,
     handleQMError,
     logErrorAndReturnSuccess,
-    OCResultError,
+    OCResultError, QMError,
 } from "../../util/shared/Error";
 
 @EventHandler("Receive MembershipRequestCreated events", `
@@ -63,13 +63,7 @@ export class MembersAddedToTeam implements HandleEvent<any> {
         try {
             const team = membersAddedToTeamEvent.team;
 
-            let projects;
-            try {
-                projects = await this.projectService.gluonProjectsWhichBelongToGluonTeam(ctx, team.name);
-            } catch (error) {
-                // TODO: We probably dont want to have the gluonProjectsWhichBelong to team thing catch these errors for events
-                return logErrorAndReturnSuccess(this.projectService.gluonProjectsWhichBelongToGluonTeam.name, error);
-            }
+            const projects = await this.getListOfTeamProjects(ctx, team.name);
 
             const bitbucketConfiguration = this.getBitbucketConfiguration(membersAddedToTeamEvent);
 
@@ -79,6 +73,16 @@ export class MembersAddedToTeam implements HandleEvent<any> {
         } catch (error) {
             return await this.handleError(ctx, error, membersAddedToTeamEvent.team.slackIdentity.teamChannel);
         }
+    }
+
+    private async getListOfTeamProjects(ctx: HandlerContext, teamName: string) {
+        let projects;
+        try {
+            projects = await this.projectService.gluonProjectsWhichBelongToGluonTeam(ctx, teamName, false);
+        } catch (error) {
+            throw new QMError(error, "Failed to get list of projects associated with this team.");
+        }
+        return projects;
     }
 
     private getBitbucketConfiguration(membersAddedToTeamEvent): BitbucketConfiguration {
@@ -92,6 +96,7 @@ export class MembersAddedToTeam implements HandleEvent<any> {
 
     private async addPermissionsForUserToTeams(bitbucketConfiguration: BitbucketConfiguration, teamName: string, projects, membersAddedToTeamEvent) {
         try {
+            await this.ocService.login();
             const devopsProject = `${_.kebabCase(teamName).toLowerCase()}-devops`;
             await this.ocService.addTeamMembershipPermissionsToProject(devopsProject, membersAddedToTeamEvent);
             for (const project of projects) {

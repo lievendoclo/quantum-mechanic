@@ -47,11 +47,13 @@ Consider creating a new project called ${projectName}. Click the button below to
             });
     }
 
-    public gluonProjectsWhichBelongToGluonTeam(ctx: HandlerContext, teamName: string): Promise<any[]> {
+    public gluonProjectsWhichBelongToGluonTeam(ctx: HandlerContext, teamName: string, promptToCreateIfNoProjects = true): Promise<any[]> {
         return axios.get(`${QMConfig.subatomic.gluon.baseUrl}/projects?teamName=${teamName}`)
             .then(projects => {
                 if (!_.isEmpty(projects.data._embedded)) {
                     return Promise.resolve(projects.data._embedded.projectResources);
+                } else if (!promptToCreateIfNoProjects) {
+                    return Promise.resolve([]);
                 }
 
                 return ctx.messageClient.respond({
