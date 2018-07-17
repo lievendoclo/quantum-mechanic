@@ -404,6 +404,12 @@ export class ConfigurePackage extends RecursiveParameterRequestCommand {
                 name: appBuildName,
             },
             spec: {
+                resources: {
+                    limits: {
+                        cpu: "0",
+                        memory: "0",
+                    },
+                },
                 source: {
                     type: "Git",
                     git: {
