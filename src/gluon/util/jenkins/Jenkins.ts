@@ -4,7 +4,7 @@ import {AxiosInstance, AxiosPromise} from "axios-https-proxy-fix";
 import * as https from "https";
 import * as _ from "lodash";
 import * as qs from "query-string";
-import {addAxiosLogger} from "../shared/axiosLogger";
+import {addAxiosLogger} from "../shared/AxiosLogger";
 
 export class JenkinsService {
     public kickOffFirstBuild(jenkinsHost: string,

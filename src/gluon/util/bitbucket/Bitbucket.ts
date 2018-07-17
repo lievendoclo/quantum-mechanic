@@ -9,7 +9,7 @@ import * as fs from "fs";
 import * as https from "https";
 import * as path from "path";
 import {QMConfig} from "../../../config/QMConfig";
-import {addAxiosLogger} from "../shared/axiosLogger";
+import {addAxiosLogger} from "../shared/AxiosLogger";
 import {QMError} from "../shared/Error";
 import {createMenu} from "../shared/GenericMenu";
 import {isSuccessCode} from "../shared/Http";
