@@ -4,7 +4,11 @@ import {AxiosInstance, AxiosPromise} from "axios-https-proxy-fix";
 import * as https from "https";
 import * as _ from "lodash";
 import * as qs from "query-string";
+import * as util from "util";
 import {addAxiosLogger} from "../shared/AxiosLogger";
+import {QMError} from "../shared/Error";
+import {isSuccessCode} from "../shared/Http";
+import {retryFunction} from "../shared/RetryFunction";
 
 export class JenkinsService {
     public kickOffFirstBuild(jenkinsHost: string,
@@ -104,6 +108,43 @@ export class JenkinsService {
                     "Authorization": `Bearer ${token}`,
                 },
             });
+    }
+
+    public async createJenkinsCredentialsWithRetries(retryAttempts: number, intervalTime: number, jenkinsHost: string,
+                                                     token: string, gluonProjectId: string, jenkinsCredentials, fileDetails: { fileName: string, filePath: string } = null) {
+        const maxRetries = retryAttempts;
+        const waitTime = intervalTime;
+        const result = await retryFunction(maxRetries, waitTime, async (attemptNumber: number) => {
+            logger.warn(`Trying to create jenkins credentials. Attempt number ${attemptNumber}.`);
+            try {
+                let createCredentialsResult;
+                if (fileDetails === null) {
+                    createCredentialsResult = await this.createGlobalCredentials(jenkinsHost, token, gluonProjectId, jenkinsCredentials);
+                } else {
+                    createCredentialsResult = await this.createGlobalCredentialsWithFile(jenkinsHost, token, gluonProjectId, jenkinsCredentials, fileDetails.filePath, fileDetails.fileName);
+                }
+
+                if (!isSuccessCode(createCredentialsResult.status)) {
+                    logger.warn("Failed to create jenkins credentials.");
+                    if (attemptNumber < maxRetries) {
+                        logger.warn(`Waiting to retry again in ${waitTime}ms...`);
+                    }
+                    return false;
+                }
+
+                return true;
+            } catch (error) {
+                logger.warn(`Failed to create jenkins credentials. Error: ${util.inspect(error)}`);
+                if (attemptNumber < maxRetries) {
+                    logger.warn(`Waiting to retry again in ${waitTime}ms...`);
+                }
+                return false;
+            }
+        });
+
+        if (!result) {
+            throw new QMError("Failed to create jenkins credentials. Instance was non responsive.");
+        }
     }
 }
 

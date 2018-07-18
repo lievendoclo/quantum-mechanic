@@ -20,7 +20,6 @@ import {
     handleQMError,
     QMError,
 } from "../../util/shared/Error";
-import {isSuccessCode} from "../../util/shared/Http";
 import {TaskListMessage, TaskStatus} from "../../util/shared/TaskListMessage";
 
 const promiseRetry = require("promise-retry");
@@ -236,9 +235,9 @@ export class DevOpsEnvironmentRequested implements HandleEvent<any> {
                     }
                 });
         }, {
-            // Retry for up to 3 mins
+            // Retry for up to 8 mins
             factor: 1,
-            retries: 19,
+            retries: 59,
             minTimeout: 20000,
         });
     }
@@ -258,65 +257,56 @@ export class DevOpsEnvironmentRequested implements HandleEvent<any> {
 
     private async addJenkinsCredentials(projectId: string, jenkinsHost: string, token: string) {
         logger.debug(`Using Jenkins Route host [${jenkinsHost}] to add Bitbucket credentials`);
-        const createBitbucketGlobalCredentialsResult = await this.jenkinsService.createGlobalCredentials(
-            jenkinsHost,
-            token,
-            projectId,
-            {
-                "": "0",
-                "credentials": {
-                    scope: "GLOBAL",
-                    id: `${projectId}-bitbucket`,
-                    username: QMConfig.subatomic.bitbucket.auth.username,
-                    password: QMConfig.subatomic.bitbucket.auth.password,
-                    description: `${projectId}-bitbucket`,
-                    $class: "com.cloudbees.plugins.credentials.impl.UsernamePasswordCredentialsImpl",
-                },
-            });
-
-        if (!isSuccessCode(createBitbucketGlobalCredentialsResult.status)) {
-            throw new QMError("Failed to created Bitbucket Global Credentials in Jenkins");
-        }
-
-        const createNexusGlobalCredentialsResult = await this.jenkinsService.createGlobalCredentials(
-            jenkinsHost,
-            token,
-            projectId,
-            {
-                "": "0",
-                "credentials": {
-                    scope: "GLOBAL",
-                    id: "nexus-base-url",
-                    secret: `${QMConfig.subatomic.nexus.baseUrl}/content/repositories/`,
-                    description: "Nexus base URL",
-                    $class: "org.jenkinsci.plugins.plaincredentials.impl.StringCredentialsImpl",
-                },
-            });
-
-        if (!isSuccessCode(createNexusGlobalCredentialsResult.status)) {
-            throw new QMError("Failed to create Nexus Global Credentials in Jenkins");
-        }
-
-        const createMavenGlobalCredentialsResult = await this.jenkinsService.createGlobalCredentialsWithFile(
-            jenkinsHost,
-            token,
-            projectId,
-            {
-                "": "0",
-                "credentials": {
-                    scope: "GLOBAL",
-                    id: "maven-settings",
-                    file: "file",
-                    fileName: "settings.xml",
-                    description: "Maven settings.xml",
-                    $class: "org.jenkinsci.plugins.plaincredentials.impl.FileCredentialsImpl",
-                },
+        const bitbucketCredentials = {
+            "": "0",
+            "credentials": {
+                scope: "GLOBAL",
+                id: `${projectId}-bitbucket`,
+                username: QMConfig.subatomic.bitbucket.auth.username,
+                password: QMConfig.subatomic.bitbucket.auth.password,
+                description: `${projectId}-bitbucket`,
+                $class: "com.cloudbees.plugins.credentials.impl.UsernamePasswordCredentialsImpl",
             },
-            QMConfig.subatomic.maven.settingsPath,
-            "settings.xml");
+        };
 
-        if (!isSuccessCode(createMavenGlobalCredentialsResult.status)) {
-            throw new QMError("Failed to create Maven Global Credentials in Jenkins");
+        await this.createGlobalCredentialsFor("Bitbucket", jenkinsHost, token, projectId, bitbucketCredentials);
+
+        const nexusCredentials = {
+            "": "0",
+            "credentials": {
+                scope: "GLOBAL",
+                id: "nexus-base-url",
+                secret: `${QMConfig.subatomic.nexus.baseUrl}/content/repositories/`,
+                description: "Nexus base URL",
+                $class: "org.jenkinsci.plugins.plaincredentials.impl.StringCredentialsImpl",
+            },
+        };
+
+        await this.createGlobalCredentialsFor("Nexus", jenkinsHost, token, projectId, nexusCredentials);
+
+        const mavenCredentials = {
+            "": "0",
+            "credentials": {
+                scope: "GLOBAL",
+                id: "maven-settings",
+                file: "file",
+                fileName: "settings.xml",
+                description: "Maven settings.xml",
+                $class: "org.jenkinsci.plugins.plaincredentials.impl.FileCredentialsImpl",
+            },
+        };
+
+        await this.createGlobalCredentialsFor("Maven", jenkinsHost, token, projectId, mavenCredentials, {
+            filePath: QMConfig.subatomic.maven.settingsPath,
+            fileName: "settings.xml",
+        });
+    }
+
+    private async createGlobalCredentialsFor(forName: string, jenkinsHost: string, token: string, projectId: string, credentials, fileDetails: { fileName: string, filePath: string } = null) {
+        try {
+            await this.jenkinsService.createJenkinsCredentialsWithRetries(6, 5000, jenkinsHost, token, projectId, credentials, fileDetails);
+        } catch (error) {
+            throw new QMError(`Failed to create ${forName} Global Credentials in Jenkins`);
         }
     }
 
