@@ -10,15 +10,15 @@ import * as _ from "lodash";
 import {OCCommandResult} from "../../../openshift/base/OCCommandResult";
 import {BitbucketService} from "../../util/bitbucket/Bitbucket";
 import {BitbucketConfiguration} from "../../util/bitbucket/BitbucketConfiguration";
+import {OCService} from "../../util/openshift/OCService";
 import {getProjectDisplayName} from "../../util/project/Project";
 import {ProjectService} from "../../util/project/ProjectService";
 import {
     ChannelMessageClient,
     handleQMError,
     logErrorAndReturnSuccess,
-    OCResultError,
+    OCResultError, QMError,
 } from "../../util/shared/Error";
-import {addOpenshiftMembershipPermissions} from "./DevOpsEnvironmentRequested";
 
 @EventHandler("Receive MembershipRequestCreated events", `
 subscription MembersAddedToTeamEvent {
@@ -50,7 +50,9 @@ subscription MembersAddedToTeamEvent {
 `)
 export class MembersAddedToTeam implements HandleEvent<any> {
 
-    constructor(private projectService = new ProjectService(), private bitbucketService = new BitbucketService()) {
+    constructor(private projectService = new ProjectService(),
+                private bitbucketService = new BitbucketService(),
+                private ocService = new OCService()) {
     }
 
     public async handle(event: EventFired<any>, ctx: HandlerContext): Promise<HandlerResult> {
@@ -61,13 +63,7 @@ export class MembersAddedToTeam implements HandleEvent<any> {
         try {
             const team = membersAddedToTeamEvent.team;
 
-            let projects;
-            try {
-                projects = await this.projectService.gluonProjectsWhichBelongToGluonTeam(ctx, team.name);
-            } catch (error) {
-                // TODO: We probably dont want to have the gluonProjectsWhichBelong to team thing catch these errors for events
-                return logErrorAndReturnSuccess(this.projectService.gluonProjectsWhichBelongToGluonTeam.name, error);
-            }
+            const projects = await this.getListOfTeamProjects(ctx, team.name);
 
             const bitbucketConfiguration = this.getBitbucketConfiguration(membersAddedToTeamEvent);
 
@@ -77,6 +73,16 @@ export class MembersAddedToTeam implements HandleEvent<any> {
         } catch (error) {
             return await this.handleError(ctx, error, membersAddedToTeamEvent.team.slackIdentity.teamChannel);
         }
+    }
+
+    private async getListOfTeamProjects(ctx: HandlerContext, teamName: string) {
+        let projects;
+        try {
+            projects = await this.projectService.gluonProjectsWhichBelongToGluonTeam(ctx, teamName, false);
+        } catch (error) {
+            throw new QMError(error, "Failed to get list of projects associated with this team.");
+        }
+        return projects;
     }
 
     private getBitbucketConfiguration(membersAddedToTeamEvent): BitbucketConfiguration {
@@ -90,8 +96,9 @@ export class MembersAddedToTeam implements HandleEvent<any> {
 
     private async addPermissionsForUserToTeams(bitbucketConfiguration: BitbucketConfiguration, teamName: string, projects, membersAddedToTeamEvent) {
         try {
+            await this.ocService.login();
             const devopsProject = `${_.kebabCase(teamName).toLowerCase()}-devops`;
-            await addOpenshiftMembershipPermissions(devopsProject, membersAddedToTeamEvent);
+            await this.ocService.addTeamMembershipPermissionsToProject(devopsProject, membersAddedToTeamEvent);
             for (const project of projects) {
                 logger.info(`Configuring permissions for project: ${project}`);
                 // Add to bitbucket
@@ -99,7 +106,7 @@ export class MembersAddedToTeam implements HandleEvent<any> {
                 // Add to openshift environments
                 for (const environment of ["dev", "sit", "uat"]) {
                     const projectId = getProjectDisplayName(project.owningTenant, project.name, environment);
-                    await addOpenshiftMembershipPermissions(projectId, membersAddedToTeamEvent);
+                    await this.ocService.addTeamMembershipPermissionsToProject(projectId, membersAddedToTeamEvent);
                 }
             }
         } catch (error) {

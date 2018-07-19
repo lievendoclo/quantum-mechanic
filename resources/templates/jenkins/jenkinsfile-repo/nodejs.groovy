@@ -87,7 +87,7 @@ node('nodejs') {
         tag = "${version}-${shortGitCommit}"
         echo "Building NPM Application ${app}:${tag} from commit ${scmVars} with BuildConfig ${appBuildConfig}"
 
-        sh ': NPM build && npm install && npm run test:cypress'
+        sh ': NPM build && npm install'
     }
 
     if (env.BRANCH_NAME == 'master' || !env.BRANCH_NAME) {

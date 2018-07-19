@@ -12,7 +12,7 @@ import {SlackMessage, url} from "@atomist/slack-messages";
 import {Attachment} from "@atomist/slack-messages/SlackMessages";
 import * as _ from "lodash";
 import {QMConfig} from "../../../config/QMConfig";
-import {OCClient} from "../../../openshift/OCClient";
+import {OCService} from "../../util/openshift/OCService";
 import {ProjectService} from "../../util/project/ProjectService";
 import {
     handleQMError,
@@ -58,12 +58,16 @@ export class CreateOpenShiftPvc extends RecursiveParameterRequestCommand {
     public pvcName: string;
 
     constructor(private teamService = new TeamService(),
-                private projectService = new ProjectService()) {
+                private projectService = new ProjectService(),
+                private ocService = new OCService()) {
         super();
     }
 
     protected async runCommand(ctx: HandlerContext): Promise<HandlerResult> {
         try {
+
+            await this.ocService.login();
+
             const projectId = _.kebabCase(this.gluonProjectName);
 
             if (this.openShiftProjectNames === "all") {
@@ -75,7 +79,7 @@ export class CreateOpenShiftPvc extends RecursiveParameterRequestCommand {
 
             for (const environment of this.openShiftProjectNames.split(",")) {
                 logger.debug(`Adding PVC to OpenShift project: ${environment}`);
-                await OCClient.createPvc(pvcName, environment);
+                await this.ocService.createPVC(pvcName, environment);
                 pvcAttachments.push({
                     fallback: `PVC created`,
                     text: `

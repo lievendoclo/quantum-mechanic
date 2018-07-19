@@ -142,7 +142,7 @@ export class AddMemberToTeam implements HandleCommand<HandlerResult> {
                 (team: any) => team.slack.teamChannel === this.teamChannel);
 
             if (!_.isEmpty(teamSlackChannel)) {
-                return await this.inviteUserToTeam(ctx, newMember, actioningMember, teamSlackChannel, this.channelId, this.screenName, this.teamId, this.teamChannel, this.slackName);
+                return await this.inviteUserToTeam(ctx, newMember, actioningMember, teamSlackChannel, this.channelId, newMember.slack.userId, this.teamId, this.teamChannel, this.slackName);
             } else {
                 return await this.alertTeamDoesNotExist(ctx);
             }
@@ -203,6 +203,7 @@ export class AddMemberToTeam implements HandleCommand<HandlerResult> {
 
             return await this.welcomeMemberToTeam(ctx, newMember, teamSlackChannel, actioningMember, teamChannel);
         } catch (error) {
+            logger.warn(error);
             return await ctx.messageClient.addressChannels(`User ${slackName} successfully added to your gluon team. Private channels do not currently support automatic user invitation.` +
                 " Please invite the user to this slack channel manually.", teamChannel);
         }
