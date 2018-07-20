@@ -6,8 +6,8 @@ import {
 import {KickOffJenkinsBuild} from "./gluon/commands/jenkins/JenkinsBuild";
 import {OnboardMember} from "./gluon/commands/member/Onboard";
 import {AddSlackDetails} from "./gluon/commands/member/Slack";
+import {ConfigureBasicPackage} from "./gluon/commands/packages/ConfigureBasicPackage";
 import {
-    ConfigureBasicPackage,
     ConfigurePackage,
 } from "./gluon/commands/packages/ConfigurePackage";
 import {CreateApplication} from "./gluon/commands/packages/CreateApplication";

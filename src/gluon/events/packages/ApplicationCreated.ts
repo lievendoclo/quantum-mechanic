@@ -10,7 +10,7 @@ import {
 import {buttonForCommand} from "@atomist/automation-client/spi/message/MessageClient";
 import {url} from "@atomist/slack-messages";
 import {QMConfig} from "../../../config/QMConfig";
-import {ConfigureBasicPackage} from "../../commands/packages/ConfigurePackage";
+import {ConfigureBasicPackage} from "../../commands/packages/ConfigureBasicPackage";
 
 @EventHandler("Receive ApplicationCreatedEvent events", `
 subscription ApplicationCreatedEvent {
