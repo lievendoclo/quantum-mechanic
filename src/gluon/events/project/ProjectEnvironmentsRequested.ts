@@ -12,8 +12,8 @@ import * as _ from "lodash";
 import {QMConfig} from "../../../config/QMConfig";
 import {OCCommandResult} from "../../../openshift/base/OCCommandResult";
 import {QMTemplate} from "../../../template/QMTemplate";
-import {LinkExistingApplication} from "../../commands/packages/CreateApplication";
-import {LinkExistingLibrary} from "../../commands/packages/CreateLibrary";
+import {LinkExistingApplication} from "../../commands/packages/LinkExistingApplication";
+import {LinkExistingLibrary} from "../../commands/packages/LinkExistingLibrary";
 import {JenkinsService} from "../../util/jenkins/Jenkins";
 import {OCService} from "../../util/openshift/OCService";
 import {
