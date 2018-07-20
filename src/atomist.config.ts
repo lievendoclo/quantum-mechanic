@@ -6,15 +6,13 @@ import {
 import {KickOffJenkinsBuild} from "./gluon/commands/jenkins/JenkinsBuild";
 import {OnboardMember} from "./gluon/commands/member/Onboard";
 import {AddSlackDetails} from "./gluon/commands/member/Slack";
+import {ConfigureBasicPackage} from "./gluon/commands/packages/ConfigureBasicPackage";
 import {
-    ConfigureBasicPackage,
     ConfigurePackage,
 } from "./gluon/commands/packages/ConfigurePackage";
-import {
-    CreateApplication,
-    LinkExistingApplication,
-} from "./gluon/commands/packages/CreateApplication";
-import {LinkExistingLibrary} from "./gluon/commands/packages/CreateLibrary";
+import {CreateApplication} from "./gluon/commands/packages/CreateApplication";
+import {LinkExistingApplication} from "./gluon/commands/packages/LinkExistingApplication";
+import {LinkExistingLibrary} from "./gluon/commands/packages/LinkExistingLibrary";
 import {AddConfigServer} from "./gluon/commands/project/AddConfigServer";
 import {AssociateTeam} from "./gluon/commands/project/AssociateTeam";
 import {CreateOpenShiftPvc} from "./gluon/commands/project/CreateOpenShiftPvc";

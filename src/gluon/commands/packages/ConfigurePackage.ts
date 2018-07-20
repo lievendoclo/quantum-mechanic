@@ -16,22 +16,17 @@ import {url} from "@atomist/slack-messages";
 import * as _ from "lodash";
 import {QMConfig} from "../../../config/QMConfig";
 import {QMTemplate} from "../../../template/QMTemplate";
-import {JenkinsService} from "../../util/jenkins/Jenkins";
-import {OCService} from "../../util/openshift/OCService";
+import {GluonService} from "../../services/gluon/GluonService";
+import {JenkinsService} from "../../services/jenkins/JenkinsService";
+import {OCService} from "../../services/openshift/OCService";
 import {
-    ApplicationService,
     ApplicationType,
     menuForApplications,
 } from "../../util/packages/Applications";
-import {PackageDefinition} from "../../util/packages/PackageDefinition";
 import {getProjectDevOpsId, getProjectId} from "../../util/project/Project";
-import {
-    menuForProjects,
-    ProjectService,
-} from "../../util/project/ProjectService";
+import {menuForProjects} from "../../util/project/Project";
 import {
     handleQMError,
-    logErrorAndReturnSuccess,
     QMError,
     ResponderMessageClient,
 } from "../../util/shared/Error";
@@ -41,115 +36,8 @@ import {
     RecursiveParameter,
     RecursiveParameterRequestCommand,
 } from "../../util/shared/RecursiveParameterRequestCommand";
-import {TenantService} from "../../util/shared/TenantService";
-import {menuForTeams, TeamService} from "../../util/team/TeamService";
+import {menuForTeams} from "../../util/team/Teams";
 import {KickOffJenkinsBuild} from "../jenkins/JenkinsBuild";
-
-@CommandHandler("Configure an existing application/library using a predefined template", QMConfig.subatomic.commandPrefix + " configure package")
-export class ConfigureBasicPackage extends RecursiveParameterRequestCommand {
-    @MappedParameter(MappedParameters.SlackUserName)
-    public screenName: string;
-
-    @MappedParameter(MappedParameters.SlackChannelName)
-    public teamChannel: string;
-
-    @Parameter({
-        description: "application name",
-        required: false,
-        displayable: false,
-    })
-    public applicationName: string;
-
-    @Parameter({
-        description: "project name",
-        required: false,
-        displayable: false,
-    })
-    public projectName: string;
-
-    @Parameter({
-        description: "team name",
-        required: false,
-        displayable: false,
-    })
-    public teamName: string;
-
-    @RecursiveParameter({
-        description: "package definition file",
-    })
-    public packageDefinition: string;
-
-    private readonly PACKAGE_DEFINITION_EXTENSION = ".json";
-    private readonly PACKAGE_DEFINITION_FOLDER = "resources/package-definitions/";
-
-    protected async runCommand(ctx: HandlerContext): Promise<HandlerResult> {
-        try {
-            return await this.callPackageConfiguration(ctx);
-        } catch (error) {
-            return await handleQMError(new ResponderMessageClient(ctx), error);
-        }
-    }
-
-    protected async setNextParameter(ctx: HandlerContext): Promise<HandlerResult> {
-        if (_.isEmpty(this.packageDefinition)) {
-            return await this.requestPackageDefinitionFile(ctx);
-        }
-    }
-
-    private async requestPackageDefinitionFile(ctx: HandlerContext): Promise<HandlerResult> {
-        const fs = require("fs");
-        const packageDefinitionOptions: string [] = [];
-        logger.info(`Searching folder: ${this.PACKAGE_DEFINITION_FOLDER}`);
-        fs.readdirSync(this.PACKAGE_DEFINITION_FOLDER).forEach(file => {
-            logger.info(`Found file: ${file}`);
-            if (file.endsWith(this.PACKAGE_DEFINITION_EXTENSION)) {
-                packageDefinitionOptions.push(this.getNameFromDefinitionPath(file));
-            }
-        });
-        return await createMenu(ctx, packageDefinitionOptions.map(packageDefinition => {
-                return {
-                    value: packageDefinition,
-                    text: packageDefinition,
-                };
-            }),
-            this,
-            "Please select a package definition to use for your project",
-            "Select a package definition",
-            "packageDefinition");
-    }
-
-    private async callPackageConfiguration(ctx: HandlerContext): Promise<HandlerResult> {
-        const configTemplate: QMTemplate = new QMTemplate(this.getPathFromDefinitionName(this.packageDefinition));
-        const definition: PackageDefinition = JSON.parse(configTemplate.build(QMConfig.publicConfig()));
-
-        const configurePackage = new ConfigurePackage();
-        configurePackage.screenName = this.screenName;
-        configurePackage.teamChannel = this.teamChannel;
-        configurePackage.openshiftTemplate = definition.openshiftTemplate || "";
-        configurePackage.jenkinsfileName = definition.jenkinsfile;
-        configurePackage.baseS2IImage = definition.buildConfig.imageStream;
-        if (definition.buildConfig.envVariables != null) {
-            configurePackage.buildEnvironmentVariables = definition.buildConfig.envVariables;
-        }
-        configurePackage.applicationName = this.applicationName;
-        configurePackage.teamName = this.teamName;
-        configurePackage.projectName = this.projectName;
-
-        return await configurePackage.handle(ctx);
-    }
-
-    private getNameFromDefinitionPath(definitionPath: string): string {
-        const definitionSlashSplit = definitionPath.split("/");
-        let name = definitionSlashSplit[definitionSlashSplit.length - 1];
-        // Remove file extension
-        name = name.substring(0, definitionPath.length - this.PACKAGE_DEFINITION_EXTENSION.length);
-        return name;
-    }
-
-    private getPathFromDefinitionName(definitionName: string): string {
-        return this.PACKAGE_DEFINITION_FOLDER + definitionName + this.PACKAGE_DEFINITION_EXTENSION;
-    }
-}
 
 @CommandHandler("Configure an existing application/library", QMConfig.subatomic.commandPrefix + " configure custom package")
 export class ConfigurePackage extends RecursiveParameterRequestCommand {
@@ -196,10 +84,7 @@ export class ConfigurePackage extends RecursiveParameterRequestCommand {
     private readonly JENKINSFILE_FOLDER = "resources/templates/jenkins/jenkinsfile-repo/";
     private readonly JENKINSFILE_EXISTS = "JENKINS_FILE_EXISTS";
 
-    constructor(private teamService = new TeamService(),
-                private tenantService = new TenantService(),
-                private projectService = new ProjectService(),
-                private applicationService = new ApplicationService(),
+    constructor(private gluonService = new GluonService(),
                 private jenkinsService = new JenkinsService(),
                 private ocService = new OCService()) {
         super();
@@ -219,11 +104,11 @@ export class ConfigurePackage extends RecursiveParameterRequestCommand {
     protected async setNextParameter(ctx: HandlerContext): Promise<HandlerResult> {
         if (_.isEmpty(this.teamName)) {
             try {
-                const team = await this.teamService.gluonTeamForSlackTeamChannel(this.teamChannel);
+                const team = await this.gluonService.teams.gluonTeamForSlackTeamChannel(this.teamChannel);
                 this.teamName = team.name;
                 return await this.handle(ctx);
             } catch (error) {
-                const teams = await this.teamService.gluonTeamsWhoSlackScreenNameBelongsTo(ctx, this.screenName);
+                const teams = await this.gluonService.teams.gluonTeamsWhoSlackScreenNameBelongsTo(this.screenName);
                 return await menuForTeams(
                     ctx,
                     teams,
@@ -233,11 +118,11 @@ export class ConfigurePackage extends RecursiveParameterRequestCommand {
 
         }
         if (_.isEmpty(this.projectName)) {
-            const projects = await this.projectService.gluonProjectsWhichBelongToGluonTeam(ctx, this.teamName);
+            const projects = await this.gluonService.projects.gluonProjectsWhichBelongToGluonTeam(this.teamName);
             return await menuForProjects(ctx, projects, this, "Please select the owning project of the package you wish to configure");
         }
         if (_.isEmpty(this.applicationName)) {
-            const applications = await this.applicationService.gluonApplicationsLinkedToGluonProject(ctx, this.projectName);
+            const applications = await this.gluonService.applications.gluonApplicationsLinkedToGluonProject(this.projectName);
             return await menuForApplications(ctx, applications, this, "Please select the package you wish to configure");
         }
         if (_.isEmpty(this.openshiftTemplate)) {
@@ -262,8 +147,8 @@ export class ConfigurePackage extends RecursiveParameterRequestCommand {
 
     private async requestJenkinsFileParameter(ctx: HandlerContext): Promise<HandlerResult> {
 
-        const project = await this.projectService.gluonProjectFromProjectName(ctx, this.projectName);
-        const application = await this.applicationService.gluonApplicationForNameAndProjectName(ctx, this.applicationName, this.projectName);
+        const project = await this.gluonService.projects.gluonProjectFromProjectName(this.projectName);
+        const application = await this.gluonService.applications.gluonApplicationForNameAndProjectName(this.applicationName, this.projectName);
         const username = QMConfig.subatomic.bitbucket.auth.username;
         const password = QMConfig.subatomic.bitbucket.auth.password;
         const gitProject: GitProject = await GitCommandGitProject.cloned({
@@ -319,19 +204,10 @@ export class ConfigurePackage extends RecursiveParameterRequestCommand {
     }
 
     private async configurePackage(ctx: HandlerContext): Promise<HandlerResult> {
-        let project;
-        try {
-            project = await this.projectService.gluonProjectFromProjectName(ctx, this.projectName);
-        } catch (error) {
-            return await logErrorAndReturnSuccess(this.projectService.gluonProjectFromProjectName.name, error);
-        }
+        const project = await this.gluonService.projects.gluonProjectFromProjectName(this.projectName);
 
-        let application;
-        try {
-            application = await this.applicationService.gluonApplicationForNameAndProjectName(ctx, this.applicationName, this.projectName);
-        } catch (error) {
-            return await logErrorAndReturnSuccess(this.applicationService.gluonApplicationForNameAndProjectName.name, error);
-        }
+        const application = await this.gluonService.applications.gluonApplicationForNameAndProjectName(this.applicationName, this.projectName);
+
         return await this.doConfiguration(
             ctx,
             project.name,
@@ -419,7 +295,6 @@ export class ConfigurePackage extends RecursiveParameterRequestCommand {
                         ref: "master",
                     },
                     sourceSecret: {
-                        // TODO should this be configurable?
                         name: "bitbucket-ssh",
                     },
                 },
@@ -456,7 +331,6 @@ export class ConfigurePackage extends RecursiveParameterRequestCommand {
             );
         }
 
-        // TODO this should be extracted to a configurable QMTemplate
         await this.ocService.createResourceFromDataInNamespace(
             buildConfig,
             teamDevOpsProjectId,
@@ -497,53 +371,32 @@ export class ConfigurePackage extends RecursiveParameterRequestCommand {
 
             await this.createApplicationBuildConfig(bitbucketRepoRemoteUrl, appBuildName, this.baseS2IImage, teamDevOpsProjectId);
 
-            const project = await this.projectService.gluonProjectFromProjectName(ctx, projectName);
+            const project = await this.gluonService.projects.gluonProjectFromProjectName(projectName);
             logger.info(`Trying to find tenant: ${project.owningTenant}`);
-            const tenant = await this.tenantService.gluonTenantFromTenantId(project.owningTenant);
+            const tenant = await this.gluonService.tenants.gluonTenantFromTenantId(project.owningTenant);
             logger.info(`Found tenant: ${tenant}`);
             await this.createApplicationOpenshiftResources(tenant.name, project.name, packageName);
 
-            return await this.sendApplicationProvisionedMessage(ctx, packageName, projectName, associatedTeams);
+            return await this.sendPackageProvisionedMessage(ctx, packageName, projectName, associatedTeams, ApplicationType.DEPLOYABLE);
         } else {
-            return await this.sendLibraryProvisionedMessage(ctx, packageName, projectName, associatedTeams);
+            return await this.sendPackageProvisionedMessage(ctx, packageName, projectName, associatedTeams, ApplicationType.LIBRARY);
         }
     }
 
-    private async sendApplicationProvisionedMessage(ctx: HandlerContext, applicationName: string, projectName: string, associatedTeams: any[]) {
-        return await ctx.messageClient.addressChannels({
-            text: `Your application *${applicationName}*, in project *${projectName}*, has been provisioned successfully ` +
-            "and is ready to build and deploy to your project environments",
-            attachments: [{
-                fallback: `Your application has been provisioned successfully`,
-                footer: `For more information, please read the ${this.docs() + "#jenkins-build"}`,
-                text: `
-You can kick off the build pipeline for your application by clicking the button below or pushing changes to your application's repository`,
-                mrkdwn_in: ["text"],
-                actions: [
-                    buttonForCommand(
-                        {
-                            text: "Start build",
-                            style: "primary",
-                        },
-                        new KickOffJenkinsBuild(),
-                        {
-                            projectName,
-                            applicationName,
-                        }),
-                ],
-            }],
-        }, associatedTeams.map(team =>
-            team.slack.teamChannel));
-    }
+    private async sendPackageProvisionedMessage(ctx: HandlerContext, applicationName: string, projectName: string, associatedTeams: any[], applicationType: ApplicationType) {
+        let packageTypeString = "application";
+        if (applicationType === ApplicationType.LIBRARY) {
+            packageTypeString = "library";
+        }
 
-    private async sendLibraryProvisionedMessage(ctx: HandlerContext, applicationName: string, projectName: string, associatedTeams: any[]) {
         return await ctx.messageClient.addressChannels({
-            text: "Your library has been provisioned successfully and is ready to build",
+            text: `Your ${packageTypeString} *${applicationName}*, in project *${projectName}*, has been provisioned successfully ` +
+            "and is ready to build/deploy",
             attachments: [{
-                fallback: `Your library has been provisioned successfully`,
+                fallback: `Your ${packageTypeString} has been provisioned successfully`,
                 footer: `For more information, please read the ${this.docs() + "#jenkins-build"}`,
                 text: `
-You can kick off the build pipeline for your library by clicking the button below or pushing changes to your library's repository`,
+You can kick off the build pipeline for your ${packageTypeString} by clicking the button below or pushing changes to your ${packageTypeString}'s repository`,
                 mrkdwn_in: ["text"],
                 actions: [
                     buttonForCommand(

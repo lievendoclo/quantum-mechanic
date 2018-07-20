@@ -13,8 +13,8 @@ import {timeout, TimeoutError} from "promise-timeout";
 import {QMConfig} from "../../../config/QMConfig";
 import {AddConfigServer} from "../../commands/project/AddConfigServer";
 import {CreateProject} from "../../commands/project/CreateProject";
-import {JenkinsService} from "../../util/jenkins/Jenkins";
-import {OCService} from "../../util/openshift/OCService";
+import {JenkinsService} from "../../services/jenkins/JenkinsService";
+import {OCService} from "../../services/openshift/OCService";
 import {
     ChannelMessageClient,
     handleQMError,

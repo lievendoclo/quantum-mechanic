@@ -12,16 +12,11 @@ import {
 } from "@atomist/automation-client";
 import {buttonForCommand} from "@atomist/automation-client/spi/message/MessageClient";
 import {SlackMessage, url} from "@atomist/slack-messages";
-import axios from "axios";
 import {QMConfig} from "../../../config/QMConfig";
 import {NewDevOpsEnvironment} from "../../commands/team/DevOpsEnvironment";
 import {AddMemberToTeam} from "../../commands/team/JoinTeam";
-import {
-    ChannelMessageClient,
-    handleQMError,
-    QMError,
-} from "../../util/shared/Error";
-import {isSuccessCode} from "../../util/shared/Http";
+import {GluonService} from "../../services/gluon/GluonService";
+import {ChannelMessageClient, handleQMError} from "../../util/shared/Error";
 
 @EventHandler("Display a helpful message when the bot joins a channel",
     `subscription BotJoinedChannel {
@@ -66,6 +61,9 @@ export class BotJoinedChannel implements HandleEvent<any> {
 
     @MappedParameter(MappedParameters.SlackChannelName)
     public slackChannelName: string;
+
+    constructor(private gluonService = new GluonService()) {
+    }
 
     public async handle(event: EventFired<any>, ctx: HandlerContext): Promise<HandlerResult> {
         const botJoinedChannel = event.data.UserJoinedChannel[0];
@@ -116,17 +114,11 @@ If you haven't already, you might want to:
     }
 
     private async getTeams(channelName: string) {
-        const teams = await axios.get(`${QMConfig.subatomic.gluon.baseUrl}/teams?slackTeamChannel=${channelName}`);
-
-        if (!isSuccessCode(teams.status)) {
-            throw new QMError("Unable to connect to Subatomic. Please check your connection");
-        }
-
-        return teams;
+        return await this.gluonService.teams.gluonTeamForSlackTeamChannel(channelName);
     }
 
     private docs(): string {
-        return `${url(`${QMConfig.subatomic.docs.baseUrl}/new-to-subatomic`,
+        return `${url(`${QMConfig.subatomic.docs.baseUrl}`,
             "documentation")}`;
     }
 }

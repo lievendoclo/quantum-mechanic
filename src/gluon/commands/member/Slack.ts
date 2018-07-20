@@ -8,8 +8,8 @@ import {
     MappedParameters,
     Parameter,
 } from "@atomist/automation-client";
-import axios from "axios";
 import {QMConfig} from "../../../config/QMConfig";
+import {GluonService} from "../../services/gluon/GluonService";
 import {isSuccessCode} from "../../util/shared/Http";
 
 @CommandHandler("Add Slack details to an existing team member", QMConfig.subatomic.commandPrefix + " add slack")
@@ -26,6 +26,9 @@ export class AddSlackDetails implements HandleCommand<HandlerResult> {
         pattern: /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/,
     })
     public email: string;
+
+    constructor(private gluonService = new GluonService()) {
+    }
 
     public async handle(ctx: HandlerContext): Promise<HandlerResult> {
         logger.info(`Adding Slack details for member: ${this.email}`);
@@ -53,12 +56,11 @@ export class AddSlackDetails implements HandleCommand<HandlerResult> {
     }
 
     private async findGluonMemberByEmail(emailAddress: string) {
-        return await axios.get(`${QMConfig.subatomic.gluon.baseUrl}/members?email=${emailAddress}`);
+        return await this.gluonService.members.gluonMemberFromEmailAddress(emailAddress);
     }
 
     private async updateGluonMemberSlackDetails(slackScreenName: string, slackUserId: string, gluonMemberId: string) {
-        return await axios.put(
-            `${QMConfig.subatomic.gluon.baseUrl}/members/${gluonMemberId}`,
+        return await this.gluonService.members.updateMemberSlackDetails(gluonMemberId,
             {
                 slack: {
                     screenName: slackScreenName,
