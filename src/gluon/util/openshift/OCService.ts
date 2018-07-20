@@ -16,18 +16,21 @@ export class OCService {
     }
 
     public async newDevOpsProject(openshiftProjectId: string, teamName: string): Promise<OCCommandResult> {
+        logger.debug(`Trying to create new Dev Ops environment. openshiftProjectId: ${openshiftProjectId}; teamName: ${teamName} `);
         return await OCClient.newProject(openshiftProjectId,
             `${teamName} DevOps`,
             `DevOps environment for ${teamName} [managed by Subatomic]`);
     }
 
     public async newSubatomicProject(openshiftProjectId: string, projectName: string, owningTenant: string, environment: string[]): Promise<OCCommandResult> {
+        logger.debug(`Trying to create new Subatomic Project. openshiftProjectId: ${openshiftProjectId}; projectName: ${projectName}; environment: ${JSON.stringify(environment)} `);
         return await OCClient.newProject(openshiftProjectId,
             getProjectDisplayName(owningTenant, projectName, environment[0]),
             `${environment[1]} environment for ${projectName} [managed by Subatomic]`);
     }
 
     public async createDevOpsDefaultResourceQuota(openshiftProjectId: string): Promise<OCCommandResult> {
+        logger.debug(`Trying to create Dev Ops default resource quota. openshiftProjectId: ${openshiftProjectId}`);
         return await OCCommon.createFromData({
             apiVersion: "v1",
             kind: "ResourceQuota",
@@ -47,6 +50,7 @@ export class OCService {
     }
 
     public async createDevOpsDefaultLimits(openshiftProjectId: string): Promise<OCCommandResult> {
+        logger.debug(`Trying to create Dev Ops default limits. openshiftProjectId: ${openshiftProjectId}`);
         return await OCCommon.createFromData({
             apiVersion: "v1",
             kind: "LimitRange",
@@ -76,6 +80,7 @@ export class OCService {
     }
 
     public async createProjectDefaultResourceQuota(openshiftProjectId: string): Promise<OCCommandResult> {
+        logger.debug(`Trying to create project default resource quota. openshiftProjectId: ${openshiftProjectId}`);
         return await OCCommon.createFromData({
             apiVersion: "v1",
             kind: "ResourceQuota",
@@ -97,6 +102,7 @@ export class OCService {
     }
 
     public async createProjectDefaultLimits(openshiftProjectId: string): Promise<OCCommandResult> {
+        logger.debug(`Trying to create project default limits. openshiftProjectId: ${openshiftProjectId}`);
         return await OCCommon.createFromData({
             apiVersion: "v1",
             kind: "LimitRange",
@@ -126,6 +132,7 @@ export class OCService {
     }
 
     public async getSubatomicTemplate(templateName: string): Promise<OCCommandResult> {
+        logger.debug(`Trying to get subatomic template. templateName: ${templateName}`);
         return await OCCommon.commonCommand("get", "templates",
             [templateName],
             [
@@ -136,6 +143,7 @@ export class OCService {
     }
 
     public async getSubatomicAppTemplates(namespace = "subatomic"): Promise<OCCommandResult> {
+        logger.debug(`Trying to get subatomic templates. namespace: ${namespace}`);
         return await OCCommon.commonCommand("get", "templates",
             [],
             [
@@ -147,6 +155,7 @@ export class OCService {
     }
 
     public async getJenkinsTemplate(): Promise<OCCommandResult> {
+        logger.debug(`Trying to get jenkins template.`);
         return await OCCommon.commonCommand("get", "templates",
             ["jenkins-persistent-subatomic"],
             [
@@ -157,6 +166,7 @@ export class OCService {
     }
 
     public async getSubatomicImageStreamTags(namespace = "subatomic") {
+        logger.debug(`Trying to get subatomic image stream. namespace: ${namespace}`);
         return OCCommon.commonCommand("get", "istag",
             [],
             [
@@ -168,6 +178,7 @@ export class OCService {
     }
 
     public async createResourceFromDataInNamespace(resourceDefinition: any, projectNamespace: string, applyNotReplace: boolean = false): Promise<OCCommandResult> {
+        logger.debug(`Trying to create resource from data in namespace. projectNamespace: ${projectNamespace}`);
         return await OCCommon.createFromData(resourceDefinition,
             [
                 new SimpleOption("-namespace", projectNamespace),
@@ -176,12 +187,14 @@ export class OCService {
     }
 
     public async tagSubatomicImageToNamespace(imageStreamTagName: string, destinationProjectNamespace: string, destinationImageStreamTagName: string = imageStreamTagName): Promise<OCCommandResult> {
+        logger.debug(`Trying tag subatomic image to namespace. imageStreamTagName: ${imageStreamTagName}; destinationProjectNamespace: ${destinationProjectNamespace}; destingationImageStreamTagName: ${destinationImageStreamTagName}`);
         return await OCCommon.commonCommand("tag",
             `subatomic/${imageStreamTagName}`,
             [`${destinationProjectNamespace}/${destinationImageStreamTagName}`]);
     }
 
     public async processJenkinsTemplateForDevOpsProject(devopsNamespace: string): Promise<OCCommandResult> {
+        logger.debug(`Trying to process jenkins template for devops project template. devopsNamespace: ${devopsNamespace}`);
         const parameters = [
             `NAMESPACE=${devopsNamespace}`,
             "JENKINS_IMAGE_STREAM_TAG=jenkins-subatomic:2.0",
@@ -199,6 +212,7 @@ export class OCService {
     }
 
     public async processOpenshiftTemplate(templateName: string, namespace: string, parameters: string[], ignoreUnknownParameters: boolean = false) {
+        logger.debug(`Trying to process openshift template in namespace. templateName: ${templateName}; namespace: ${namespace}, paramaters: ${JSON.stringify(parameters)}`);
         const commandOptions: AbstractOption[] = [];
         if (ignoreUnknownParameters) {
             commandOptions.push(new StandardOption("ignore-unknown-parameters", "true"));
@@ -218,6 +232,7 @@ export class OCService {
     }
 
     public async getDeploymentConfigInNamespace(dcName: string, namespace: string): Promise<OCCommandResult> {
+        logger.debug(`Trying to get dc in namespace. dcName: ${dcName}, namespace: ${namespace}`);
         return await OCCommon.commonCommand("get", `dc/${dcName}`, [],
             [
                 new SimpleOption("-namespace", namespace),
@@ -225,6 +240,7 @@ export class OCService {
     }
 
     public async rolloutDeploymentConfigInNamespace(dcName: string, namespace: string): Promise<OCCommandResult> {
+        logger.debug(`Trying to rollout dc in namespace. dcName: ${dcName}, namespace: ${namespace}`);
         return await OCCommon.commonCommand(
             "rollout status",
             `dc/${dcName}`,
@@ -236,6 +252,7 @@ export class OCService {
     }
 
     public async getServiceAccountToken(serviceAccountName: string, namespace: string): Promise<OCCommandResult> {
+        logger.debug(`Trying to get service account token in namespace. serviceAccountName: ${serviceAccountName}, namespace: ${namespace}`);
         return await OCCommon.commonCommand("serviceaccounts",
             "get-token",
             [
@@ -246,6 +263,7 @@ export class OCService {
     }
 
     public async annotateJenkinsRoute(namespace: string): Promise<OCCommandResult> {
+        logger.debug(`Trying to annotate jenkins route in namespace. namespace: ${namespace}`);
         return await OCCommon.commonCommand("annotate route",
             "jenkins",
             [],
@@ -256,6 +274,7 @@ export class OCService {
     }
 
     public async getJenkinsHost(namespace: string): Promise<OCCommandResult> {
+        logger.debug(`Trying to get jenkins host in namespace. namespace: ${namespace}`);
         return await OCCommon.commonCommand(
             "get",
             "route/jenkins",
@@ -267,6 +286,7 @@ export class OCService {
     }
 
     public async getSecretFromNamespace(secretName: string, namespace: string): Promise<OCCommandResult> {
+        logger.debug(`Trying to get secret in namespace. secretName: ${secretName}, namespace: ${namespace}`);
         return await OCCommon.commonCommand("get secrets",
             secretName,
             [],
@@ -276,6 +296,7 @@ export class OCService {
     }
 
     public async createBitbucketSSHAuthSecret(secretName: string, namespace: string): Promise<OCCommandResult> {
+        logger.debug(`Trying to create bitbucket ssh auth secret in namespace. secretName: ${secretName}, namespace: ${namespace}`);
         return await OCCommon.commonCommand("secrets new-sshauth",
             secretName,
             [],
@@ -287,6 +308,7 @@ export class OCService {
     }
 
     public async createConfigServerSecret(namespace: string): Promise<OCCommandResult> {
+        logger.debug(`Trying to create config server secret. namespace: ${namespace}`);
         return await OCCommon.commonCommand("create secret generic",
             "subatomic-config-server",
             [],
@@ -298,6 +320,7 @@ export class OCService {
     }
 
     public async addTeamMembershipPermissionsToProject(projectId: string, team: { owners: Array<{ domainUsername }>, members: Array<{ domainUsername }> }) {
+        logger.debug(`Trying to add team membership permission to project.`);
         await team.owners.map(async owner => {
             const ownerUsername = /[^\\]*$/.exec(owner.domainUsername)[0];
             logger.info(`Adding role to project [${projectId}] and owner [${owner.domainUsername}]: ${ownerUsername}`);
@@ -315,6 +338,7 @@ export class OCService {
     }
 
     public async createPodNetwork(projectsToJoin: string[], projectToJoinTo: string): Promise<OCCommandResult> {
+        logger.debug(`Trying to create pod network. projectsToJoin: ${JSON.stringify(projectsToJoin)}; projectToJoinTo: ${projectToJoinTo}`);
         return await OCCommon.commonCommand(
             "adm pod-network",
             "join-projects",
@@ -325,12 +349,14 @@ export class OCService {
     }
 
     public async addRoleToUserInNamespace(user: string, role: string, namespace: string): Promise<OCCommandResult> {
+        logger.debug(`Trying to add role to user in namespace: user: ${user}; role: ${role}; namespace: ${namespace}`);
         return await OCClient.policy.addRoleToUser(user,
             role,
             namespace);
     }
 
     public async createPVC(pvcName: string, namespace: string): Promise<OCCommandResult> {
+        logger.debug(`Trying to create pvc in namespace. pvcName: ${pvcName}; namespace: ${namespace}`);
         return await OCClient.createPvc(pvcName, namespace);
     }
 }

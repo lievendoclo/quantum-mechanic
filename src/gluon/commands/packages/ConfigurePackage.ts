@@ -31,7 +31,6 @@ import {
 } from "../../util/project/ProjectService";
 import {
     handleQMError,
-    logErrorAndReturnSuccess,
     QMError,
     ResponderMessageClient,
 } from "../../util/shared/Error";
@@ -223,7 +222,7 @@ export class ConfigurePackage extends RecursiveParameterRequestCommand {
                 this.teamName = team.name;
                 return await this.handle(ctx);
             } catch (error) {
-                const teams = await this.teamService.gluonTeamsWhoSlackScreenNameBelongsTo(ctx, this.screenName);
+                const teams = await this.teamService.gluonTeamsWhoSlackScreenNameBelongsTo(this.screenName);
                 return await menuForTeams(
                     ctx,
                     teams,
@@ -233,11 +232,11 @@ export class ConfigurePackage extends RecursiveParameterRequestCommand {
 
         }
         if (_.isEmpty(this.projectName)) {
-            const projects = await this.projectService.gluonProjectsWhichBelongToGluonTeam(ctx, this.teamName);
+            const projects = await this.projectService.gluonProjectsWhichBelongToGluonTeam(this.teamName);
             return await menuForProjects(ctx, projects, this, "Please select the owning project of the package you wish to configure");
         }
         if (_.isEmpty(this.applicationName)) {
-            const applications = await this.applicationService.gluonApplicationsLinkedToGluonProject(ctx, this.projectName);
+            const applications = await this.applicationService.gluonApplicationsLinkedToGluonProject(this.projectName);
             return await menuForApplications(ctx, applications, this, "Please select the package you wish to configure");
         }
         if (_.isEmpty(this.openshiftTemplate)) {
@@ -262,8 +261,8 @@ export class ConfigurePackage extends RecursiveParameterRequestCommand {
 
     private async requestJenkinsFileParameter(ctx: HandlerContext): Promise<HandlerResult> {
 
-        const project = await this.projectService.gluonProjectFromProjectName(ctx, this.projectName);
-        const application = await this.applicationService.gluonApplicationForNameAndProjectName(ctx, this.applicationName, this.projectName);
+        const project = await this.projectService.gluonProjectFromProjectName(this.projectName);
+        const application = await this.applicationService.gluonApplicationForNameAndProjectName(this.applicationName, this.projectName);
         const username = QMConfig.subatomic.bitbucket.auth.username;
         const password = QMConfig.subatomic.bitbucket.auth.password;
         const gitProject: GitProject = await GitCommandGitProject.cloned({
@@ -319,19 +318,10 @@ export class ConfigurePackage extends RecursiveParameterRequestCommand {
     }
 
     private async configurePackage(ctx: HandlerContext): Promise<HandlerResult> {
-        let project;
-        try {
-            project = await this.projectService.gluonProjectFromProjectName(ctx, this.projectName);
-        } catch (error) {
-            return await logErrorAndReturnSuccess(this.projectService.gluonProjectFromProjectName.name, error);
-        }
+        const project = await this.projectService.gluonProjectFromProjectName(this.projectName);
 
-        let application;
-        try {
-            application = await this.applicationService.gluonApplicationForNameAndProjectName(ctx, this.applicationName, this.projectName);
-        } catch (error) {
-            return await logErrorAndReturnSuccess(this.applicationService.gluonApplicationForNameAndProjectName.name, error);
-        }
+        const application = await this.applicationService.gluonApplicationForNameAndProjectName(this.applicationName, this.projectName);
+
         return await this.doConfiguration(
             ctx,
             project.name,
@@ -497,7 +487,7 @@ export class ConfigurePackage extends RecursiveParameterRequestCommand {
 
             await this.createApplicationBuildConfig(bitbucketRepoRemoteUrl, appBuildName, this.baseS2IImage, teamDevOpsProjectId);
 
-            const project = await this.projectService.gluonProjectFromProjectName(ctx, projectName);
+            const project = await this.projectService.gluonProjectFromProjectName(projectName);
             logger.info(`Trying to find tenant: ${project.owningTenant}`);
             const tenant = await this.tenantService.gluonTenantFromTenantId(project.owningTenant);
             logger.info(`Found tenant: ${tenant}`);

@@ -81,7 +81,7 @@ export class KickOffJenkinsBuild extends RecursiveParameterRequestCommand {
                 this.teamName = team.name;
                 return await this.handle(ctx);
             } catch (error) {
-                const teams = await this.teamService.gluonTeamsWhoSlackScreenNameBelongsTo(ctx, this.screenName);
+                const teams = await this.teamService.gluonTeamsWhoSlackScreenNameBelongsTo(this.screenName);
                 return await menuForTeams(
                     ctx,
                     teams,
@@ -90,7 +90,7 @@ export class KickOffJenkinsBuild extends RecursiveParameterRequestCommand {
             }
         }
         if (_.isEmpty(this.projectName)) {
-            const projects = await this.projectService.gluonProjectsWhichBelongToGluonTeam(ctx, this.teamName);
+            const projects = await this.projectService.gluonProjectsWhichBelongToGluonTeam(this.teamName);
             return menuForProjects(
                 ctx,
                 projects,
@@ -98,7 +98,7 @@ export class KickOffJenkinsBuild extends RecursiveParameterRequestCommand {
                 "Please select a project which contains the application you would like to build");
         }
         if (_.isEmpty(this.applicationName)) {
-            const applications = await this.applicationService.gluonApplicationsLinkedToGluonProject(ctx, this.projectName);
+            const applications = await this.applicationService.gluonApplicationsLinkedToGluonProject(this.projectName);
             return await menuForApplications(
                 ctx,
                 applications,

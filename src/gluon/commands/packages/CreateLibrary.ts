@@ -8,7 +8,6 @@ import {
     Parameter,
     success,
 } from "@atomist/automation-client";
-import axios from "axios";
 import * as _ from "lodash";
 import {QMConfig} from "../../../config/QMConfig";
 import {
@@ -16,11 +15,16 @@ import {
     menuForBitbucketRepositories,
 } from "../../util/bitbucket/Bitbucket";
 import {MemberService} from "../../util/member/Members";
-import {ApplicationType} from "../../util/packages/Applications";
-import {menuForProjects, ProjectService} from "../../util/project/ProjectService";
+import {
+    ApplicationService,
+    ApplicationType,
+} from "../../util/packages/Applications";
+import {
+    menuForProjects,
+    ProjectService,
+} from "../../util/project/ProjectService";
 import {
     handleQMError,
-    logErrorAndReturnSuccess,
     QMError,
     ResponderMessageClient,
 } from "../../util/shared/Error";
@@ -70,7 +74,8 @@ export class LinkExistingLibrary extends RecursiveParameterRequestCommand {
     constructor(private teamService = new TeamService(),
                 private projectService = new ProjectService(),
                 private memberService = new MemberService(),
-                private bitbucketService = new BitbucketService()) {
+                private bitbucketService = new BitbucketService(),
+                private applicationService = new ApplicationService()) {
         super();
     }
 
@@ -81,7 +86,6 @@ export class LinkExistingLibrary extends RecursiveParameterRequestCommand {
             }, this.teamChannel);
 
             return await this.linkLibraryForGluonProject(
-                ctx,
                 this.screenName,
                 this.name,
                 this.description,
@@ -100,7 +104,7 @@ export class LinkExistingLibrary extends RecursiveParameterRequestCommand {
                 this.teamName = team.name;
                 return await this.handle(ctx);
             } catch (error) {
-                const teams = await this.teamService.gluonTeamsWhoSlackScreenNameBelongsTo(ctx, this.screenName);
+                const teams = await this.teamService.gluonTeamsWhoSlackScreenNameBelongsTo(this.screenName);
                 return menuForTeams(
                     ctx,
                     teams,
@@ -110,7 +114,7 @@ export class LinkExistingLibrary extends RecursiveParameterRequestCommand {
             }
         }
         if (_.isEmpty(this.projectName)) {
-            const projects = await this.projectService.gluonProjectsWhichBelongToGluonTeam(ctx, this.teamName);
+            const projects = await this.projectService.gluonProjectsWhichBelongToGluonTeam(this.teamName);
             return menuForProjects(
                 ctx,
                 projects,
@@ -118,7 +122,7 @@ export class LinkExistingLibrary extends RecursiveParameterRequestCommand {
                 "Please select a project to which you would like to link a library to");
         }
         if (_.isEmpty(this.bitbucketRepositorySlug)) {
-            const project = await this.projectService.gluonProjectFromProjectName(ctx, this.projectName);
+            const project = await this.projectService.gluonProjectFromProjectName(this.projectName);
             if (_.isEmpty(project.bitbucketProject)) {
                 throw new QMError(`The selected project does not have an associated bitbucket project. Please first associate a bitbucket project using the \`${QMConfig.subatomic.commandPrefix} link bitbucket project\` command.`);
             }
@@ -138,16 +142,15 @@ export class LinkExistingLibrary extends RecursiveParameterRequestCommand {
         }
     }
 
-    private async linkLibraryForGluonProject(ctx: HandlerContext,
-                                             slackScreeName: string,
+    private async linkLibraryForGluonProject(slackScreeName: string,
                                              libraryName: string,
                                              libraryDescription: string,
                                              bitbucketRepositorySlug: string,
                                              gluonProjectName: string): Promise<HandlerResult> {
-        const project = await this.projectService.gluonProjectFromProjectName(ctx, gluonProjectName);
+        const project = await this.projectService.gluonProjectFromProjectName(gluonProjectName);
         logger.debug(`Linking Bitbucket repository: ${bitbucketRepositorySlug}`);
 
-        return await this.linkBitbucketRepository(ctx,
+        return await this.linkBitbucketRepository(
             slackScreeName,
             libraryName,
             libraryDescription,
@@ -156,8 +159,7 @@ export class LinkExistingLibrary extends RecursiveParameterRequestCommand {
             project.projectId);
     }
 
-    private async linkBitbucketRepository(ctx: HandlerContext,
-                                          slackScreeName: string,
+    private async linkBitbucketRepository(slackScreeName: string,
                                           libraryName: string,
                                           libraryDescription: string,
                                           bitbucketRepositorySlug: string,
@@ -171,17 +173,13 @@ export class LinkExistingLibrary extends RecursiveParameterRequestCommand {
 
         const repo = repoResult.data;
 
-        let member;
-        try {
-            member = await this.memberService.gluonMemberFromScreenName(ctx, slackScreeName);
-        } catch (error) {
-            return await logErrorAndReturnSuccess(this.memberService.gluonMemberFromScreenName.name, error);
-        }
+        const member = await this.memberService.gluonMemberFromScreenName(slackScreeName);
+
         const remoteUrl = _.find(repo.links.clone, clone => {
             return (clone as any).name === "ssh";
         }) as any;
 
-        const createApplicationResult = await axios.post(`${QMConfig.subatomic.gluon.baseUrl}/applications`,
+        const createApplicationResult = await this.applicationService.createGluonApplication(
             {
                 name: libraryName,
                 description: libraryDescription,

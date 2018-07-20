@@ -15,12 +15,11 @@ import {addBotToSlackChannel} from "@atomist/lifecycle-automation/handlers/comma
 import {inviteUserToSlackChannel} from "@atomist/lifecycle-automation/handlers/command/slack/AssociateRepo";
 import {createChannel} from "@atomist/lifecycle-automation/handlers/command/slack/CreateChannel";
 import {SlackMessage, url} from "@atomist/slack-messages";
-import axios from "axios";
 import * as _ from "lodash";
 import {QMConfig} from "../../../config/QMConfig";
+import {MemberService} from "../../util/member/Members";
 import {
     handleQMError,
-    logErrorAndReturnSuccess,
     QMError,
     ResponderMessageClient,
 } from "../../util/shared/Error";
@@ -105,10 +104,13 @@ export class NewTeamSlackChannel implements HandleCommand {
     })
     public teamChannel: string;
 
+    constructor(private teamService = new TeamService(), private teamSlackChannelService = new TeamSlackChannelService()) {
+    }
+
     public async handle(ctx: HandlerContext): Promise<HandlerResult> {
         try {
             this.teamChannel = _.isEmpty(this.teamChannel) ? this.teamName : this.teamChannel;
-            return await linkSlackChannelToGluonTeam(ctx, this.teamName, this.teamId, this.teamChannel, this.docs(), true);
+            return await this.teamSlackChannelService.linkSlackChannelToGluonTeam(ctx, this.teamName, this.teamId, this.teamChannel, this.docs(), true);
         } catch (error) {
             return await this.handleError(ctx, error);
         }
@@ -146,26 +148,23 @@ export class LinkExistingTeamSlackChannel extends RecursiveParameterRequestComma
     })
     public teamChannel: string;
 
-    constructor(private teamService = new TeamService()) {
+    constructor(private teamService = new TeamService(),
+                private teamSlackChannelService = new TeamSlackChannelService()) {
         super();
     }
 
     protected async runCommand(ctx: HandlerContext) {
-        return await linkSlackChannelToGluonTeam(ctx, this.teamName, this.teamId, this.teamChannel, this.docs(), false);
+        return await this.teamSlackChannelService.linkSlackChannelToGluonTeam(ctx, this.teamName, this.teamId, this.teamChannel, this.docs(), false);
     }
 
     protected async setNextParameter(ctx: HandlerContext): Promise<HandlerResult> {
         if (_.isEmpty(this.teamName)) {
-            try {
-                const teams = await this.teamService.gluonTeamsWhoSlackScreenNameBelongsTo(ctx, this.slackScreenName);
-                return await menuForTeams(
-                    ctx,
-                    teams,
-                    this,
-                    "Please select the team you would like to link the slack channel to");
-            } catch (error) {
-                return await logErrorAndReturnSuccess(this.teamService.gluonTeamsWhoSlackScreenNameBelongsTo.name, error);
-            }
+            const teams = await this.teamService.gluonTeamsWhoSlackScreenNameBelongsTo(this.slackScreenName);
+            return await menuForTeams(
+                ctx,
+                teams,
+                this,
+                "Please select the team you would like to link the slack channel to");
         }
     }
 
@@ -175,113 +174,119 @@ export class LinkExistingTeamSlackChannel extends RecursiveParameterRequestComma
     }
 }
 
-async function linkSlackChannelToGluonTeam(ctx: HandlerContext,
-                                           gluonTeamName: string,
-                                           slackTeamId: string,
-                                           slackChannelName: string,
-                                           documentationLink: string,
-                                           isNewChannel: boolean): Promise<HandlerResult> {
-    let finalisedSlackChannelName: string = slackChannelName;
-    if (isNewChannel) {
-        finalisedSlackChannelName = _.kebabCase(slackChannelName);
+export class TeamSlackChannelService {
+
+    constructor(private teamService = new TeamService(), private memberService = new MemberService()) {
     }
 
-    const teamQueryResult = await axios.get(`${QMConfig.subatomic.gluon.baseUrl}/teams?name=${gluonTeamName}`);
+    public async linkSlackChannelToGluonTeam(ctx: HandlerContext,
+                                             gluonTeamName: string,
+                                             slackTeamId: string,
+                                             slackChannelName: string,
+                                             documentationLink: string,
+                                             isNewChannel: boolean): Promise<HandlerResult> {
+        let finalisedSlackChannelName: string = slackChannelName;
+        if (isNewChannel) {
+            finalisedSlackChannelName = _.kebabCase(slackChannelName);
+        }
 
-    if (isSuccessCode(teamQueryResult.status)) {
-        const team = teamQueryResult.data._embedded.teamResources[0];
+        const teamQueryResult = await this.teamService.gluonTeamByName(gluonTeamName);
 
-        logger.info(`Updating team channel [${finalisedSlackChannelName}]: ${team.teamId}`);
+        if (isSuccessCode(teamQueryResult.status)) {
+            const team = teamQueryResult.data._embedded.teamResources[0];
 
-        await axios.put(`${QMConfig.subatomic.gluon.baseUrl}/teams/${team.teamId}`,
-            {
+            logger.info(`Updating team channel [${finalisedSlackChannelName}]: ${team.teamId}`);
+
+            await this.teamService.addSlackDetailsToTeam(team.teamId, {
                 slack: {
                     teamChannel: finalisedSlackChannelName,
                 },
             });
 
-        return await createTeamSlackChannel(ctx, slackTeamId, slackChannelName, team);
-    } else {
-        return await requestNonExistentTeamsCreation(ctx, gluonTeamName, documentationLink);
-    }
-}
-
-async function createTeamSlackChannel(ctx: HandlerContext, slackTeamId: string, slackChannelName: string, team): Promise<HandlerResult> {
-    try {
-        const channel = await createChannel(ctx, slackTeamId, slackChannelName);
-        if (channel && channel.createSlackChannel) {
-            await addBotToSlackChannel(ctx, slackTeamId, channel.createSlackChannel.id);
-
-            await inviteListOfGluonMembersToChannel(ctx, slackTeamId, channel.createSlackChannel.id, slackChannelName, team.members);
-
-            await inviteListOfGluonMembersToChannel(ctx, slackTeamId, channel.createSlackChannel.id, slackChannelName, team.owners);
-
-            return await success();
+            await this.createTeamSlackChannel(ctx, slackTeamId, slackChannelName, team);
+        } else {
+            return await this.requestNonExistentTeamsCreation(ctx, gluonTeamName, documentationLink);
         }
-        // allow error to fall through to final return otherwise
-    } catch (err) {
-        if (err.networkError && err.networkError.response && err.networkError.response.status === 400) {
-            return await ctx.messageClient.respond(`The channel has been successfully linked to your team but since the channel "${slackChannelName}" is private` +
-                ` the atomist bot cannot be automatically invited. Please manually invite the atomist bot using the \`/invite @atomist\` command in the "${slackChannelName}" slack channel.`);
-        }
-        // allow error to fall through to final return otherwise
     }
-    throw new QMError(`Channel with channel name ${slackChannelName} could not be created.`);
 
-}
-
-async function inviteListOfGluonMembersToChannel(ctx: HandlerContext, slackTeamId: string, channelId: string, slackChannelName: string, memberList): Promise<void> {
-    for (const member of memberList) {
+    private async createTeamSlackChannel(ctx: HandlerContext, slackTeamId: string, slackChannelName: string, team): Promise<HandlerResult> {
         try {
-            await tryInviteGluonMemberToChannel(ctx, member.memberId, slackTeamId, channelId);
+            const channel = await createChannel(ctx, slackTeamId, slackChannelName);
+            if (channel && channel.createSlackChannel) {
+                await addBotToSlackChannel(ctx, slackTeamId, channel.createSlackChannel.id);
+
+                await this.inviteListOfGluonMembersToChannel(ctx, slackTeamId, channel.createSlackChannel.id, slackChannelName, team.members);
+
+                await this.inviteListOfGluonMembersToChannel(ctx, slackTeamId, channel.createSlackChannel.id, slackChannelName, team.owners);
+
+                return await success();
+            }
+            // allow error to fall through to final return otherwise
         } catch (err) {
-            // Don't outright fail. Just alert the user.
-            await ctx.messageClient.respond(`❗Unable to invite member "${member.firstName} ${member.lastName}" to channel ${slackChannelName}. Failed with error message: ${err.message}`);
+            if (err.networkError && err.networkError.response && err.networkError.response.status === 400) {
+                return await ctx.messageClient.respond(`The channel has been successfully linked to your team but since the channel "${slackChannelName}" is private` +
+                    ` the atomist bot cannot be automatically invited. Please manually invite the atomist bot using the \`/invite @atomist\` command in the "${slackChannelName}" slack channel.`);
+            }
+            // allow error to fall through to final return otherwise
+        }
+        throw new QMError(`Channel with channel name ${slackChannelName} could not be created.`);
+
+    }
+
+    private async inviteListOfGluonMembersToChannel(ctx: HandlerContext, slackTeamId: string, channelId: string, slackChannelName: string, memberList): Promise<void> {
+        for (const member of memberList) {
+            try {
+                await this.tryInviteGluonMemberToChannel(ctx, member.memberId, slackTeamId, channelId);
+            } catch (err) {
+                // Don't outright fail. Just alert the user.
+                await ctx.messageClient.respond(`❗Unable to invite member "${member.firstName} ${member.lastName}" to channel ${slackChannelName}. Failed with error message: ${err.message}`);
+            }
         }
     }
-}
 
-async function tryInviteGluonMemberToChannel(ctx: HandlerContext,
-                                             gluonMemberId: string,
-                                             slackTeamId: string,
-                                             slackChannelId: string): Promise<any> {
-    logger.info("Creating promise to find and add member: " + gluonMemberId);
-    const memberQueryResponse = await axios.get(`${QMConfig.subatomic.gluon.baseUrl}/members/${gluonMemberId}`);
+    private async tryInviteGluonMemberToChannel(ctx: HandlerContext,
+                                                gluonMemberId: string,
+                                                slackTeamId: string,
+                                                slackChannelId: string): Promise<any> {
+        logger.info("Creating promise to find and add member: " + gluonMemberId);
+        const memberQueryResponse = await this.memberService.gluonMemberFromMemberId(gluonMemberId);
 
-    if (!isSuccessCode(memberQueryResponse.status)) {
-        throw new Error("Unable to find member");
+        if (!isSuccessCode(memberQueryResponse.status)) {
+            throw new Error("Unable to find member");
+        }
+
+        const member = memberQueryResponse.data;
+        if (member.slack !== null) {
+            logger.info(`Inviting member: ${member.firstName}`);
+            return await inviteUserToSlackChannel(ctx, slackTeamId, slackChannelId, member.slack.userId);
+        } else {
+            throw new Error("User has no associated slack id to invite");
+        }
     }
 
-    const member = memberQueryResponse.data;
-    if (member.slack !== null) {
-        logger.info(`Inviting member: ${member.firstName}`);
-        return await inviteUserToSlackChannel(ctx, slackTeamId, slackChannelId, member.slack.userId);
-    } else {
-        throw new Error("User has no associated slack id to invite");
-    }
-}
-
-async function requestNonExistentTeamsCreation(ctx: HandlerContext, gluonTeamName: string, documentationLink: string) {
-    const msg: SlackMessage = {
-        text: `There was an error creating your *${gluonTeamName}* team channel`,
-        attachments: [{
-            text: `
+    private async requestNonExistentTeamsCreation(ctx: HandlerContext, gluonTeamName: string, documentationLink: string) {
+        const msg: SlackMessage = {
+            text: `There was an error creating your *${gluonTeamName}* team channel`,
+            attachments: [{
+                text: `
 Unfortunately this team does not seem to exist on Subatomic.
 To create a team channel you must first create a team. Click the button below to do that now.
                                                   `,
-            fallback: "Team does not exist on Subatomic",
-            footer: `For more information, please read the ${documentationLink}`,
-            color: "#D94649",
-            mrkdwn_in: ["text"],
-            actions: [
-                buttonForCommand(
-                    {
-                        text: "Create team",
-                    },
-                    new CreateTeam()),
-            ],
-        }],
-    };
+                fallback: "Team does not exist on Subatomic",
+                footer: `For more information, please read the ${documentationLink}`,
+                color: "#D94649",
+                mrkdwn_in: ["text"],
+                actions: [
+                    buttonForCommand(
+                        {
+                            text: "Create team",
+                        },
+                        new CreateTeam()),
+                ],
+            }],
+        };
 
-    return await ctx.messageClient.respond(msg);
+        return await ctx.messageClient.respond(msg);
+    }
+
 }

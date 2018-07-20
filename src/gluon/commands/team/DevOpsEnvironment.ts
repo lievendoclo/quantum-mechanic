@@ -8,11 +8,9 @@ import {
     success,
     Tags,
 } from "@atomist/automation-client";
-import axios from "axios";
 import * as _ from "lodash";
 import {QMConfig} from "../../../config/QMConfig";
 import {MemberService} from "../../util/member/Members";
-import {logErrorAndReturnSuccess} from "../../util/shared/Error";
 import {isSuccessCode} from "../../util/shared/Http";
 import {
     RecursiveParameter,
@@ -56,7 +54,7 @@ export class NewDevOpsEnvironment extends RecursiveParameterRequestCommand {
                 this.teamName = team.name;
                 return await this.handle(ctx);
             } catch (slackChannelError) {
-                const teams = await this.teamService.gluonTeamsWhoSlackScreenNameBelongsTo(ctx, this.screenName);
+                const teams = await this.teamService.gluonTeamsWhoSlackScreenNameBelongsTo(this.screenName);
                 return await menuForTeams(
                     ctx,
                     teams,
@@ -74,12 +72,7 @@ export class NewDevOpsEnvironment extends RecursiveParameterRequestCommand {
             text: `Requesting DevOps environment for *${teamName}* team.`,
         }, teamChannel);
 
-        let member;
-        try {
-            member = await this.memberService.gluonMemberFromScreenName(ctx, screenName);
-        } catch (error) {
-            return logErrorAndReturnSuccess(this.memberService.gluonMemberFromScreenName.name, error);
-        }
+        const member = await this.memberService.gluonMemberFromScreenName(screenName);
 
         const teamQueryResult = await this.getGluonTeamFromTeamName(teamName);
 
@@ -102,16 +95,11 @@ export class NewDevOpsEnvironment extends RecursiveParameterRequestCommand {
     }
 
     private async getGluonTeamFromTeamName(teamName: string) {
-        return await axios.get(`${QMConfig.subatomic.gluon.baseUrl}/teams?name=${teamName}`);
+        return await this.teamService.gluonTeamByName(teamName);
     }
 
     private async requestDevOpsEnvironmentThroughGluon(teamId: string, memberId: string) {
-        return await axios.put(`${QMConfig.subatomic.gluon.baseUrl}/teams/${teamId}`,
-            {
-                devOpsEnvironment: {
-                    requestedBy: memberId,
-                },
-            });
+        return await this.teamService.requestDevOpsEnvironment(teamId, memberId);
     }
 
 }

@@ -15,12 +15,17 @@ import {
 } from "@atomist/automation-client/spi/message/MessageClient";
 import {inviteUserToSlackChannel} from "@atomist/lifecycle-automation/handlers/command/slack/AssociateRepo";
 import {SlackMessage, url} from "@atomist/slack-messages";
-import axios from "axios";
 import * as _ from "lodash";
 import {QMConfig} from "../../../config/QMConfig";
 import * as graphql from "../../../typings/types";
-import {handleQMError, QMError, ResponderMessageClient} from "../../util/shared/Error";
+import {MemberService} from "../../util/member/Members";
+import {
+    handleQMError,
+    QMError,
+    ResponderMessageClient,
+} from "../../util/shared/Error";
 import {isSuccessCode} from "../../util/shared/Http";
+import {TeamService} from "../../util/team/TeamService";
 import {ListTeamProjects} from "../project/ProjectDetails";
 import {CreateTeam} from "./CreateTeam";
 
@@ -31,9 +36,12 @@ export class JoinTeam implements HandleCommand<HandlerResult> {
     @MappedParameter(MappedParameters.SlackUser)
     public slackName: string;
 
+    constructor(private teamService = new TeamService()) {
+    }
+
     public async handle(ctx: HandlerContext): Promise<HandlerResult> {
         try {
-            const teamsQueryResult = await axios.get(`${QMConfig.subatomic.gluon.baseUrl}/teams`);
+            const teamsQueryResult = await this.teamService.getAllTeams();
 
             if (!isSuccessCode(teamsQueryResult.status)) {
                 return this.alertUserThatNoTeamsExist(ctx);
@@ -118,6 +126,9 @@ export class AddMemberToTeam implements HandleCommand<HandlerResult> {
     })
     public slackName: string;
 
+    constructor(private teamService = new TeamService(), private memberService = new MemberService()) {
+    }
+
     public async handle(ctx: HandlerContext): Promise<HandlerResult> {
         try {
             logger.info(`Adding member [${this.slackName}] to team: ${this.teamChannel}`);
@@ -128,13 +139,13 @@ export class AddMemberToTeam implements HandleCommand<HandlerResult> {
 
             logger.info(`Got ChatId: ${chatId}`);
 
-            const newMember = await this.getNewMember(ctx, chatId);
+            const newMember = await this.getNewMember(chatId);
 
             logger.info(`Gluon member found: ${JSON.stringify(newMember)}`);
 
             logger.info(`Getting teams that ${this.screenName} (you) are a part of...`);
 
-            const actioningMember = await this.getGluonMemberFromScreenName(this.screenName);
+            const actioningMember = await this.memberService.gluonMemberFromScreenName(this.screenName);
 
             logger.info(`Got member's teams you belong to: ${JSON.stringify(actioningMember)}`);
 
@@ -151,14 +162,8 @@ export class AddMemberToTeam implements HandleCommand<HandlerResult> {
         }
     }
 
-    private async getNewMember(ctx: HandlerContext, chatId: string) {
-        const newMemberQueryResult = await axios.get(`${QMConfig.subatomic.gluon.baseUrl}/members?slackScreenName=${chatId}`);
-
-        if (!isSuccessCode(newMemberQueryResult.status)) {
-            return await alertGluonMemberForSlackMentionDoesNotExist(ctx, this.slackName, this.docs("onboard-me"));
-        }
-
-        const newMember = newMemberQueryResult.data._embedded.teamMemberResources[0];
+    private async getNewMember(chatId: string) {
+        const newMember = await this.memberService.gluonMemberFromScreenName(chatId);
 
         if (!_.isEmpty(_.find(newMember.teams,
             (team: any) => team.slack.teamChannel === this.teamChannel))) {
@@ -168,20 +173,14 @@ export class AddMemberToTeam implements HandleCommand<HandlerResult> {
         return newMember;
     }
 
-    private async getGluonMemberFromScreenName(screenName: string) {
-        const memberResult = await axios.get(`${QMConfig.subatomic.gluon.baseUrl}/members?slackScreenName=${screenName}`);
-        if (!isSuccessCode(memberResult.status)) {
-            throw new QMError(`${this.screenName} does not appear to have been onboarded onto the Subatomic system`);
-        }
-
-        return memberResult.data._embedded.teamMemberResources[0];
-    }
-
     private async inviteUserToTeam(ctx: HandlerContext, newMember, actioningMember, teamSlackChannel, channelId, screenName, teamId, teamChannel, slackName) {
         const newMemberId = newMember.memberId;
-        logger.info(`Adding member [${newMemberId}] to team with ${JSON.stringify(teamSlackChannel._links.self.href)}`);
+        logger.info(`Adding member [${newMemberId}] to team ${JSON.stringify(teamSlackChannel._links.self.href)}`);
 
-        const updateTeamResult = await axios.put(teamSlackChannel._links.self.href,
+        const splitLink = teamSlackChannel._links.self.href.split("/");
+        const gluonTeamId = splitLink[splitLink.length - 1];
+
+        const updateTeamResult = await this.teamService.addMemberToTeam(gluonTeamId,
             {
                 members: [{
                     memberId: newMemberId,
@@ -271,6 +270,10 @@ export class CreateMembershipRequestToTeam implements HandleCommand<HandlerResul
     })
     public slackName: string;
 
+    constructor(private teamService = new TeamService(),
+                private memberService = new MemberService()) {
+    }
+
     public async handle(ctx: HandlerContext): Promise<HandlerResult> {
         logger.info(`Request to join team: ${this.teamId}`);
         try {
@@ -279,7 +282,7 @@ export class CreateMembershipRequestToTeam implements HandleCommand<HandlerResul
 
             const chatId = await loadScreenNameByUserId(ctx, screenName);
 
-            const newMemberQueryResult = await axios.get(`${QMConfig.subatomic.gluon.baseUrl}/members?slackScreenName=${chatId}`);
+            const newMemberQueryResult = await this.memberService.gluonMemberFromScreenName(chatId);
 
             if (!isSuccessCode(newMemberQueryResult.status)) {
                 return await alertGluonMemberForSlackMentionDoesNotExist(ctx, this.slackName, this.docs("onboard-me"));
@@ -294,7 +297,7 @@ export class CreateMembershipRequestToTeam implements HandleCommand<HandlerResul
     }
 
     private async createMembershipRequest(newMember) {
-        const updateTeamResult = await axios.put(`${QMConfig.subatomic.gluon.baseUrl}/teams/${this.teamId}`,
+        const updateTeamResult = await this.teamService.createMembershipRequest(this.teamId,
             {
                 membershipRequests: [
                     {

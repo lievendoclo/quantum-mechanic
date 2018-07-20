@@ -6,11 +6,17 @@ import {
     MappedParameter,
     MappedParameters,
 } from "@atomist/automation-client";
-import axios from "axios";
 import * as _ from "lodash";
 import {QMConfig} from "../../../config/QMConfig";
-import {menuForProjects, ProjectService} from "../../util/project/ProjectService";
-import {handleQMError, QMError, ResponderMessageClient} from "../../util/shared/Error";
+import {
+    menuForProjects,
+    ProjectService,
+} from "../../util/project/ProjectService";
+import {
+    handleQMError,
+    QMError,
+    ResponderMessageClient,
+} from "../../util/shared/Error";
 import {isSuccessCode} from "../../util/shared/Http";
 import {
     RecursiveParameter,
@@ -56,7 +62,7 @@ export class AssociateTeam extends RecursiveParameterRequestCommand {
 
     protected async setNextParameter(ctx: HandlerContext): Promise<HandlerResult> {
         if (_.isEmpty(this.projectName)) {
-            const projects = await this.projectService.gluonProjectList(ctx);
+            const projects = await this.projectService.gluonProjectList();
             return await menuForProjects(
                 ctx,
                 projects,
@@ -65,7 +71,7 @@ export class AssociateTeam extends RecursiveParameterRequestCommand {
             );
         }
         if (_.isEmpty(this.teamName)) {
-            const teams = await this.teamService.gluonTeamsWhoSlackScreenNameBelongsTo(ctx, this.screenName);
+            const teams = await this.teamService.gluonTeamsWhoSlackScreenNameBelongsTo(this.screenName);
             const availTeams = await this.availableTeamsToAssociate(teams, this.projectName);
 
             if (_.isEmpty(availTeams)) {
@@ -82,8 +88,8 @@ export class AssociateTeam extends RecursiveParameterRequestCommand {
     }
 
     private async linkProjectForTeam(ctx: HandlerContext, teamName: string): Promise<HandlerResult> {
-        const team = await axios.get(`${QMConfig.subatomic.gluon.baseUrl}/teams?name=${teamName}`);
-        const gluonProject = await this.projectService.gluonProjectFromProjectName(ctx, this.projectName);
+        const team = await this.teamService.gluonTeamByName(teamName);
+        const gluonProject = await this.projectService.gluonProjectFromProjectName(this.projectName);
         let updateGluonWithProjectDetails;
         try {
             updateGluonWithProjectDetails = await this.updateGluonProject(gluonProject.projectId, gluonProject.createdBy, team.data._embedded.teamResources[0].teamId, team.data._embedded.teamResources[0].name);
@@ -101,7 +107,8 @@ export class AssociateTeam extends RecursiveParameterRequestCommand {
     }
 
     private async updateGluonProject(projectId: string, createdBy: string, teamId: string, name: string) {
-        return await axios.put(`${QMConfig.subatomic.gluon.baseUrl}/projects/${projectId}`,
+
+        return await this.projectService.associateTeamToProject(projectId,
             {
                 productId: `${projectId}`,
                 createdBy: `${createdBy}`,
@@ -126,11 +133,7 @@ export class AssociateTeam extends RecursiveParameterRequestCommand {
             allTeams.push(team.name);
         }
 
-        const projectDetails = await axios.get(`${QMConfig.subatomic.gluon.baseUrl}/projects?name=${projectName}`);
-        if (!isSuccessCode(projectDetails.status)) {
-            throw new QMError("Failed to get project details for the project specified.");
-        }
-        const projectTeams = projectDetails.data._embedded.projectResources[0];
+        const projectTeams = await this.projectService.gluonProjectFromProjectName(projectName);
 
         for (const team of projectTeams.teams) {
             associatedTeams.push(team.name);

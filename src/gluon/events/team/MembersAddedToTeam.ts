@@ -16,8 +16,8 @@ import {ProjectService} from "../../util/project/ProjectService";
 import {
     ChannelMessageClient,
     handleQMError,
-    logErrorAndReturnSuccess,
-    OCResultError, QMError,
+    OCResultError,
+    QMError,
 } from "../../util/shared/Error";
 
 @EventHandler("Receive MembershipRequestCreated events", `
@@ -63,7 +63,7 @@ export class MembersAddedToTeam implements HandleEvent<any> {
         try {
             const team = membersAddedToTeamEvent.team;
 
-            const projects = await this.getListOfTeamProjects(ctx, team.name);
+            const projects = await this.getListOfTeamProjects(team.name);
 
             const bitbucketConfiguration = this.getBitbucketConfiguration(membersAddedToTeamEvent);
 
@@ -75,10 +75,10 @@ export class MembersAddedToTeam implements HandleEvent<any> {
         }
     }
 
-    private async getListOfTeamProjects(ctx: HandlerContext, teamName: string) {
+    private async getListOfTeamProjects(teamName: string) {
         let projects;
         try {
-            projects = await this.projectService.gluonProjectsWhichBelongToGluonTeam(ctx, teamName, false);
+            projects = await this.projectService.gluonProjectsWhichBelongToGluonTeam(teamName, false);
         } catch (error) {
             throw new QMError(error, "Failed to get list of projects associated with this team.");
         }

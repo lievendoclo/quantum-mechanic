@@ -12,9 +12,13 @@ import {
 import {addressSlackUsers} from "@atomist/automation-client/spi/message/MessageClient";
 import {inviteUserToSlackChannel} from "@atomist/lifecycle-automation/handlers/command/slack/AssociateRepo";
 import {SlackMessage} from "@atomist/slack-messages";
-import axios from "axios";
 import {QMConfig} from "../../../config/QMConfig";
-import {handleQMError, QMError, ResponderMessageClient} from "../../util/shared/Error";
+import {MemberService} from "../../util/member/Members";
+import {
+    handleQMError,
+    QMError,
+    ResponderMessageClient,
+} from "../../util/shared/Error";
 import {isSuccessCode} from "../../util/shared/Http";
 
 @CommandHandler("Close a membership request")
@@ -63,6 +67,9 @@ export class MembershipRequestClosed implements HandleCommand<HandlerResult> {
     })
     public approvalStatus: string;
 
+    constructor(private memberService = new MemberService()) {
+    }
+
     public async handle(ctx: HandlerContext): Promise<HandlerResult> {
         logger.info(`Attempting approval from user: ${this.approverUserName}`);
 
@@ -84,19 +91,16 @@ export class MembershipRequestClosed implements HandleCommand<HandlerResult> {
     }
 
     private async findGluonTeamMember(slackScreenName: string) {
-        const approverMemberQueryResult = await axios.get(`${QMConfig.subatomic.gluon.baseUrl}/members?slackScreenName=${slackScreenName}`);
-
-        if (!isSuccessCode(approverMemberQueryResult.status)) {
+        try {
+            return await this.memberService.gluonMemberFromScreenName(slackScreenName, false);
+        } catch (error) {
             logger.error("The approver is not a gluon member. This can only happen if the user was deleted before approving this request.");
             throw new QMError("You are no longer a Subatomic user. Membership request closure failed.");
         }
-
-        return approverMemberQueryResult.data._embedded.teamMemberResources[0];
     }
 
     private async updateGluonMembershipRequest(teamId: string, membershipRequestId: string, approvedByMemberId: string, approvalStatus: string) {
-        const updateMembershipRequestResult = await axios.put(
-            `${QMConfig.subatomic.gluon.baseUrl}/teams/${teamId}`,
+        const updateMembershipRequestResult = await this.memberService.updateGluonMembershipRequest(teamId,
             {
                 membershipRequests: [
                     {

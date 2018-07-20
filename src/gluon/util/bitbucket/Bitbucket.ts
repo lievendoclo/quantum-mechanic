@@ -16,26 +16,32 @@ import {isSuccessCode} from "../shared/Http";
 
 export class BitbucketService {
     public async bitbucketUserFromUsername(username: string): Promise<any> {
+        logger.debug(`Trying to get Bitbucket user from username. username: ${username} `);
         return await bitbucketAxios().get(`${QMConfig.subatomic.bitbucket.restUrl}/api/1.0/admin/users?filter=${username}`);
     }
 
     public async bitbucketProjectFromKey(bitbucketProjectKey: string): Promise<any> {
+        logger.debug(`Trying to get Bitbucket project from project key. bitbucketProjectKey: ${bitbucketProjectKey} `);
         return await bitbucketAxios().get(`${QMConfig.subatomic.bitbucket.restUrl}/api/1.0/projects/${bitbucketProjectKey}`);
     }
 
     public bitbucketRepositoriesForProjectKey(bitbucketProjectKey: string): Promise<any> {
+        logger.debug(`Trying to get Bitbucket repositories associated to project key. bitbucketProjectKey: ${bitbucketProjectKey} `);
         return this.getBitbucketResources(`${QMConfig.subatomic.bitbucket.restUrl}/api/1.0/projects/${bitbucketProjectKey}/repos`);
     }
 
     public async bitbucketRepositoryForSlug(bitbucketProjectKey: string, slug: string): Promise<any> {
+        logger.debug(`Trying to get Bitbucket repository associated to project key with given slug. bitbucketProjectKey: ${bitbucketProjectKey}; slug: ${slug} `);
         return await bitbucketAxios().get(`${QMConfig.subatomic.bitbucket.restUrl}/api/1.0/projects/${bitbucketProjectKey}/repos/${slug}`);
     }
 
     public bitbucketProjects() {
+        logger.debug(`Trying to get all Bitbucket projects.`);
         return this.getBitbucketResources(`${QMConfig.subatomic.bitbucket.restUrl}/api/1.0/projects`);
     }
 
     public async getBitbucketResources(resourceUri: string, axiosInstance: AxiosInstance = null, currentResources = []) {
+        logger.debug(`Trying to get Bitbucket resources: ${resourceUri} `);
         if (axiosInstance === null) {
             axiosInstance = bitbucketAxios();
         }
@@ -53,30 +59,36 @@ export class BitbucketService {
     }
 
     public async addProjectPermission(projectKey: string, user: string, permission: string = "PROJECT_READ"): Promise<any> {
+        logger.debug(`Trying to add Bitbucket project permissions. projectKey: ${projectKey}; user: ${user}; permission: ${permission} `);
         return await bitbucketAxios().put(`${QMConfig.subatomic.bitbucket.restUrl}/api/1.0/projects/${projectKey}/permissions/users?name=${user}&permission=${permission}`,
             {});
     }
 
     public async addBranchPermissions(projectKey: string, permissionsConfig: any): Promise<any> {
+        logger.debug(`Trying to add Bitbucket branch permissions for project. projectKey: ${projectKey} `);
         return await bitbucketAxios().post(`${QMConfig.subatomic.bitbucket.restUrl}/branch-permissions/2.0/projects/${projectKey}/restrictions`,
             permissionsConfig);
     }
 
     public async addProjectWebHook(projectKey: string, hook: string, data = {}): Promise<any> {
+        logger.debug(`Trying to add project web hook. projectKey: ${projectKey}; hook: ${hook} `);
         return await bitbucketAxios().put(`${QMConfig.subatomic.bitbucket.restUrl}/api/1.0/projects/${projectKey}/settings/hooks/${hook}/enabled`,
             data);
     }
 
     public async getDefaultReviewers(projectKey: string): Promise<any> {
+        logger.debug(`Trying to get Bitbucket default reviewers for project. projectKey: ${projectKey} `);
         return await bitbucketAxios().get(`${QMConfig.subatomic.bitbucket.restUrl}/default-reviewers/1.0/projects/${projectKey}/conditions`);
     }
 
     public async addDefaultReviewers(projectKey: string, defaultReviewerConfig: any): Promise<any> {
+        logger.debug(`Trying to add Bitbucket default reviewers for project. projectKey: ${projectKey} `);
         return await bitbucketAxios().post(`${QMConfig.subatomic.bitbucket.restUrl}/default-reviewers/1.0/projects/${projectKey}/condition`,
             defaultReviewerConfig);
     }
 
     public async addBitbucketProjectAccessKeys(projectKey: string) {
+        logger.debug(`Trying to add Bitbucket project access keys. projectKey: ${projectKey} `);
         const accessKeysResult = await bitbucketAxios().post(`${QMConfig.subatomic.bitbucket.restUrl}/keys/1.0/projects/${projectKey}/ssh`,
             {
                 key: {
@@ -98,6 +110,7 @@ export class BitbucketService {
     }
 
     public async createBitbucketProject(projectData: any): Promise<any> {
+        logger.debug(`Trying to create Bitbucket project.`);
         return await bitbucketAxios().post(`${QMConfig.subatomic.bitbucket.restUrl}/api/1.0/projects`,
             projectData);
     }

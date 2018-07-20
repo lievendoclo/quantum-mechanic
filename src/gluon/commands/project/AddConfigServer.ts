@@ -62,7 +62,7 @@ export class AddConfigServer extends RecursiveParameterRequestCommand {
                 const team = await this.teamService.gluonTeamForSlackTeamChannel(this.teamChannel);
                 this.gluonTeamName = team.name;
             } catch (error) {
-                const teams = await this.teamService.gluonTeamsWhoSlackScreenNameBelongsTo(ctx, this.screenName);
+                const teams = await this.teamService.gluonTeamsWhoSlackScreenNameBelongsTo(this.screenName);
                 return await menuForTeams(
                     ctx,
                     teams,

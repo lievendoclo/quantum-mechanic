@@ -8,13 +8,19 @@ import {
     Parameter,
     success,
 } from "@atomist/automation-client";
-import axios from "axios";
 import * as _ from "lodash";
 import {QMConfig} from "../../../config/QMConfig";
 import {BitbucketService} from "../../util/bitbucket/Bitbucket";
 import {MemberService} from "../../util/member/Members";
-import {menuForProjects, ProjectService} from "../../util/project/ProjectService";
-import {handleQMError, QMError, ResponderMessageClient} from "../../util/shared/Error";
+import {
+    menuForProjects,
+    ProjectService,
+} from "../../util/project/ProjectService";
+import {
+    handleQMError,
+    QMError,
+    ResponderMessageClient,
+} from "../../util/shared/Error";
 import {isSuccessCode} from "../../util/shared/Http";
 import {
     RecursiveParameter,
@@ -58,9 +64,9 @@ export class NewBitbucketProject extends RecursiveParameterRequestCommand {
         logger.info(`Team: ${this.teamName}, Project: ${this.projectName}`);
 
         try {
-            const member = await this.memberService.gluonMemberFromScreenName(ctx, this.screenName);
+            const member = await this.memberService.gluonMemberFromScreenName(this.screenName);
 
-            const project = await this.projectService.gluonProjectFromProjectName(ctx, this.projectName);
+            const project = await this.projectService.gluonProjectFromProjectName(this.projectName);
 
             await this.updateGluonWithBitbucketDetails(project.projectId, this.projectName, project.description, member.memberId);
 
@@ -78,7 +84,7 @@ export class NewBitbucketProject extends RecursiveParameterRequestCommand {
                 this.teamName = team.name;
                 return await this.handle(ctx);
             } catch (error) {
-                const teams = await this.teamService.gluonTeamsWhoSlackScreenNameBelongsTo(ctx, this.screenName);
+                const teams = await this.teamService.gluonTeamsWhoSlackScreenNameBelongsTo(this.screenName);
                 return await menuForTeams(
                     ctx,
                     teams,
@@ -89,7 +95,7 @@ export class NewBitbucketProject extends RecursiveParameterRequestCommand {
         }
         if (_.isEmpty(this.projectName)) {
             logger.info("Project name is empty");
-            const projects = await this.projectService.gluonProjectsWhichBelongToGluonTeam(ctx, this.teamName);
+            const projects = await this.projectService.gluonProjectsWhichBelongToGluonTeam(this.teamName);
             return await menuForProjects(
                 ctx,
                 projects,
@@ -100,7 +106,7 @@ export class NewBitbucketProject extends RecursiveParameterRequestCommand {
     }
 
     private async updateGluonWithBitbucketDetails(projectId: string, projectName: string, projectDescription: string, memberId: string) {
-        const updateGluonProjectResult = await axios.put(`${QMConfig.subatomic.gluon.baseUrl}/projects/${projectId}`,
+        const updateGluonProjectResult = await this.projectService.updateProjectWithBitbucketDetails(projectId,
             {
                 bitbucketProject: {
                     name: projectName,
@@ -172,7 +178,7 @@ export class ListExistingBitbucketProject extends RecursiveParameterRequestComma
                 this.teamName = team.name;
                 return await this.handle(ctx);
             } catch (error) {
-                const teams = await this.teamService.gluonTeamsWhoSlackScreenNameBelongsTo(ctx, this.screenName);
+                const teams = await this.teamService.gluonTeamsWhoSlackScreenNameBelongsTo(this.screenName);
                 return await menuForTeams(
                     ctx,
                     teams,
@@ -183,7 +189,7 @@ export class ListExistingBitbucketProject extends RecursiveParameterRequestComma
         }
         if (_.isEmpty(this.projectName)) {
             logger.info("Project name is empty");
-            const projects = await this.projectService.gluonProjectsWhichBelongToGluonTeam(ctx, this.teamName);
+            const projects = await this.projectService.gluonProjectsWhichBelongToGluonTeam(this.teamName);
 
             return await menuForProjects(
                 ctx,
@@ -197,8 +203,8 @@ export class ListExistingBitbucketProject extends RecursiveParameterRequestComma
     private async configBitbucket(ctx: HandlerContext): Promise<HandlerResult> {
         logger.info(`Team: ${this.teamName}, Project: ${this.projectName}`);
 
-        const member = await this.memberService.gluonMemberFromScreenName(ctx, this.screenName);
-        const gluonProject = await this.projectService.gluonProjectFromProjectName(ctx, this.projectName);
+        const member = await this.memberService.gluonMemberFromScreenName(this.screenName);
+        const gluonProject = await this.projectService.gluonProjectFromProjectName(this.projectName);
 
         const projectUiUrl = `${QMConfig.subatomic.bitbucket.baseUrl}/projects/${this.bitbucketProjectKey}`;
 
@@ -226,7 +232,7 @@ export class ListExistingBitbucketProject extends RecursiveParameterRequestComma
     }
 
     private async updateGluonProjectWithBitbucketDetails(bitbucketProjectUiUrl: string, createdByMemberId: string, gluonProject, bitbucketProject) {
-        const updateGluonProjectResult = await axios.put(`${QMConfig.subatomic.gluon.baseUrl}/projects/${gluonProject.projectId}`,
+        const updateGluonProjectResult = await this.projectService.updateProjectWithBitbucketDetails(gluonProject,
             {
                 bitbucketProject: {
                     bitbucketProjectId: bitbucketProject.id,

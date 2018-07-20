@@ -8,11 +8,11 @@ import {
     success,
 } from "@atomist/automation-client";
 import {url} from "@atomist/slack-messages";
-import axios from "axios";
 import * as _ from "lodash";
 import {QMConfig} from "../../../config/QMConfig";
 import {BitbucketService} from "../../util/bitbucket/Bitbucket";
 import {BitbucketConfiguration} from "../../util/bitbucket/BitbucketConfiguration";
+import {ProjectService} from "../../util/project/ProjectService";
 import {
     handleQMError,
     QMError,
@@ -70,7 +70,7 @@ export class BitbucketProjectRequested implements HandleEvent<any> {
 
     private bitbucketProjectUrl: string;
 
-    constructor(private bitbucketService = new BitbucketService()) {
+    constructor(private bitbucketService = new BitbucketService(), private projectService = new ProjectService()) {
     }
 
     public async handle(event: EventFired<any>, ctx: HandlerContext): Promise<HandlerResult> {
@@ -158,7 +158,7 @@ export class BitbucketProjectRequested implements HandleEvent<any> {
 
     private async confirmBitbucketProjectCreatedWithGluon(projectId: string, projectName: string) {
         logger.info(`Confirming Bitbucket project: [${this.bitbucketProjectId}-${this.bitbucketProjectUrl}]`);
-        const confirmBitbucketProjectCreatedResult = await axios.put(`${QMConfig.subatomic.gluon.baseUrl}/projects/${projectId}`,
+        const confirmBitbucketProjectCreatedResult = await this.projectService.confirmBitbucketProjectCreated(projectId,
             {
                 bitbucketProject: {
                     bitbucketProjectId: this.bitbucketProjectId,

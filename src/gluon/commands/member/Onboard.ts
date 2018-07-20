@@ -11,9 +11,13 @@ import {
 } from "@atomist/automation-client";
 import {buttonForCommand} from "@atomist/automation-client/spi/message/MessageClient";
 import {SlackMessage, url} from "@atomist/slack-messages";
-import axios from "axios";
 import {QMConfig} from "../../../config/QMConfig";
-import {handleQMError, QMError, ResponderMessageClient} from "../../util/shared/Error";
+import {MemberService} from "../../util/member/Members";
+import {
+    handleQMError,
+    QMError,
+    ResponderMessageClient,
+} from "../../util/shared/Error";
 import {isSuccessCode} from "../../util/shared/Http";
 import {CreateTeam} from "../team/CreateTeam";
 import {JoinTeam} from "../team/JoinTeam";
@@ -51,6 +55,9 @@ export class OnboardMember implements HandleCommand<HandlerResult> {
     })
     public domainUsername: string;
 
+    constructor(private memberService = new MemberService()) {
+    }
+
     public async handle(ctx: HandlerContext): Promise<HandlerResult> {
         try {
             logger.info("Creating");
@@ -74,8 +81,7 @@ export class OnboardMember implements HandleCommand<HandlerResult> {
 
     private async createGluonTeamMember(teamMemberDetails: any) {
 
-        const createMemberResult = await axios.post(`${QMConfig.subatomic.gluon.baseUrl}/members`,
-            teamMemberDetails);
+        const createMemberResult = await this.memberService.createGluonMember(teamMemberDetails);
 
         if (!isSuccessCode(createMemberResult.status)) {
             throw new QMError(`Unable to onboard a member with provided details. Details of the user are already in use.`);

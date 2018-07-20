@@ -7,13 +7,12 @@ import {
     MappedParameters,
     Parameter,
 } from "@atomist/automation-client";
-import axios from "axios";
 import * as _ from "lodash";
 import {QMConfig} from "../../../config/QMConfig";
 import {MemberService} from "../../util/member/Members";
+import {ProjectService} from "../../util/project/ProjectService";
 import {
     handleQMError,
-    logErrorAndReturnSuccess,
     QMError,
     ResponderMessageClient,
 } from "../../util/shared/Error";
@@ -56,7 +55,8 @@ export class CreateProject extends RecursiveParameterRequestCommand {
 
     constructor(private teamService = new TeamService(),
                 private tenantService = new TenantService(),
-                private memberService = new MemberService()) {
+                private memberService = new MemberService(),
+                private projectService = new ProjectService()) {
         super();
     }
 
@@ -76,7 +76,7 @@ export class CreateProject extends RecursiveParameterRequestCommand {
                 this.teamName = team.name;
                 return await this.handle(ctx);
             } catch (error) {
-                const teams = await this.teamService.gluonTeamsWhoSlackScreenNameBelongsTo(ctx, this.screenName);
+                const teams = await this.teamService.gluonTeamsWhoSlackScreenNameBelongsTo(this.screenName);
                 return await menuForTeams(
                     ctx,
                     teams,
@@ -97,12 +97,8 @@ export class CreateProject extends RecursiveParameterRequestCommand {
 
     private async requestNewProjectForTeamAndTenant(ctx: HandlerContext, screenName: string,
                                                     teamName: string, tenantId: string): Promise<any> {
-        let member;
-        try {
-            member = await this.memberService.gluonMemberFromScreenName(ctx, screenName);
-        } catch (error) {
-            return await logErrorAndReturnSuccess(this.memberService.gluonMemberFromScreenName.name, error);
-        }
+
+        const member = await this.memberService.gluonMemberFromScreenName(screenName);
 
         const team = await this.getGluonTeamFromName(teamName);
 
@@ -121,7 +117,7 @@ export class CreateProject extends RecursiveParameterRequestCommand {
     }
 
     private async getGluonTeamFromName(teamName: string) {
-        const teamQueryResult = await axios.get(`${QMConfig.subatomic.gluon.baseUrl}/teams?name=${teamName}`);
+        const teamQueryResult = await this.teamService.gluonTeamByName(teamName);
         if (!isSuccessCode(teamQueryResult.status)) {
             logger.error(`Failed to find team ${teamName}. Error: ${JSON.stringify(teamQueryResult)}`);
             throw new QMError(`Team ${teamName} does not appear to be a valid SubAtomic team.`);
@@ -130,7 +126,7 @@ export class CreateProject extends RecursiveParameterRequestCommand {
     }
 
     private async createGluonProject(projectDetails) {
-        const projectCreationResult = await axios.post(`${QMConfig.subatomic.gluon.baseUrl}/projects`,
+        const projectCreationResult = await this.projectService.createGluonProject(
             projectDetails);
         if (projectCreationResult.status === 409) {
             logger.error(`Failed to create project since the project name is already in use.`);

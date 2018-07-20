@@ -16,7 +16,6 @@ import {OCService} from "../../util/openshift/OCService";
 import {ProjectService} from "../../util/project/ProjectService";
 import {
     handleQMError,
-    logErrorAndReturnSuccess,
     ResponderMessageClient,
 } from "../../util/shared/Error";
 import {
@@ -131,65 +130,58 @@ Now that your PVCs have been created, you can add this PVC as storage to an appl
     }
 
     private async presentMenuToSelectProjectAssociatedTeam(ctx: HandlerContext): Promise<HandlerResult> {
-        try {
-            const teams = await this.teamService.gluonTeamsWhoSlackScreenNameBelongsTo(ctx, this.screenName);
-            const msg: SlackMessage = {
-                text: "Please select a team associated with the project you wish to create a PVC for",
-                attachments: [{
-                    fallback: "Please select a team",
-                    actions: [
-                        menuForCommand({
-                                text: "Select Team", options:
-                                    teams.map(team => {
-                                        return {
-                                            value: team.name,
-                                            text: team.name,
-                                        };
-                                    }),
-                            },
-                            this, "gluonTeamName",
-                            {pvcName: this.pvcName}),
-                    ],
-                }],
-            };
 
-            return await ctx.messageClient.respond(msg);
-        } catch (error) {
-            return await logErrorAndReturnSuccess(this.teamService.gluonTeamsWhoSlackScreenNameBelongsTo.name, error);
-        }
+        const teams = await this.teamService.gluonTeamsWhoSlackScreenNameBelongsTo(this.screenName);
+        const msg: SlackMessage = {
+            text: "Please select a team associated with the project you wish to create a PVC for",
+            attachments: [{
+                fallback: "Please select a team",
+                actions: [
+                    menuForCommand({
+                            text: "Select Team", options:
+                                teams.map(team => {
+                                    return {
+                                        value: team.name,
+                                        text: team.name,
+                                    };
+                                }),
+                        },
+                        this, "gluonTeamName",
+                        {pvcName: this.pvcName}),
+                ],
+            }],
+        };
+
+        return await ctx.messageClient.respond(msg);
     }
 
     private async presentMenuToSelectProjectToCreatePvcFor(ctx: HandlerContext): Promise<HandlerResult> {
-        try {
-            const teams = await this.projectService.gluonProjectsWhichBelongToGluonTeam(ctx, this.gluonTeamName);
+        const teams = await this.projectService.gluonProjectsWhichBelongToGluonTeam(this.gluonTeamName);
 
-            const msg: SlackMessage = {
-                text: "Please select the project, whose OpenShift environments the PVCs will be created in",
-                attachments: [{
-                    fallback: "Please select a project",
-                    actions: [
-                        menuForCommand({
-                                text: "Select Project", options:
-                                    teams.map(project => {
-                                        return {
-                                            value: project.name,
-                                            text: project.name,
-                                        };
-                                    }),
-                            },
-                            this, "gluonProjectName",
-                            {
-                                gluonTeamName: this.gluonTeamName,
-                                pvcName: this.pvcName,
-                            }),
-                    ],
-                }],
-            };
+        const msg: SlackMessage = {
+            text: "Please select the project, whose OpenShift environments the PVCs will be created in",
+            attachments: [{
+                fallback: "Please select a project",
+                actions: [
+                    menuForCommand({
+                            text: "Select Project", options:
+                                teams.map(project => {
+                                    return {
+                                        value: project.name,
+                                        text: project.name,
+                                    };
+                                }),
+                        },
+                        this, "gluonProjectName",
+                        {
+                            gluonTeamName: this.gluonTeamName,
+                            pvcName: this.pvcName,
+                        }),
+                ],
+            }],
+        };
 
-            return await ctx.messageClient.respond(msg);
-        } catch (error) {
-            return await logErrorAndReturnSuccess(this.projectService.gluonProjectsWhichBelongToGluonTeam.name, error);
-        }
+        return await ctx.messageClient.respond(msg);
     }
 
     private async presentMenuToSelectOpenshiftProjectToCreatePvcIn(ctx: HandlerContext, projectId: string) {
