@@ -1,18 +1,15 @@
 import {HandlerResult, logger, success} from "@atomist/automation-client";
 import * as _ from "lodash";
-import {BitbucketService} from "../bitbucket/Bitbucket";
-import {MemberService} from "../member/Members";
-import {ProjectService} from "../project/ProjectService";
-import {QMError} from "../shared/Error";
-import {isSuccessCode} from "../shared/Http";
-import {ApplicationService, ApplicationType} from "./Applications";
+import {ApplicationType} from "../../util/packages/Applications";
+import {QMError} from "../../util/shared/Error";
+import {isSuccessCode} from "../../util/shared/Http";
+import {BitbucketService} from "../bitbucket/BitbucketService";
+import {GluonService} from "../gluon/GluonService";
 
 export class PackageCommandService {
 
-    constructor(private projectService = new ProjectService(),
-                private bitbucketService = new BitbucketService(),
-                private applicationService = new ApplicationService(),
-                private memberService = new MemberService()) {
+    constructor(private gluonService = new GluonService(),
+                private bitbucketService = new BitbucketService()) {
     }
 
     public async linkBitbucketRepoToGluonPackage(slackScreeName: string,
@@ -21,7 +18,7 @@ export class PackageCommandService {
                                                  bitbucketRepositorySlug: string,
                                                  gluonProjectName: string,
                                                  applicationType: ApplicationType): Promise<HandlerResult> {
-        const project = await this.projectService.gluonProjectFromProjectName(gluonProjectName);
+        const project = await this.gluonService.projects.gluonProjectFromProjectName(gluonProjectName);
         logger.debug(`Linking Bitbucket repository: ${bitbucketRepositorySlug}`);
 
         const repo = await this.getBitbucketRepo(project.bitbucketProject.key, bitbucketRepositorySlug);
@@ -30,7 +27,7 @@ export class PackageCommandService {
             return (clone as any).name === "ssh";
         }) as any;
 
-        const member = await this.memberService.gluonMemberFromScreenName(slackScreeName);
+        const member = await this.gluonService.members.gluonMemberFromScreenName(slackScreeName);
 
         return await this.linkBitbucketRepository(
             member.memberId,
@@ -52,7 +49,7 @@ export class PackageCommandService {
                                           gluonProjectId: string,
                                           applicationType: ApplicationType): Promise<HandlerResult> {
 
-        const createApplicationResult = await this.applicationService.createGluonApplication(
+        const createApplicationResult = await this.gluonService.applications.createGluonApplication(
             {
                 name: libraryName,
                 description: libraryDescription,

@@ -8,11 +8,11 @@ import {
 } from "@atomist/automation-client";
 import * as _ from "lodash";
 import {OCCommandResult} from "../../../openshift/base/OCCommandResult";
-import {BitbucketService} from "../../util/bitbucket/Bitbucket";
-import {BitbucketConfiguration} from "../../util/bitbucket/BitbucketConfiguration";
-import {OCService} from "../../util/openshift/OCService";
+import {BitbucketConfigurationService} from "../../services/bitbucket/BitbucketConfigurationService";
+import {BitbucketService} from "../../services/bitbucket/BitbucketService";
+import {GluonService} from "../../services/gluon/GluonService";
+import {OCService} from "../../services/openshift/OCService";
 import {getProjectDisplayName} from "../../util/project/Project";
-import {ProjectService} from "../../util/project/ProjectService";
 import {
     ChannelMessageClient,
     handleQMError,
@@ -50,7 +50,7 @@ subscription MembersAddedToTeamEvent {
 `)
 export class MembersAddedToTeam implements HandleEvent<any> {
 
-    constructor(private projectService = new ProjectService(),
+    constructor(private gluonService = new GluonService(),
                 private bitbucketService = new BitbucketService(),
                 private ocService = new OCService()) {
     }
@@ -78,23 +78,23 @@ export class MembersAddedToTeam implements HandleEvent<any> {
     private async getListOfTeamProjects(teamName: string) {
         let projects;
         try {
-            projects = await this.projectService.gluonProjectsWhichBelongToGluonTeam(teamName, false);
+            projects = await this.gluonService.projects.gluonProjectsWhichBelongToGluonTeam(teamName, false);
         } catch (error) {
             throw new QMError(error, "Failed to get list of projects associated with this team.");
         }
         return projects;
     }
 
-    private getBitbucketConfiguration(membersAddedToTeamEvent): BitbucketConfiguration {
+    private getBitbucketConfiguration(membersAddedToTeamEvent): BitbucketConfigurationService {
         let teamOwnersUsernames: string[] = [];
         let teamMembersUsernames: string[] = [];
 
         teamOwnersUsernames = _.union(teamOwnersUsernames, membersAddedToTeamEvent.owners.map(owner => owner.domainUsername));
         teamMembersUsernames = _.union(teamMembersUsernames, membersAddedToTeamEvent.members.map(member => member.domainUsername));
-        return new BitbucketConfiguration(teamOwnersUsernames, teamMembersUsernames, this.bitbucketService);
+        return new BitbucketConfigurationService(teamOwnersUsernames, teamMembersUsernames, this.bitbucketService);
     }
 
-    private async addPermissionsForUserToTeams(bitbucketConfiguration: BitbucketConfiguration, teamName: string, projects, membersAddedToTeamEvent) {
+    private async addPermissionsForUserToTeams(bitbucketConfiguration: BitbucketConfigurationService, teamName: string, projects, membersAddedToTeamEvent) {
         try {
             await this.ocService.login();
             const devopsProject = `${_.kebabCase(teamName).toLowerCase()}-devops`;

@@ -5,10 +5,10 @@ import * as https from "https";
 import * as _ from "lodash";
 import * as qs from "query-string";
 import * as util from "util";
-import {addAxiosLogger} from "../shared/AxiosLogger";
-import {QMError} from "../shared/Error";
-import {isSuccessCode} from "../shared/Http";
-import {retryFunction} from "../shared/RetryFunction";
+import {addAxiosLogger} from "../../util/shared/AxiosLogger";
+import {QMError} from "../../util/shared/Error";
+import {isSuccessCode} from "../../util/shared/Http";
+import {retryFunction} from "../../util/shared/RetryFunction";
 
 export class JenkinsService {
     public kickOffFirstBuild(jenkinsHost: string,

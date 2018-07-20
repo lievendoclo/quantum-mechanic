@@ -18,14 +18,13 @@ import {SlackMessage, url} from "@atomist/slack-messages";
 import * as _ from "lodash";
 import {QMConfig} from "../../../config/QMConfig";
 import * as graphql from "../../../typings/types";
-import {MemberService} from "../../util/member/Members";
+import {GluonService} from "../../services/gluon/GluonService";
 import {
     handleQMError,
     QMError,
     ResponderMessageClient,
 } from "../../util/shared/Error";
 import {isSuccessCode} from "../../util/shared/Http";
-import {TeamService} from "../../util/team/TeamService";
 import {ListTeamProjects} from "../project/ProjectDetails";
 import {CreateTeam} from "./CreateTeam";
 
@@ -36,12 +35,12 @@ export class JoinTeam implements HandleCommand<HandlerResult> {
     @MappedParameter(MappedParameters.SlackUser)
     public slackName: string;
 
-    constructor(private teamService = new TeamService()) {
+    constructor(private gluonService = new GluonService()) {
     }
 
     public async handle(ctx: HandlerContext): Promise<HandlerResult> {
         try {
-            const teamsQueryResult = await this.teamService.getAllTeams();
+            const teamsQueryResult = await this.gluonService.teams.getAllTeams();
 
             if (!isSuccessCode(teamsQueryResult.status)) {
                 return this.alertUserThatNoTeamsExist(ctx);
@@ -126,7 +125,7 @@ export class AddMemberToTeam implements HandleCommand<HandlerResult> {
     })
     public slackName: string;
 
-    constructor(private teamService = new TeamService(), private memberService = new MemberService()) {
+    constructor(private gluonService = new GluonService()) {
     }
 
     public async handle(ctx: HandlerContext): Promise<HandlerResult> {
@@ -145,7 +144,7 @@ export class AddMemberToTeam implements HandleCommand<HandlerResult> {
 
             logger.info(`Getting teams that ${this.screenName} (you) are a part of...`);
 
-            const actioningMember = await this.memberService.gluonMemberFromScreenName(this.screenName);
+            const actioningMember = await this.gluonService.members.gluonMemberFromScreenName(this.screenName);
 
             logger.info(`Got member's teams you belong to: ${JSON.stringify(actioningMember)}`);
 
@@ -163,7 +162,7 @@ export class AddMemberToTeam implements HandleCommand<HandlerResult> {
     }
 
     private async getNewMember(chatId: string) {
-        const newMember = await this.memberService.gluonMemberFromScreenName(chatId);
+        const newMember = await this.gluonService.members.gluonMemberFromScreenName(chatId);
 
         if (!_.isEmpty(_.find(newMember.teams,
             (team: any) => team.slack.teamChannel === this.teamChannel))) {
@@ -180,7 +179,7 @@ export class AddMemberToTeam implements HandleCommand<HandlerResult> {
         const splitLink = teamSlackChannel._links.self.href.split("/");
         const gluonTeamId = splitLink[splitLink.length - 1];
 
-        const updateTeamResult = await this.teamService.addMemberToTeam(gluonTeamId,
+        const updateTeamResult = await this.gluonService.teams.addMemberToTeam(gluonTeamId,
             {
                 members: [{
                     memberId: newMemberId,
@@ -270,8 +269,7 @@ export class CreateMembershipRequestToTeam implements HandleCommand<HandlerResul
     })
     public slackName: string;
 
-    constructor(private teamService = new TeamService(),
-                private memberService = new MemberService()) {
+    constructor(private gluonService = new GluonService()) {
     }
 
     public async handle(ctx: HandlerContext): Promise<HandlerResult> {
@@ -282,7 +280,7 @@ export class CreateMembershipRequestToTeam implements HandleCommand<HandlerResul
 
             const chatId = await loadScreenNameByUserId(ctx, screenName);
 
-            const newMemberQueryResult = await this.memberService.gluonMemberFromScreenName(chatId);
+            const newMemberQueryResult = await this.gluonService.members.gluonMemberFromScreenName(chatId);
 
             if (!isSuccessCode(newMemberQueryResult.status)) {
                 return await alertGluonMemberForSlackMentionDoesNotExist(ctx, this.slackName, this.docs("onboard-me"));
@@ -297,7 +295,7 @@ export class CreateMembershipRequestToTeam implements HandleCommand<HandlerResul
     }
 
     private async createMembershipRequest(newMember) {
-        const updateTeamResult = await this.teamService.createMembershipRequest(this.teamId,
+        const updateTeamResult = await this.gluonService.teams.createMembershipRequest(this.teamId,
             {
                 membershipRequests: [
                     {

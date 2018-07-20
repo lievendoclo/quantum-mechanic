@@ -12,7 +12,7 @@ import {
 import {buttonForCommand} from "@atomist/automation-client/spi/message/MessageClient";
 import {SlackMessage, url} from "@atomist/slack-messages";
 import {QMConfig} from "../../../config/QMConfig";
-import {MemberService} from "../../util/member/Members";
+import {GluonService} from "../../services/gluon/GluonService";
 import {
     handleQMError,
     QMError,
@@ -55,7 +55,7 @@ export class OnboardMember implements HandleCommand<HandlerResult> {
     })
     public domainUsername: string;
 
-    constructor(private memberService = new MemberService()) {
+    constructor(private gluonService = new GluonService()) {
     }
 
     public async handle(ctx: HandlerContext): Promise<HandlerResult> {
@@ -81,7 +81,7 @@ export class OnboardMember implements HandleCommand<HandlerResult> {
 
     private async createGluonTeamMember(teamMemberDetails: any) {
 
-        const createMemberResult = await this.memberService.createGluonMember(teamMemberDetails);
+        const createMemberResult = await this.gluonService.members.createGluonMember(teamMemberDetails);
 
         if (!isSuccessCode(createMemberResult.status)) {
             throw new QMError(`Unable to onboard a member with provided details. Details of the user are already in use.`);

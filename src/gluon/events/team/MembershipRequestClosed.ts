@@ -13,7 +13,7 @@ import {addressSlackUsers} from "@atomist/automation-client/spi/message/MessageC
 import {inviteUserToSlackChannel} from "@atomist/lifecycle-automation/handlers/command/slack/AssociateRepo";
 import {SlackMessage} from "@atomist/slack-messages";
 import {QMConfig} from "../../../config/QMConfig";
-import {MemberService} from "../../util/member/Members";
+import {GluonService} from "../../services/gluon/GluonService";
 import {
     handleQMError,
     QMError,
@@ -67,7 +67,7 @@ export class MembershipRequestClosed implements HandleCommand<HandlerResult> {
     })
     public approvalStatus: string;
 
-    constructor(private memberService = new MemberService()) {
+    constructor(private gluonService = new GluonService()) {
     }
 
     public async handle(ctx: HandlerContext): Promise<HandlerResult> {
@@ -92,7 +92,7 @@ export class MembershipRequestClosed implements HandleCommand<HandlerResult> {
 
     private async findGluonTeamMember(slackScreenName: string) {
         try {
-            return await this.memberService.gluonMemberFromScreenName(slackScreenName, false);
+            return await this.gluonService.members.gluonMemberFromScreenName(slackScreenName, false);
         } catch (error) {
             logger.error("The approver is not a gluon member. This can only happen if the user was deleted before approving this request.");
             throw new QMError("You are no longer a Subatomic user. Membership request closure failed.");
@@ -100,7 +100,7 @@ export class MembershipRequestClosed implements HandleCommand<HandlerResult> {
     }
 
     private async updateGluonMembershipRequest(teamId: string, membershipRequestId: string, approvedByMemberId: string, approvalStatus: string) {
-        const updateMembershipRequestResult = await this.memberService.updateGluonMembershipRequest(teamId,
+        const updateMembershipRequestResult = await this.gluonService.members.updateGluonMembershipRequest(teamId,
             {
                 membershipRequests: [
                     {

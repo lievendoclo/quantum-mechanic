@@ -7,7 +7,7 @@ import {SimpleOption} from "../../../openshift/base/options/SimpleOption";
 import {StandardOption} from "../../../openshift/base/options/StandardOption";
 import {OCClient} from "../../../openshift/OCClient";
 import {OCCommon} from "../../../openshift/OCCommon";
-import {getProjectDisplayName} from "../project/Project";
+import {getProjectDisplayName} from "../../util/project/Project";
 
 export class OCService {
 

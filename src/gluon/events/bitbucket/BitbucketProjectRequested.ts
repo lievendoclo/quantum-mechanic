@@ -10,9 +10,9 @@ import {
 import {url} from "@atomist/slack-messages";
 import * as _ from "lodash";
 import {QMConfig} from "../../../config/QMConfig";
-import {BitbucketService} from "../../util/bitbucket/Bitbucket";
-import {BitbucketConfiguration} from "../../util/bitbucket/BitbucketConfiguration";
-import {ProjectService} from "../../util/project/ProjectService";
+import {BitbucketConfigurationService} from "../../services/bitbucket/BitbucketConfigurationService";
+import {BitbucketService} from "../../services/bitbucket/BitbucketService";
+import {GluonService} from "../../services/gluon/GluonService";
 import {
     handleQMError,
     QMError,
@@ -70,7 +70,7 @@ export class BitbucketProjectRequested implements HandleEvent<any> {
 
     private bitbucketProjectUrl: string;
 
-    constructor(private bitbucketService = new BitbucketService(), private projectService = new ProjectService()) {
+    constructor(private bitbucketService = new BitbucketService(), private gluonService = new GluonService()) {
     }
 
     public async handle(event: EventFired<any>, ctx: HandlerContext): Promise<HandlerResult> {
@@ -89,7 +89,7 @@ export class BitbucketProjectRequested implements HandleEvent<any> {
                 teamMembers = _.union(teamMembers, team.members.map(member => member.domainUsername));
             });
 
-            const bitbucketConfiguration = new BitbucketConfiguration(
+            const bitbucketConfiguration = new BitbucketConfigurationService(
                 teamOwners,
                 teamMembers,
                 this.bitbucketService,
@@ -158,7 +158,7 @@ export class BitbucketProjectRequested implements HandleEvent<any> {
 
     private async confirmBitbucketProjectCreatedWithGluon(projectId: string, projectName: string) {
         logger.info(`Confirming Bitbucket project: [${this.bitbucketProjectId}-${this.bitbucketProjectUrl}]`);
-        const confirmBitbucketProjectCreatedResult = await this.projectService.confirmBitbucketProjectCreated(projectId,
+        const confirmBitbucketProjectCreatedResult = await this.gluonService.projects.confirmBitbucketProjectCreated(projectId,
             {
                 bitbucketProject: {
                     bitbucketProjectId: this.bitbucketProjectId,

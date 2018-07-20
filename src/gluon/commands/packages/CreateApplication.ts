@@ -8,15 +8,9 @@ import {
 } from "@atomist/automation-client";
 import * as _ from "lodash";
 import {QMConfig} from "../../../config/QMConfig";
-import {MemberService} from "../../util/member/Members";
-import {
-    ApplicationService,
-    ApplicationType,
-} from "../../util/packages/Applications";
-import {
-    menuForProjects,
-    ProjectService,
-} from "../../util/project/ProjectService";
+import {GluonService} from "../../services/gluon/GluonService";
+import {ApplicationType} from "../../util/packages/Applications";
+import {menuForProjects} from "../../util/project/Project";
 import {
     handleQMError,
     QMError,
@@ -27,7 +21,7 @@ import {
     RecursiveParameter,
     RecursiveParameterRequestCommand,
 } from "../../util/shared/RecursiveParameterRequestCommand";
-import {menuForTeams, TeamService} from "../../util/team/TeamService";
+import {menuForTeams} from "../../util/team/Teams";
 
 @CommandHandler("Create a new Bitbucket project", QMConfig.subatomic.commandPrefix + " create bitbucket project")
 export class CreateApplication extends RecursiveParameterRequestCommand {
@@ -68,10 +62,7 @@ export class CreateApplication extends RecursiveParameterRequestCommand {
     })
     public teamName: string;
 
-    constructor(private teamService = new TeamService(),
-                private projectService = new ProjectService(),
-                private memberService = new MemberService(),
-                private applicationService = new ApplicationService()) {
+    constructor(private gluonService = new GluonService()) {
         super();
     }
 
@@ -82,9 +73,9 @@ export class CreateApplication extends RecursiveParameterRequestCommand {
                 text: "🚀 Your new application is being created...",
             });
 
-            const member = await this.memberService.gluonMemberFromScreenName(this.screenName);
+            const member = await this.gluonService.members.gluonMemberFromScreenName(this.screenName);
 
-            const project = await this.projectService.gluonProjectFromProjectName(this.projectName);
+            const project = await this.gluonService.projects.gluonProjectFromProjectName(this.projectName);
 
             await this.createApplicationInGluon(project, member);
 
@@ -100,22 +91,22 @@ export class CreateApplication extends RecursiveParameterRequestCommand {
     protected async setNextParameter(ctx: HandlerContext) {
         if (_.isEmpty(this.teamName)) {
             try {
-                const team = await this.teamService.gluonTeamForSlackTeamChannel(this.teamChannel);
+                const team = await this.gluonService.teams.gluonTeamForSlackTeamChannel(this.teamChannel);
                 this.teamName = team.name;
                 return await this.handle(ctx);
             } catch (error) {
-                const teams = await this.teamService.gluonTeamsWhoSlackScreenNameBelongsTo(this.screenName);
+                const teams = await this.gluonService.teams.gluonTeamsWhoSlackScreenNameBelongsTo(this.screenName);
                 return await menuForTeams(ctx, teams, this);
             }
         }
         if (_.isEmpty(this.projectName)) {
-            const projects = await this.projectService.gluonProjectsWhichBelongToGluonTeam(this.teamName);
+            const projects = await this.gluonService.projects.gluonProjectsWhichBelongToGluonTeam(this.teamName);
             return await menuForProjects(ctx, projects, this);
         }
     }
 
     private async createApplicationInGluon(project, member) {
-        const createApplicationResult = await this.applicationService.createGluonApplication(
+        const createApplicationResult = await this.gluonService.applications.createGluonApplication(
             {
                 name: this.name,
                 description: this.description,

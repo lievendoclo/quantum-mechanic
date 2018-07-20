@@ -12,14 +12,13 @@ import {
 } from "@atomist/automation-client";
 import {url} from "@atomist/slack-messages";
 import {QMConfig} from "../../../config/QMConfig";
-import {MemberService} from "../../util/member/Members";
+import {GluonService} from "../../services/gluon/GluonService";
 import {
     handleQMError,
     QMError,
     ResponderMessageClient,
 } from "../../util/shared/Error";
 import {isSuccessCode} from "../../util/shared/Http";
-import {TeamService} from "../../util/team/TeamService";
 
 @CommandHandler("Create a new team", QMConfig.subatomic.commandPrefix + " create team")
 @Tags("subatomic", "team")
@@ -38,8 +37,7 @@ export class CreateTeam implements HandleCommand<HandlerResult> {
     })
     private description: string;
 
-    constructor(private teamService = new TeamService(),
-                private memberService = new MemberService()) {
+    constructor(private gluonService = new GluonService()) {
     }
 
     public async handle(ctx: HandlerContext): Promise<HandlerResult> {
@@ -57,11 +55,11 @@ export class CreateTeam implements HandleCommand<HandlerResult> {
     }
 
     private async getGluonMemberFromScreenName(screenName: string) {
-        return await this.memberService.gluonMemberFromScreenName(screenName);
+        return await this.gluonService.members.gluonMemberFromScreenName(screenName);
     }
 
     private async createTeamInGluon(teamName: string, teamDescription: string, createdBy: string) {
-        const teamCreationResult = await this.teamService.createGluonTeam(teamName, teamDescription, createdBy);
+        const teamCreationResult = await this.gluonService.teams.createGluonTeam(teamName, teamDescription, createdBy);
 
         if (!isSuccessCode(teamCreationResult.status)) {
             logger.error(`Failed to create the team with name ${name}. Error: ${teamCreationResult.status}`);

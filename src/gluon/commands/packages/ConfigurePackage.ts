@@ -16,18 +16,15 @@ import {url} from "@atomist/slack-messages";
 import * as _ from "lodash";
 import {QMConfig} from "../../../config/QMConfig";
 import {QMTemplate} from "../../../template/QMTemplate";
-import {JenkinsService} from "../../util/jenkins/Jenkins";
-import {OCService} from "../../util/openshift/OCService";
+import {GluonService} from "../../services/gluon/GluonService";
+import {JenkinsService} from "../../services/jenkins/JenkinsService";
+import {OCService} from "../../services/openshift/OCService";
 import {
-    ApplicationService,
     ApplicationType,
     menuForApplications,
 } from "../../util/packages/Applications";
 import {getProjectDevOpsId, getProjectId} from "../../util/project/Project";
-import {
-    menuForProjects,
-    ProjectService,
-} from "../../util/project/ProjectService";
+import {menuForProjects} from "../../util/project/Project";
 import {
     handleQMError,
     QMError,
@@ -39,8 +36,7 @@ import {
     RecursiveParameter,
     RecursiveParameterRequestCommand,
 } from "../../util/shared/RecursiveParameterRequestCommand";
-import {TenantService} from "../../util/shared/TenantService";
-import {menuForTeams, TeamService} from "../../util/team/TeamService";
+import {menuForTeams} from "../../util/team/Teams";
 import {KickOffJenkinsBuild} from "../jenkins/JenkinsBuild";
 
 @CommandHandler("Configure an existing application/library", QMConfig.subatomic.commandPrefix + " configure custom package")
@@ -88,10 +84,7 @@ export class ConfigurePackage extends RecursiveParameterRequestCommand {
     private readonly JENKINSFILE_FOLDER = "resources/templates/jenkins/jenkinsfile-repo/";
     private readonly JENKINSFILE_EXISTS = "JENKINS_FILE_EXISTS";
 
-    constructor(private teamService = new TeamService(),
-                private tenantService = new TenantService(),
-                private projectService = new ProjectService(),
-                private applicationService = new ApplicationService(),
+    constructor(private gluonService = new GluonService(),
                 private jenkinsService = new JenkinsService(),
                 private ocService = new OCService()) {
         super();
@@ -111,11 +104,11 @@ export class ConfigurePackage extends RecursiveParameterRequestCommand {
     protected async setNextParameter(ctx: HandlerContext): Promise<HandlerResult> {
         if (_.isEmpty(this.teamName)) {
             try {
-                const team = await this.teamService.gluonTeamForSlackTeamChannel(this.teamChannel);
+                const team = await this.gluonService.teams.gluonTeamForSlackTeamChannel(this.teamChannel);
                 this.teamName = team.name;
                 return await this.handle(ctx);
             } catch (error) {
-                const teams = await this.teamService.gluonTeamsWhoSlackScreenNameBelongsTo(this.screenName);
+                const teams = await this.gluonService.teams.gluonTeamsWhoSlackScreenNameBelongsTo(this.screenName);
                 return await menuForTeams(
                     ctx,
                     teams,
@@ -125,11 +118,11 @@ export class ConfigurePackage extends RecursiveParameterRequestCommand {
 
         }
         if (_.isEmpty(this.projectName)) {
-            const projects = await this.projectService.gluonProjectsWhichBelongToGluonTeam(this.teamName);
+            const projects = await this.gluonService.projects.gluonProjectsWhichBelongToGluonTeam(this.teamName);
             return await menuForProjects(ctx, projects, this, "Please select the owning project of the package you wish to configure");
         }
         if (_.isEmpty(this.applicationName)) {
-            const applications = await this.applicationService.gluonApplicationsLinkedToGluonProject(this.projectName);
+            const applications = await this.gluonService.applications.gluonApplicationsLinkedToGluonProject(this.projectName);
             return await menuForApplications(ctx, applications, this, "Please select the package you wish to configure");
         }
         if (_.isEmpty(this.openshiftTemplate)) {
@@ -154,8 +147,8 @@ export class ConfigurePackage extends RecursiveParameterRequestCommand {
 
     private async requestJenkinsFileParameter(ctx: HandlerContext): Promise<HandlerResult> {
 
-        const project = await this.projectService.gluonProjectFromProjectName(this.projectName);
-        const application = await this.applicationService.gluonApplicationForNameAndProjectName(this.applicationName, this.projectName);
+        const project = await this.gluonService.projects.gluonProjectFromProjectName(this.projectName);
+        const application = await this.gluonService.applications.gluonApplicationForNameAndProjectName(this.applicationName, this.projectName);
         const username = QMConfig.subatomic.bitbucket.auth.username;
         const password = QMConfig.subatomic.bitbucket.auth.password;
         const gitProject: GitProject = await GitCommandGitProject.cloned({
@@ -211,9 +204,9 @@ export class ConfigurePackage extends RecursiveParameterRequestCommand {
     }
 
     private async configurePackage(ctx: HandlerContext): Promise<HandlerResult> {
-        const project = await this.projectService.gluonProjectFromProjectName(this.projectName);
+        const project = await this.gluonService.projects.gluonProjectFromProjectName(this.projectName);
 
-        const application = await this.applicationService.gluonApplicationForNameAndProjectName(this.applicationName, this.projectName);
+        const application = await this.gluonService.applications.gluonApplicationForNameAndProjectName(this.applicationName, this.projectName);
 
         return await this.doConfiguration(
             ctx,
@@ -378,9 +371,9 @@ export class ConfigurePackage extends RecursiveParameterRequestCommand {
 
             await this.createApplicationBuildConfig(bitbucketRepoRemoteUrl, appBuildName, this.baseS2IImage, teamDevOpsProjectId);
 
-            const project = await this.projectService.gluonProjectFromProjectName(projectName);
+            const project = await this.gluonService.projects.gluonProjectFromProjectName(projectName);
             logger.info(`Trying to find tenant: ${project.owningTenant}`);
-            const tenant = await this.tenantService.gluonTenantFromTenantId(project.owningTenant);
+            const tenant = await this.gluonService.tenants.gluonTenantFromTenantId(project.owningTenant);
             logger.info(`Found tenant: ${tenant}`);
             await this.createApplicationOpenshiftResources(tenant.name, project.name, packageName);
 

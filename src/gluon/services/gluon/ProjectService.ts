@@ -1,17 +1,12 @@
-import {
-    HandleCommand,
-    HandlerContext,
-    logger,
-} from "@atomist/automation-client";
+import {logger} from "@atomist/automation-client";
 import {buttonForCommand} from "@atomist/automation-client/spi/message/MessageClient";
 import {SlackMessage, url} from "@atomist/slack-messages";
 import axios from "axios";
 import _ = require("lodash");
 import {QMConfig} from "../../../config/QMConfig";
 import {CreateProject} from "../../commands/project/CreateProject";
-import {QMError} from "../shared/Error";
-import {createMenu} from "../shared/GenericMenu";
-import {isSuccessCode} from "../shared/Http";
+import {QMError} from "../../util/shared/Error";
+import {isSuccessCode} from "../../util/shared/Http";
 
 export class ProjectService {
     public async gluonProjectFromProjectName(projectName: string,
@@ -157,21 +152,4 @@ Consider creating a new project called ${projectName}. Click the button below to
         return await axios.put(`${QMConfig.subatomic.gluon.baseUrl}/projects/${projectId}`,
             bitbucketDetails);
     }
-}
-
-export function menuForProjects(ctx: HandlerContext, projects: any[],
-                                command: HandleCommand, message: string = "Please select a project",
-                                projectNameVariable: string = "projectName"): Promise<any> {
-    return createMenu(ctx,
-        projects.map(project => {
-            return {
-                value: project.name,
-                text: project.name,
-            };
-        }),
-        command,
-        message,
-        "Select Project",
-        projectNameVariable,
-    );
 }

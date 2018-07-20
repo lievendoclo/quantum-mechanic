@@ -14,8 +14,8 @@ import {OCCommandResult} from "../../../openshift/base/OCCommandResult";
 import {QMTemplate} from "../../../template/QMTemplate";
 import {LinkExistingApplication} from "../../commands/packages/LinkExistingApplication";
 import {LinkExistingLibrary} from "../../commands/packages/LinkExistingLibrary";
-import {JenkinsService} from "../../util/jenkins/Jenkins";
-import {OCService} from "../../util/openshift/OCService";
+import {JenkinsService} from "../../services/jenkins/JenkinsService";
+import {OCService} from "../../services/openshift/OCService";
 import {
     getProjectId,
 } from "../../util/project/Project";

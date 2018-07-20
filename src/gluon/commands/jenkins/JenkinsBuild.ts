@@ -8,16 +8,11 @@ import {
 } from "@atomist/automation-client";
 import * as _ from "lodash";
 import {QMConfig} from "../../../config/QMConfig";
-import {JenkinsService} from "../../util/jenkins/Jenkins";
-import {OCService} from "../../util/openshift/OCService";
-import {
-    ApplicationService,
-    menuForApplications,
-} from "../../util/packages/Applications";
-import {
-    menuForProjects,
-    ProjectService,
-} from "../../util/project/ProjectService";
+import {GluonService} from "../../services/gluon/GluonService";
+import {JenkinsService} from "../../services/jenkins/JenkinsService";
+import {OCService} from "../../services/openshift/OCService";
+import {menuForApplications} from "../../util/packages/Applications";
+import {menuForProjects} from "../../util/project/Project";
 import {
     handleQMError,
     QMError,
@@ -28,7 +23,7 @@ import {
     RecursiveParameter,
     RecursiveParameterRequestCommand,
 } from "../../util/shared/RecursiveParameterRequestCommand";
-import {menuForTeams, TeamService} from "../../util/team/TeamService";
+import {menuForTeams} from "../../util/team/Teams";
 
 @CommandHandler("Kick off a Jenkins build", QMConfig.subatomic.commandPrefix + " jenkins build")
 export class KickOffJenkinsBuild extends RecursiveParameterRequestCommand {
@@ -57,9 +52,7 @@ export class KickOffJenkinsBuild extends RecursiveParameterRequestCommand {
     })
     public applicationName: string;
 
-    constructor(private teamService = new TeamService(),
-                private projectService = new ProjectService(),
-                private applicationService = new ApplicationService(),
+    constructor(private gluonService = new GluonService(),
                 private jenkinsService = new JenkinsService(),
                 private ocService = new OCService()) {
         super();
@@ -77,11 +70,11 @@ export class KickOffJenkinsBuild extends RecursiveParameterRequestCommand {
     protected async setNextParameter(ctx: HandlerContext): Promise<HandlerResult> {
         if (_.isEmpty(this.teamName)) {
             try {
-                const team = await this.teamService.gluonTeamForSlackTeamChannel(this.teamChannel);
+                const team = await this.gluonService.teams.gluonTeamForSlackTeamChannel(this.teamChannel);
                 this.teamName = team.name;
                 return await this.handle(ctx);
             } catch (error) {
-                const teams = await this.teamService.gluonTeamsWhoSlackScreenNameBelongsTo(this.screenName);
+                const teams = await this.gluonService.teams.gluonTeamsWhoSlackScreenNameBelongsTo(this.screenName);
                 return await menuForTeams(
                     ctx,
                     teams,
@@ -90,7 +83,7 @@ export class KickOffJenkinsBuild extends RecursiveParameterRequestCommand {
             }
         }
         if (_.isEmpty(this.projectName)) {
-            const projects = await this.projectService.gluonProjectsWhichBelongToGluonTeam(this.teamName);
+            const projects = await this.gluonService.projects.gluonProjectsWhichBelongToGluonTeam(this.teamName);
             return menuForProjects(
                 ctx,
                 projects,
@@ -98,7 +91,7 @@ export class KickOffJenkinsBuild extends RecursiveParameterRequestCommand {
                 "Please select a project which contains the application you would like to build");
         }
         if (_.isEmpty(this.applicationName)) {
-            const applications = await this.applicationService.gluonApplicationsLinkedToGluonProject(this.projectName);
+            const applications = await this.gluonService.applications.gluonApplicationsLinkedToGluonProject(this.projectName);
             return await menuForApplications(
                 ctx,
                 applications,

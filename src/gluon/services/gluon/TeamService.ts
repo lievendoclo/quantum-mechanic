@@ -1,8 +1,4 @@
-import {
-    HandleCommand,
-    HandlerContext,
-    logger,
-} from "@atomist/automation-client";
+import {logger} from "@atomist/automation-client";
 import {buttonForCommand} from "@atomist/automation-client/spi/message/MessageClient";
 import {SlackMessage} from "@atomist/slack-messages";
 import axios from "axios";
@@ -10,9 +6,8 @@ import * as _ from "lodash";
 import {QMConfig} from "../../../config/QMConfig";
 import {CreateTeam} from "../../commands/team/CreateTeam";
 import {JoinTeam} from "../../commands/team/JoinTeam";
-import {QMError} from "../shared/Error";
-import {createMenu} from "../shared/GenericMenu";
-import {isSuccessCode} from "../shared/Http";
+import {QMError} from "../../util/shared/Error";
+import {isSuccessCode} from "../../util/shared/Http";
 
 export class TeamService {
     public async gluonTeamsWhoSlackScreenNameBelongsTo(screenName: string, requestActionOnFailure: boolean = true): Promise<any[]> {
@@ -115,21 +110,4 @@ export class TeamService {
                 },
             });
     }
-}
-
-export function menuForTeams(ctx: HandlerContext, teams: any[],
-                             command: HandleCommand, message: string = "Please select a team",
-                             projectNameVariable: string = "teamName"): Promise<any> {
-    return createMenu(ctx,
-        teams.map(team => {
-            return {
-                value: team.name,
-                text: team.name,
-            };
-        }),
-        command,
-        message,
-        "Select Team",
-        projectNameVariable,
-    );
 }

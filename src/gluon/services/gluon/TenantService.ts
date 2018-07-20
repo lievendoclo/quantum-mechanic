@@ -1,15 +1,10 @@
-import {
-    HandleCommand,
-    HandlerContext,
-    logger,
-} from "@atomist/automation-client";
+import {logger} from "@atomist/automation-client";
 import axios from "axios";
 import * as _ from "lodash";
 import * as util from "util";
 import {QMConfig} from "../../../config/QMConfig";
-import {QMError} from "./Error";
-import {createMenu} from "./GenericMenu";
-import {isSuccessCode} from "./Http";
+import {QMError} from "../../util/shared/Error";
+import {isSuccessCode} from "../../util/shared/Http";
 
 export class TenantService {
     public async gluonTenantList(): Promise<any> {
@@ -43,21 +38,4 @@ export class TenantService {
         }
         return tenantResult.data;
     }
-}
-
-export function menuForTenants(ctx: HandlerContext, tenants: any[],
-                               command: HandleCommand, message: string = "Please select a tenant",
-                               tenantNameVariable: string = "tenantName"): Promise<any> {
-    return createMenu(ctx,
-        tenants.map(tenant => {
-            return {
-                value: tenant.name,
-                text: tenant.name,
-            };
-        }),
-        command,
-        message,
-        "Select Tenant",
-        tenantNameVariable,
-    );
 }

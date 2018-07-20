@@ -11,7 +11,7 @@ import {url} from "@atomist/slack-messages";
 import {QMConfig} from "../../../config/QMConfig";
 import {AssociateTeam} from "../../commands/project/AssociateTeam";
 import {NewProjectEnvironments} from "../../commands/project/ProjectEnvironments";
-import {BitbucketService} from "../../util/bitbucket/Bitbucket";
+import {BitbucketService} from "../../services/bitbucket/BitbucketService";
 import {handleQMError, QMError, UserMessageClient} from "../../util/shared/Error";
 
 @EventHandler("Receive BitbucketProjectAddedEvent events", `

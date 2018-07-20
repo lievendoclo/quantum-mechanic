@@ -9,7 +9,7 @@ import {
     Parameter,
 } from "@atomist/automation-client";
 import {QMConfig} from "../../../config/QMConfig";
-import {MemberService} from "../../util/member/Members";
+import {GluonService} from "../../services/gluon/GluonService";
 import {isSuccessCode} from "../../util/shared/Http";
 
 @CommandHandler("Add Slack details to an existing team member", QMConfig.subatomic.commandPrefix + " add slack")
@@ -27,7 +27,7 @@ export class AddSlackDetails implements HandleCommand<HandlerResult> {
     })
     public email: string;
 
-    constructor(private memberService = new MemberService()) {
+    constructor(private gluonService = new GluonService()) {
     }
 
     public async handle(ctx: HandlerContext): Promise<HandlerResult> {
@@ -56,11 +56,11 @@ export class AddSlackDetails implements HandleCommand<HandlerResult> {
     }
 
     private async findGluonMemberByEmail(emailAddress: string) {
-        return await this.memberService.gluonMemberFromEmailAddress(emailAddress);
+        return await this.gluonService.members.gluonMemberFromEmailAddress(emailAddress);
     }
 
     private async updateGluonMemberSlackDetails(slackScreenName: string, slackUserId: string, gluonMemberId: string) {
-        return await this.memberService.updateMemberSlackDetails(gluonMemberId,
+        return await this.gluonService.members.updateMemberSlackDetails(gluonMemberId,
             {
                 slack: {
                     screenName: slackScreenName,

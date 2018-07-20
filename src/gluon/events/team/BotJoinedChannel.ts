@@ -15,8 +15,8 @@ import {SlackMessage, url} from "@atomist/slack-messages";
 import {QMConfig} from "../../../config/QMConfig";
 import {NewDevOpsEnvironment} from "../../commands/team/DevOpsEnvironment";
 import {AddMemberToTeam} from "../../commands/team/JoinTeam";
+import {GluonService} from "../../services/gluon/GluonService";
 import {ChannelMessageClient, handleQMError} from "../../util/shared/Error";
-import {TeamService} from "../../util/team/TeamService";
 
 @EventHandler("Display a helpful message when the bot joins a channel",
     `subscription BotJoinedChannel {
@@ -62,7 +62,7 @@ export class BotJoinedChannel implements HandleEvent<any> {
     @MappedParameter(MappedParameters.SlackChannelName)
     public slackChannelName: string;
 
-    constructor(private teamService = new TeamService()) {
+    constructor(private gluonService = new GluonService()) {
     }
 
     public async handle(event: EventFired<any>, ctx: HandlerContext): Promise<HandlerResult> {
@@ -114,7 +114,7 @@ If you haven't already, you might want to:
     }
 
     private async getTeams(channelName: string) {
-        return await this.teamService.gluonTeamForSlackTeamChannel(channelName);
+        return await this.gluonService.teams.gluonTeamForSlackTeamChannel(channelName);
     }
 
     private docs(): string {

@@ -2,10 +2,10 @@ import {logger} from "@atomist/automation-client";
 import {AxiosPromise} from "axios-https-proxy-fix";
 import * as _ from "lodash";
 import {QMConfig} from "../../../config/QMConfig";
-import {usernameFromDomainUsername} from "../member/Members";
-import {BitbucketService} from "./Bitbucket";
+import {usernameFromDomainUsername} from "../../util/member/Members";
+import {BitbucketService} from "./BitbucketService";
 
-export class BitbucketConfiguration {
+export class BitbucketConfigurationService {
 
     constructor(private owners: string[], private teamMembers: string[], private bitbucketService = new BitbucketService()) {
         logger.debug(`Configuring with team owners: ${JSON.stringify(owners)}`);
