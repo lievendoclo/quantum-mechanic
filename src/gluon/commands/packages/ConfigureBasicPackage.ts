@@ -10,6 +10,7 @@ import {
 import * as _ from "lodash";
 import {QMConfig} from "../../../config/QMConfig";
 import {QMTemplate} from "../../../template/QMTemplate";
+import {GluonService} from "../../services/gluon/GluonService";
 import {PackageDefinition} from "../../util/packages/PackageDefinition";
 import {handleQMError, ResponderMessageClient} from "../../util/shared/Error";
 import {createMenu} from "../../util/shared/GenericMenu";
@@ -49,12 +50,21 @@ export class ConfigureBasicPackage extends RecursiveParameterRequestCommand {
     public teamName: string;
 
     @RecursiveParameter({
+        description: "package type",
+    })
+    public packageType: string;
+
+    @RecursiveParameter({
         description: "package definition file",
     })
     public packageDefinition: string;
 
     private readonly PACKAGE_DEFINITION_EXTENSION = ".json";
     private readonly PACKAGE_DEFINITION_FOLDER = "resources/package-definitions/";
+
+    constructor(private gluonService = new GluonService()) {
+        super();
+    }
 
     protected async runCommand(ctx: HandlerContext): Promise<HandlerResult> {
         try {
@@ -65,21 +75,18 @@ export class ConfigureBasicPackage extends RecursiveParameterRequestCommand {
     }
 
     protected async setNextParameter(ctx: HandlerContext): Promise<HandlerResult> {
+        if (_.isEmpty(this.packageType)) {
+            const application = await this.gluonService.applications.gluonApplicationForNameAndProjectName(this.applicationName, this.projectName, false);
+            this.packageType = application.applicationType;
+            return await this.handle(ctx);
+        }
         if (_.isEmpty(this.packageDefinition)) {
             return await this.requestPackageDefinitionFile(ctx);
         }
     }
 
     private async requestPackageDefinitionFile(ctx: HandlerContext): Promise<HandlerResult> {
-        const fs = require("fs");
-        const packageDefinitionOptions: string [] = [];
-        logger.info(`Searching folder: ${this.PACKAGE_DEFINITION_FOLDER}`);
-        fs.readdirSync(this.PACKAGE_DEFINITION_FOLDER).forEach(file => {
-            logger.info(`Found file: ${file}`);
-            if (file.endsWith(this.PACKAGE_DEFINITION_EXTENSION)) {
-                packageDefinitionOptions.push(this.getNameFromDefinitionPath(file));
-            }
-        });
+        const packageDefinitionOptions: string [] = this.readPackageDefinitions(this.packageType);
         return await createMenu(ctx, packageDefinitionOptions.map(packageDefinition => {
                 return {
                     value: packageDefinition,
@@ -92,6 +99,19 @@ export class ConfigureBasicPackage extends RecursiveParameterRequestCommand {
             "packageDefinition");
     }
 
+    private readPackageDefinitions(packageType: string) {
+        const fs = require("fs");
+        const packageDefinitionOptions: string [] = [];
+        logger.info(`Searching folder: ${this.PACKAGE_DEFINITION_FOLDER}${packageType.toLowerCase()}/`);
+        fs.readdirSync(`${this.PACKAGE_DEFINITION_FOLDER}${packageType.toLowerCase()}/`).forEach(file => {
+            logger.info(`Found file: ${file}`);
+            if (file.endsWith(this.PACKAGE_DEFINITION_EXTENSION)) {
+                packageDefinitionOptions.push(this.getNameFromDefinitionPath(file));
+            }
+        });
+        return packageDefinitionOptions;
+    }
+
     private async callPackageConfiguration(ctx: HandlerContext): Promise<HandlerResult> {
         const configTemplate: QMTemplate = new QMTemplate(this.getPathFromDefinitionName(this.packageDefinition));
         const definition: PackageDefinition = JSON.parse(configTemplate.build(QMConfig.publicConfig()));
@@ -99,7 +119,7 @@ export class ConfigureBasicPackage extends RecursiveParameterRequestCommand {
         const configurePackage = new ConfigurePackage();
         configurePackage.screenName = this.screenName;
         configurePackage.teamChannel = this.teamChannel;
-        configurePackage.openshiftTemplate = definition.openshiftTemplate || "";
+        configurePackage.openshiftTemplate = definition.openshiftTemplate || "Default";
         configurePackage.jenkinsfileName = definition.jenkinsfile;
         configurePackage.baseS2IImage = definition.buildConfig.imageStream;
         if (definition.buildConfig.envVariables != null) {
@@ -121,6 +141,6 @@ export class ConfigureBasicPackage extends RecursiveParameterRequestCommand {
     }
 
     private getPathFromDefinitionName(definitionName: string): string {
-        return this.PACKAGE_DEFINITION_FOLDER + definitionName + this.PACKAGE_DEFINITION_EXTENSION;
+        return `${this.PACKAGE_DEFINITION_FOLDER}${this.packageType}/${definitionName}${this.PACKAGE_DEFINITION_EXTENSION}`;
     }
 }
