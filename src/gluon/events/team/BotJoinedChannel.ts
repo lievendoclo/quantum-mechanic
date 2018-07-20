@@ -69,13 +69,15 @@ export class BotJoinedChannel implements HandleEvent<any> {
         const botJoinedChannel = event.data.UserJoinedChannel[0];
         logger.info(`BotJoinedChannelEvent: ${JSON.stringify(botJoinedChannel)}`);
 
+        const teams = await this.getTeams(botJoinedChannel.channel.name);
+        if (!JSON.stringify(teams.data).includes("_embedded")) {
+            return await success();
+        }
+
         try {
             if (botJoinedChannel.user.isAtomistBot === "true") {
-                let channelNameString = "your";
-                if (botJoinedChannel.channel.name !== null) {
-                    // necessary because channel.name is null for private channels
-                    channelNameString = `the ${botJoinedChannel.channel.name}`;
-                }
+                const channelNameString = `the ${botJoinedChannel.channel.name}`;
+
                 return await this.sendBotTeamWelcomeMessage(ctx, channelNameString, botJoinedChannel.channel.channelId);
             }
             return await success();
