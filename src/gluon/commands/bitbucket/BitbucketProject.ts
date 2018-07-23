@@ -207,7 +207,7 @@ export class ListExistingBitbucketProject extends RecursiveParameterRequestComma
 
         const bitbucketProject = await this.getBitbucketProject(this.bitbucketProjectKey);
 
-        await this.updateGluonProjectWithBitbucketDetails(projectUiUrl, member.memberId, gluonProject, bitbucketProject);
+        await this.updateGluonProjectWithBitbucketDetails(projectUiUrl, member.memberId, gluonProject.projectId, bitbucketProject);
 
         return await success();
     }

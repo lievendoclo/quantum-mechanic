@@ -16,7 +16,11 @@ import {QMConfig} from "../../../config/QMConfig";
 import {NewDevOpsEnvironment} from "../../commands/team/DevOpsEnvironment";
 import {AddMemberToTeam} from "../../commands/team/JoinTeam";
 import {GluonService} from "../../services/gluon/GluonService";
-import {ChannelMessageClient, handleQMError} from "../../util/shared/Error";
+import {
+    ChannelMessageClient,
+    handleQMError,
+    QMError,
+} from "../../util/shared/Error";
 
 @EventHandler("Display a helpful message when the bot joins a channel",
     `subscription BotJoinedChannel {
@@ -70,7 +74,7 @@ export class BotJoinedChannel implements HandleEvent<any> {
         logger.info(`BotJoinedChannelEvent: ${JSON.stringify(botJoinedChannel)}`);
 
         const teams = await this.getTeams(botJoinedChannel.channel.name);
-        if (!JSON.stringify(teams.data).includes("_embedded")) {
+        if (teams == null) {
             return await success();
         }
 
@@ -114,7 +118,15 @@ If you haven't already, you might want to:
     }
 
     private async getTeams(channelName: string) {
-        return await this.gluonService.teams.gluonTeamForSlackTeamChannel(channelName);
+        let result = null;
+        try {
+            result = await this.gluonService.teams.gluonTeamForSlackTeamChannel(channelName);
+        } catch (error) {
+            if (!(error instanceof QMError)) {
+                throw error;
+            }
+        }
+        return result;
     }
 
     private docs(): string {
