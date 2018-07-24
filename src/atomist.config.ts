@@ -4,12 +4,10 @@ import {
     NewBitbucketProject,
 } from "./gluon/commands/bitbucket/BitbucketProject";
 import {KickOffJenkinsBuild} from "./gluon/commands/jenkins/JenkinsBuild";
-import {OnboardMember} from "./gluon/commands/member/Onboard";
-import {AddSlackDetails} from "./gluon/commands/member/Slack";
+import {AddSlackDetails} from "./gluon/commands/member/AddSlackDetails";
+import {OnboardMember} from "./gluon/commands/member/OnboardMember";
 import {ConfigureBasicPackage} from "./gluon/commands/packages/ConfigureBasicPackage";
-import {
-    ConfigurePackage,
-} from "./gluon/commands/packages/ConfigurePackage";
+import {ConfigurePackage} from "./gluon/commands/packages/ConfigurePackage";
 import {CreateApplication} from "./gluon/commands/packages/CreateApplication";
 import {LinkExistingApplication} from "./gluon/commands/packages/LinkExistingApplication";
 import {LinkExistingLibrary} from "./gluon/commands/packages/LinkExistingLibrary";
@@ -22,18 +20,14 @@ import {
     ListTeamProjects,
 } from "./gluon/commands/project/ProjectDetails";
 import {NewProjectEnvironments} from "./gluon/commands/project/ProjectEnvironments";
+import {AddMemberToTeam} from "./gluon/commands/team/AddMemberToTeam";
+import {CreateMembershipRequestToTeam} from "./gluon/commands/team/CreateMembershipRequestToTeam";
 import {CreateTeam} from "./gluon/commands/team/CreateTeam";
 import {NewDevOpsEnvironment} from "./gluon/commands/team/DevOpsEnvironment";
-import {
-    AddMemberToTeam,
-    CreateMembershipRequestToTeam,
-    JoinTeam,
-} from "./gluon/commands/team/JoinTeam";
-import {
-    LinkExistingTeamSlackChannel,
-    NewOrUseTeamSlackChannel,
-    NewTeamSlackChannel,
-} from "./gluon/commands/team/TeamSlackChannel";
+import {JoinTeam} from "./gluon/commands/team/JoinTeam";
+import {LinkExistingTeamSlackChannel} from "./gluon/commands/team/LinkExistingTeamSlackChannel";
+import {NewOrUseTeamSlackChannel} from "./gluon/commands/team/NewOrExistingTeamSlackChannel";
+import {NewTeamSlackChannel} from "./gluon/commands/team/NewSlackChannel";
 import {BitbucketProjectAdded} from "./gluon/events/bitbucket/BitbucketProjectAdded";
 import {BitbucketProjectRequested} from "./gluon/events/bitbucket/BitbucketProjectRequested";
 import {TeamMemberCreated} from "./gluon/events/member/TeamMemberCreated";

@@ -2,10 +2,10 @@ import "mocha";
 import * as assert from "power-assert";
 const MockAdapter = require("axios-mock-adapter");
 import axios from "axios";
-import {QMConfig} from "../../../src/config/QMConfig";
-import {MembershipRequestClosed} from "../../../src/gluon/events/team/MembershipRequestClosed";
-import {TestGraphClient} from "../TestGraphClient";
-import {TestMessageClient} from "../TestMessageClient";
+import {QMConfig} from "../../../../src/config/QMConfig";
+import {MembershipRequestClosed} from "../../../../src/gluon/events/team/MembershipRequestClosed";
+import {TestGraphClient} from "../../TestGraphClient";
+import {TestMessageClient} from "../../TestMessageClient";
 
 describe("Close a membership request", () => {
     it("should approve team member", async () => {
@@ -70,7 +70,7 @@ describe("Close a membership request", () => {
         };
 
         await subject.handle(fakeContext);
-        assert(fakeContext.messageClient.textMsg.text === `Welcome to the team *@${userScreenName}*!`);
+        assert(fakeContext.messageClient.textMsg[0].text === `Welcome to the team *@${userScreenName}*!`);
     });
 
     it("should reject team member", async () => {
@@ -135,6 +135,6 @@ describe("Close a membership request", () => {
         };
 
         await subject.handle(fakeContext);
-        assert(fakeContext.messageClient.textMsg === `Membership request rejected`);
+        assert.equal(fakeContext.messageClient.textMsg[0], "Your membership request to team 'test_Team' has been rejected by @Approval.User");
     });
 });

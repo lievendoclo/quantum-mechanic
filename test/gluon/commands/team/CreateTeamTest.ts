@@ -1,10 +1,11 @@
+import axios from "axios";
 import "mocha";
 import * as assert from "power-assert";
+import {QMConfig} from "../../../../src/config/QMConfig";
+import {CreateTeam} from "../../../../src/gluon/commands/team/CreateTeam";
+import {TestMessageClient} from "../../TestMessageClient";
+
 const MockAdapter = require("axios-mock-adapter");
-import axios from "axios";
-import {QMConfig} from "../../../src/config/QMConfig";
-import {CreateTeam} from "../../../src/gluon/commands/team/CreateTeam";
-import {TestMessageClient} from "../TestMessageClient";
 
 describe("Create Team test", () => {
     it("should create team", async () => {
@@ -41,7 +42,8 @@ describe("Create Team test", () => {
         };
 
         await subject.handle(fakeContext);
-        assert(JSON.stringify(fakeContext.messageClient) === "{}");
+
+        assert.equal(fakeContext.messageClient.textMsg.length, 0);
     });
 
     it("should fail creating team", async () => {
@@ -78,6 +80,6 @@ describe("Create Team test", () => {
         };
 
         await subject.handle(fakeContext);
-        assert(fakeContext.messageClient.textMsg === "❗Unhandled exception occurred. Please alert your system admin to check the logs and correct the issue accordingly.");
+        assert(fakeContext.messageClient.textMsg[0] === "❗Unhandled exception occurred. Please alert your system admin to check the logs and correct the issue accordingly.");
     });
 });

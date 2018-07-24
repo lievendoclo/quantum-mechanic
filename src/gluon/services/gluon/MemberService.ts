@@ -4,7 +4,7 @@ import {SlackMessage, url} from "@atomist/slack-messages";
 import axios from "axios";
 import * as _ from "lodash";
 import {QMConfig} from "../../../config/QMConfig";
-import {OnboardMember} from "../../commands/member/Onboard";
+import {OnboardMember} from "../../commands/member/OnboardMember";
 import {QMError} from "../../util/shared/Error";
 import {isSuccessCode} from "../../util/shared/Http";
 

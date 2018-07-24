@@ -9,9 +9,8 @@ import {
     Parameter,
     Tags,
 } from "@atomist/automation-client";
-import {buttonForCommand} from "@atomist/automation-client/spi/message/MessageClient";
-import {SlackMessage, url} from "@atomist/slack-messages";
 import {QMConfig} from "../../../config/QMConfig";
+import {OnboardMemberMessages} from "../../messages/member/OnboardMemberMessages";
 import {GluonService} from "../../services/gluon/GluonService";
 import {
     handleQMError,
@@ -19,8 +18,6 @@ import {
     ResponderMessageClient,
 } from "../../util/shared/Error";
 import {isSuccessCode} from "../../util/shared/Http";
-import {CreateTeam} from "../team/CreateTeam";
-import {JoinTeam} from "../team/JoinTeam";
 
 @CommandHandler("Onboard a new team member", QMConfig.subatomic.commandPrefix + " onboard me")
 @Tags("subatomic", "slack", "member")
@@ -55,6 +52,8 @@ export class OnboardMember implements HandleCommand<HandlerResult> {
     })
     public domainUsername: string;
 
+    public onboardMessages: OnboardMemberMessages = new OnboardMemberMessages();
+
     constructor(private gluonService = new GluonService()) {
     }
 
@@ -72,8 +71,8 @@ export class OnboardMember implements HandleCommand<HandlerResult> {
                         userId: this.userId,
                     },
                 });
-
-            return await this.presentTeamCreationAndApplicationOptions(ctx, this.firstName, this.userId);
+            const message = this.onboardMessages.presentTeamCreationAndApplicationOptions(this.firstName);
+            return await ctx.messageClient.addressUsers(message, this.userId);
         } catch (error) {
             return await this.handleError(ctx, error);
         }
@@ -86,39 +85,6 @@ export class OnboardMember implements HandleCommand<HandlerResult> {
         if (!isSuccessCode(createMemberResult.status)) {
             throw new QMError(`Unable to onboard a member with provided details. Details of the user are already in use.`);
         }
-    }
-
-    private async presentTeamCreationAndApplicationOptions(ctx: HandlerContext, firstName: string, userId: string): Promise<HandlerResult> {
-        const text: string = `
-Welcome to the Subatomic environment *${firstName}*!
-Next steps are to either join an existing team or create a new one.
-                `;
-
-        const msg: SlackMessage = {
-            text,
-            attachments: [{
-                fallback: "Welcome to the Subatomic environment",
-                footer: `For more information, please read the ${this.docs()}`,
-                thumb_url: "https://raw.githubusercontent.com/absa-subatomic/subatomic-documentation/gh-pages/images/subatomic-logo-colour.png",
-                actions: [
-                    buttonForCommand(
-                        {
-                            text: "Apply to join a team",
-                            style: "primary",
-                        },
-                        new JoinTeam()),
-                    buttonForCommand(
-                        {text: "Create a new team"},
-                        new CreateTeam()),
-                ],
-            }],
-        };
-        return await ctx.messageClient.addressUsers(msg, userId);
-    }
-
-    private docs(): string {
-        return `${url(`${QMConfig.subatomic.docs.baseUrl}/quantum-mechanic/command-reference#joinTeam`,
-            "documentation")}`;
     }
 
     private async handleError(ctx: HandlerContext, error) {

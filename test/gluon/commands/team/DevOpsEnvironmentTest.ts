@@ -2,9 +2,9 @@ import "mocha";
 import * as assert from "power-assert";
 const MockAdapter = require("axios-mock-adapter");
 import axios from "axios";
-import {QMConfig} from "../../../src/config/QMConfig";
-import {NewDevOpsEnvironment} from "../../../src/gluon/commands/team/DevOpsEnvironment";
-import {TestMessageClient} from "../TestMessageClient";
+import {QMConfig} from "../../../../src/config/QMConfig";
+import {NewDevOpsEnvironment} from "../../../../src/gluon/commands/team/DevOpsEnvironment";
+import {TestMessageClient} from "../../TestMessageClient";
 
 describe("Create a new or use an existing Openshift DevOps environment", () => {
     it("Should use existing DevOps environment", async () => {
@@ -80,6 +80,6 @@ describe("Create a new or use an existing Openshift DevOps environment", () => {
         };
 
         await subject.handle(fakeContext);
-        assert(fakeContext.messageClient.textMsg.text === `Requesting DevOps environment for *${teamName}* team.`);
+        assert(fakeContext.messageClient.textMsg[0].text === `Requesting DevOps environment for *${teamName}* team.`);
     });
 });

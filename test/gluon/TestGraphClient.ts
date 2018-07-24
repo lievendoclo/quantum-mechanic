@@ -1,6 +1,9 @@
 import {
-    GraphClient, MutationOptions, QueryOptions,
+    GraphClient,
+    MutationOptions,
+    QueryOptions,
 } from "@atomist/automation-client/spi/graph/GraphClient";
+import {isUndefined} from "util";
 
 export class TestGraphClient implements GraphClient {
 
@@ -10,22 +13,36 @@ export class TestGraphClient implements GraphClient {
     public queryString: string;
     public var: any;
 
+    public executeQueryFromFileResults: Array<{ result: boolean, returnValue?: any }> = [];
+    public executeMutationFromFileResults: Array<{ result: boolean, returnValue?: any }> = [];
+    public executeQueryResults: Array<{ result: boolean, returnValue?: any }> = [];
+    public executeMutationResults: Array<{ result: boolean, returnValue?: any }> = [];
+
+    public defaultReturn = {
+        ChatId: [
+            {
+                userId: "U967SDE6",
+                screenName: "Test.User", // `${variables.userId}`, // ignore error, it does exist
+            },
+        ],
+    };
+
     public executeQueryFromFile<T, Q>(path: string, variables?: Q, options?: any, current?: string): Promise<any> {
         this.path = path;
-        const json = {
-            ChatId: [
-                {
-                    userId: "U967SDE6",
-                    screenName: "Test.User", // `${variables.userId}`, // ignore error, it does exist
-                },
-            ],
-        };
-        return Promise.resolve(json);
+        if (this.executeQueryFromFileResults.length > 0) {
+            const result = this.executeQueryFromFileResults.shift();
+            return this.returnPredefinedResult(result);
+        }
+        return Promise.resolve(this.defaultReturn);
     }
 
     public executeMutationFromFile<T, Q>(path: string, variables?: Q, options?: any, current?: string): Promise<any> {
         this.path = path;
-        return Promise.resolve();
+        if (this.executeMutationFromFileResults.length > 0) {
+            const result = this.executeMutationFromFileResults.shift();
+            return this.returnPredefinedResult(result);
+        }
+        return Promise.resolve(this.defaultReturn);
     }
 
     public query<T, Q>(options: QueryOptions<Q> | string): Promise<T> {
@@ -48,11 +65,28 @@ export class TestGraphClient implements GraphClient {
 
     public executeQuery<T, Q>(query: string, variables?: Q, options?: any): Promise<any> {
         this.queryString = query;
-        return Promise.resolve();
+        if (this.executeQueryResults.length > 0) {
+            const result = this.executeQueryResults.shift();
+            return this.returnPredefinedResult(result);
+        }
+        return Promise.resolve(this.defaultReturn);
     }
 
     public executeMutation<T, Q>(mutation: string, variables?: Q, options?: any): Promise<any> {
         this.mutation = mutation;
-        return Promise.resolve();
+        if (this.executeMutationResults.length > 0) {
+            const result = this.executeMutationResults.shift();
+            return this.returnPredefinedResult(result);
+        }
+        return Promise.resolve(this.defaultReturn);
+    }
+
+    private returnPredefinedResult(predefinedResult: { result: boolean, returnValue?: any }) {
+        const returnValue = isUndefined(predefinedResult.returnValue) ? this.defaultReturn : predefinedResult.returnValue;
+        if (predefinedResult.result) {
+            return Promise.resolve(returnValue);
+        } else {
+            return Promise.reject(returnValue);
+        }
     }
 }

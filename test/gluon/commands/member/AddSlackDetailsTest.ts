@@ -1,10 +1,11 @@
+import axios from "axios";
 import "mocha";
 import * as assert from "power-assert";
+import {QMConfig} from "../../../../src/config/QMConfig";
+import {AddSlackDetails} from "../../../../src/gluon/commands/member/AddSlackDetails";
+import {TestMessageClient} from "../../TestMessageClient";
+
 const MockAdapter = require("axios-mock-adapter");
-import axios from "axios";
-import {QMConfig} from "../../../src/config/QMConfig";
-import {AddSlackDetails} from "../../../src/gluon/commands/member/Slack";
-import {TestMessageClient} from "../TestMessageClient";
 
 describe("Add slack details to existing team member", () => {
     it("should add slack details to existing memnber", done => {
@@ -19,8 +20,8 @@ describe("Add slack details to existing team member", () => {
             _embedded: {
                 teamMemberResources: [
                     {
-                     memberId: `${memberId}`,
-                     firstName: `${firstName}`,
+                        memberId: `${memberId}`,
+                        firstName: `${firstName}`,
                     },
                 ],
             },
@@ -48,7 +49,7 @@ describe("Add slack details to existing team member", () => {
 
         subject.handle(fakeContext)
             .then(() => {
-                assert(fakeContext.messageClient.textMsg.text === `Thanks *${firstName}*, your Slack details have been added to your Subatomic profile. 👍`);
+                assert(fakeContext.messageClient.textMsg[0].text === `Thanks *${firstName}*, your Slack details have been added to your Subatomic profile. 👍`);
                 return Promise.resolve();
             })
             .then(done, done);

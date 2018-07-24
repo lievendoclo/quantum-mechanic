@@ -1,42 +1,14 @@
+import axios from "axios";
 import "mocha";
 import * as assert from "power-assert";
+import {QMConfig} from "../../../../src/config/QMConfig";
+import {AddMemberToTeam} from "../../../../src/gluon/commands/team/AddMemberToTeam";
+import {TestGraphClient} from "../../TestGraphClient";
+import {TestMessageClient} from "../../TestMessageClient";
+
 const MockAdapter = require("axios-mock-adapter");
-import axios from "axios";
-import {QMConfig} from "../../../src/config/QMConfig";
-import {AddMemberToTeam, JoinTeam} from "../../../src/gluon/commands/team/JoinTeam";
-import {TestGraphClient} from "../TestGraphClient";
-import {TestMessageClient} from "../TestMessageClient";
 
-describe("Join team tests", () => {
-    it("should ask for team selection", async () => {
-        const mock = new MockAdapter(axios);
-        const slackName = "Test.User";
-        const teamId = "197c1bb3-9c1d-431f-8db3-2188b9c75dce";
-        const name = "test";
-
-        mock.onGet(`${QMConfig.subatomic.gluon.baseUrl}/teams`).reply(200, {
-            _embedded: {
-                teamResources: [
-                    {
-                        teamId: `${teamId}`,
-                        name: `${name}`,
-                    },
-                ],
-            },
-        });
-
-        const subject = new JoinTeam();
-        subject.slackName = `${slackName}`;
-
-        const fakeContext = {
-            teamId: "TEST",
-            correlationId: "1231343234234",
-            messageClient: new TestMessageClient(),
-        };
-
-        await subject.handle(fakeContext);
-        assert( fakeContext.messageClient.textMsg.text === `Please select the team you would like to join`);
-    });
+describe("AddMemberToTeam tests", () => {
 
     it("should add member to team", async () => {
         const mock = new MockAdapter(axios);
@@ -45,7 +17,6 @@ describe("Join team tests", () => {
         const channelId = "3d01d401-abb3-4eee-8884-2ed5a472172d";
         const teamChannel = "test-channel";
         const slackName = "<@Test.User>";
-        const role = "";
         const chatId = "Test.User";
 
         mock.onGet(`${QMConfig.subatomic.gluon.baseUrl}/members?slackScreenName=${chatId}`).reply(200, {
@@ -97,10 +68,10 @@ describe("Join team tests", () => {
         });
         const subject = new AddMemberToTeam();
         subject.screenName = `${screenName}`;
-        subject.teamId = `${teamId}`,
-            subject.channelId = `${channelId}`,
-            subject.teamChannel = `${teamChannel}`,
-            subject.slackName = `${slackName}`;
+        subject.teamId = `${teamId}`;
+        subject.channelId = `${channelId}`;
+        subject.teamChannel = `${teamChannel}`;
+        subject.slackName = `${slackName}`;
         const fakeContext = {
             teamId: "TEST",
             correlationId: "1231343234234",
@@ -109,6 +80,6 @@ describe("Join team tests", () => {
         };
 
         await subject.handle(fakeContext);
-        assert(fakeContext.messageClient.textMsg.text === "Welcome to the team *Test*!");
+        assert(fakeContext.messageClient.textMsg[0].text === "Welcome to the team *Test*!");
     });
 });

@@ -13,7 +13,7 @@ import {
 import {SlackMessage, url} from "@atomist/slack-messages";
 import * as _ from "lodash";
 import {QMConfig} from "../../../config/QMConfig";
-import {NewOrUseTeamSlackChannel} from "../../commands/team/TeamSlackChannel";
+import {NewOrUseTeamSlackChannel} from "../../commands/team/NewOrExistingTeamSlackChannel";
 
 @EventHandler("Receive TeamCreated events", `
 subscription TeamCreatedEvent {

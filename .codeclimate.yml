@@ -40,3 +40,4 @@ checks:
       threshold: #language-specific defaults. overrides affect all languages.
 exclude_patterns:
 - "src/gluon/ingesters"
+- "test/"

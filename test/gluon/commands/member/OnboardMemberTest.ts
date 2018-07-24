@@ -1,9 +1,10 @@
-import * as assert from "power-assert";
-const MockAdapter = require("axios-mock-adapter");
 import axios from "axios";
-import {QMConfig} from "../../../src/config/QMConfig";
-import {OnboardMember} from "../../../src/gluon/commands/member/Onboard";
-import {TestMessageClient} from "../TestMessageClient";
+import * as assert from "power-assert";
+import {QMConfig} from "../../../../src/config/QMConfig";
+import {OnboardMember} from "../../../../src/gluon/commands/member/OnboardMember";
+import {TestMessageClient} from "../../TestMessageClient";
+
+const MockAdapter = require("axios-mock-adapter");
 
 describe("Onboard new member test", () => {
     it("should welcome new user", async () => {
@@ -34,6 +35,6 @@ describe("Onboard new member test", () => {
         };
 
         await subject.handle(fakeContext);
-        assert(fakeContext.messageClient.textMsg.text.trim() === "Welcome to the Subatomic environment *Test*!\nNext steps are to either join an existing team or create a new one.");
+        assert(fakeContext.messageClient.textMsg[0].text.trim() === "Welcome to the Subatomic environment *Test*!\nNext steps are to either join an existing team or create a new one.");
     });
 });

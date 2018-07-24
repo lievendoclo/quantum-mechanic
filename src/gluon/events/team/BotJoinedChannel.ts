@@ -13,8 +13,8 @@ import {
 import {buttonForCommand} from "@atomist/automation-client/spi/message/MessageClient";
 import {SlackMessage, url} from "@atomist/slack-messages";
 import {QMConfig} from "../../../config/QMConfig";
+import {AddMemberToTeam} from "../../commands/team/AddMemberToTeam";
 import {NewDevOpsEnvironment} from "../../commands/team/DevOpsEnvironment";
-import {AddMemberToTeam} from "../../commands/team/JoinTeam";
 import {GluonService} from "../../services/gluon/GluonService";
 import {
     ChannelMessageClient,
