@@ -8,8 +8,11 @@ import {StandardOption} from "../../../openshift/base/options/StandardOption";
 import {OCClient} from "../../../openshift/OCClient";
 import {OCCommon} from "../../../openshift/OCCommon";
 import {getProjectDisplayName} from "../../util/project/Project";
+import {QuotaLoader} from "../../util/resources/QuotaLoader";
 
 export class OCService {
+
+    private quotaLoader: QuotaLoader = new QuotaLoader();
 
     public async login() {
         return await OCClient.login(QMConfig.subatomic.openshift.masterUrl, QMConfig.subatomic.openshift.auth.token);
@@ -31,102 +34,28 @@ export class OCService {
 
     public async createDevOpsDefaultResourceQuota(openshiftProjectId: string): Promise<OCCommandResult> {
         logger.debug(`Trying to create Dev Ops default resource quota. openshiftProjectId: ${openshiftProjectId}`);
-        return await OCCommon.createFromData({
-            apiVersion: "v1",
-            kind: "ResourceQuota",
-            metadata: {
-                name: "default-quota",
-            },
-            spec: {
-                hard: {
-                    "limits.cpu": "16", // 4 * 4m
-                    "limits.memory": "4096Mi", // 4 * 1024Mi
-                    "pods": "4",
-                },
-            },
-        }, [
+        return await OCCommon.createFromData(this.quotaLoader.getDevOpsDefaultResourceQuota(), [
             new SimpleOption("-namespace", openshiftProjectId),
         ]);
     }
 
     public async createDevOpsDefaultLimits(openshiftProjectId: string): Promise<OCCommandResult> {
         logger.debug(`Trying to create Dev Ops default limits. openshiftProjectId: ${openshiftProjectId}`);
-        return await OCCommon.createFromData({
-            apiVersion: "v1",
-            kind: "LimitRange",
-            metadata: {
-                name: "default-limits",
-            },
-            spec: {
-                limits: [{
-                    type: "Container",
-                    max: {
-                        cpu: "4",
-                        memory: "1024Mi",
-                    },
-                    default: {
-                        cpu: "4",
-                        memory: "1024Mi",
-                    },
-                    defaultRequest: {
-                        cpu: "0",
-                        memory: "0Mi",
-                    },
-                }],
-            },
-        }, [
+        return await OCCommon.createFromData(this.quotaLoader.getDevOpsDefaultLimitRange(), [
             new SimpleOption("-namespace", openshiftProjectId),
         ]);
     }
 
     public async createProjectDefaultResourceQuota(openshiftProjectId: string): Promise<OCCommandResult> {
         logger.debug(`Trying to create project default resource quota. openshiftProjectId: ${openshiftProjectId}`);
-        return await OCCommon.createFromData({
-            apiVersion: "v1",
-            kind: "ResourceQuota",
-            metadata: {
-                name: "default-quota",
-            },
-            spec: {
-                hard: {
-                    "limits.cpu": "80", // 20 * 4m
-                    "limits.memory": "20480Mi", // 20 * 1024Mi
-                    "pods": "20",
-                    "replicationcontrollers": "20",
-                    "services": "20",
-                },
-            },
-        }, [
+        return await OCCommon.createFromData(this.quotaLoader.getProjectDefaultResourceQuota(), [
             new SimpleOption("-namespace", openshiftProjectId),
         ]);
     }
 
     public async createProjectDefaultLimits(openshiftProjectId: string): Promise<OCCommandResult> {
         logger.debug(`Trying to create project default limits. openshiftProjectId: ${openshiftProjectId}`);
-        return await OCCommon.createFromData({
-            apiVersion: "v1",
-            kind: "LimitRange",
-            metadata: {
-                name: "default-limits",
-            },
-            spec: {
-                limits: [{
-                    type: "Container",
-                    max: {
-                        cpu: "8",
-                        memory: "4096Mi",
-                    },
-                    default: {
-                        cpu: "4",
-                        memory: "1024Mi",
-                    },
-                    defaultRequest: {
-                        cpu: "0",
-                        memory: "0Mi",
-                    },
-                }],
-            },
-        }, [
+        return await OCCommon.createFromData(this.quotaLoader.getProjectDefaultLimitRange(), [
             new SimpleOption("-namespace", openshiftProjectId),
         ]);
     }

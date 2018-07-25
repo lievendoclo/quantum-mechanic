@@ -1,0 +1,26 @@
+{
+  "apiVersion": "v1",
+  "kind": "LimitRange",
+  "metadata": {
+    "name": "default-limits"
+  },
+  "spec": {
+    "limits": [
+      {
+        "type": "Container",
+        "max": {
+          "cpu": "8",
+          "memory": "4096Mi"
+        },
+        "default": {
+          "cpu": "4",
+          "memory": "1024Mi"
+        },
+        "defaultRequest": {
+          "cpu": "0",
+          "memory": "0Mi"
+        }
+      }
+    ]
+  }
+}
