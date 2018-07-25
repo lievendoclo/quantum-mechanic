@@ -69,9 +69,9 @@ export class CreateApplication extends RecursiveParameterRequestCommand {
     protected async runCommand(ctx: HandlerContext): Promise<HandlerResult> {
         // get memberId for createdBy
         try {
-            await ctx.messageClient.respond({
+            await ctx.messageClient.addressChannels({
                 text: "🚀 Your new application is being created...",
-            });
+            }, this.teamChannel, {id: `applicationCreated-${this.name}`});
 
             const member = await this.gluonService.members.gluonMemberFromScreenName(this.screenName);
 
@@ -81,7 +81,7 @@ export class CreateApplication extends RecursiveParameterRequestCommand {
 
             return await ctx.messageClient.respond({
                 text: "🚀 Application created successfully.",
-            });
+            }, {id: `applicationCreated-${this.name}`, ttl: 1000});
         } catch (error) {
             return await handleQMError(new ResponderMessageClient(ctx), error);
         }

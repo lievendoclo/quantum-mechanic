@@ -69,9 +69,9 @@ export class LinkExistingApplication extends RecursiveParameterRequestCommand {
         logger.debug(`Linking to Gluon project: ${this.projectName}`);
 
         try {
-            await ctx.messageClient.respond({
+            await ctx.messageClient.addressChannels({
                 text: "🚀 Your new application is being created...",
-            });
+            }, this.teamChannel, {id: `applicationCreated-${this.name}`});
 
             return await this.packageCommandService.linkBitbucketRepoToGluonPackage(
                 this.screenName,

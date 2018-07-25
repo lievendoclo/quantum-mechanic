@@ -89,7 +89,7 @@ export class ProjectEnvironmentsRequested implements HandleEvent<any> {
 
         this.qmMessageClient = this.createMessageClient(ctx, environmentsRequestedEvent.teams);
 
-        this.taskList = this.initialiseTaskList(environmentsRequestedEvent.project.name, this.qmMessageClient);
+        this.taskList = this.initialiseTaskList(environmentsRequestedEvent.project.name, this.qmMessageClient, environmentsRequestedEvent.teams.name);
         await this.taskList.display();
 
         try {
@@ -129,8 +129,8 @@ export class ProjectEnvironmentsRequested implements HandleEvent<any> {
         return messageClient;
     }
 
-    private initialiseTaskList(projectName: string, messageClient: QMMessageClient) {
-        const taskList = new TaskListMessage(`🚀 Provisioning of environment's for project *${projectName}* started:`, messageClient);
+    private initialiseTaskList(projectName: string, messageClient: QMMessageClient, teamName: string) {
+        const taskList = new TaskListMessage(`🚀 Provisioning of environment's for project *${projectName}* started:`, messageClient, `projectEnvRequest-${projectName}`);
         taskList.addTask("devEnvironment", "Create Dev Environment");
         taskList.addTask("sitEnvironment", "Create SIT Environment");
         taskList.addTask("uatEnvironment", "Create UAT Environment");

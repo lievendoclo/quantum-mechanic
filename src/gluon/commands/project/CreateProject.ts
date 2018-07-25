@@ -109,7 +109,7 @@ export class CreateProject extends RecursiveParameterRequestCommand {
                 }],
             });
 
-        return await ctx.messageClient.respond("🚀Project successfully created.");
+        return await ctx.messageClient.addressChannels("🚀Project successfully created.", this.teamChannel, {id: `projectCreated-${teamName}`});
     }
 
     private async getGluonTeamFromName(teamName: string) {

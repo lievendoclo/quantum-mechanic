@@ -69,7 +69,7 @@ export class NewDevOpsEnvironment extends RecursiveParameterRequestCommand {
 
         await ctx.messageClient.addressChannels({
             text: `Requesting DevOps environment for *${teamName}* team.`,
-        }, teamChannel);
+        }, teamChannel, {id: `devOpsEnvRequest-${teamName}`});
 
         const member = await this.gluonService.members.gluonMemberFromScreenName(screenName);
 

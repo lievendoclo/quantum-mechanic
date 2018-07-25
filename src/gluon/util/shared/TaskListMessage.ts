@@ -6,12 +6,11 @@ import {QMMessageClient} from "./Error";
 export class TaskListMessage {
 
     private statusCosmetics = new Map<TaskStatus, { color: string, symbol: string }>();
-    private readonly messageId: string;
     private readonly tasks: { [k: string]: Task };
     private readonly taskOrder: string[];
 
-    constructor(private titleMessage, private messageClient: QMMessageClient) {
-        this.messageId = uuid();
+    constructor(private titleMessage, private messageClient: QMMessageClient, private messageId) {
+        this.messageId = messageId;
         this.tasks = {};
         this.taskOrder = [];
         this.statusCosmetics.set(TaskStatus.Pending, {
@@ -48,7 +47,7 @@ export class TaskListMessage {
     }
 
     public display(): Promise<HandlerResult> {
-        return this.messageClient.send(this.generateMessage(), {id: this.messageId});
+        return this.messageClient.send(this.generateMessage(), {id: this.messageId, ttl: 60000});
     }
 
     private generateMessage() {

@@ -101,7 +101,7 @@ export class ApplicationCreated implements HandleEvent<any> {
                         }),
                 ],
             }],
-        }, applicationCreatedEvent.owningTeam.slackIdentity.teamChannel);
+        }, applicationCreatedEvent.owningTeam.slackIdentity.teamChannel, {id: `applicationCreated-${applicationCreatedEvent.application.name}`, ttl: 1000});
     }
 
     private docs(extension): string {

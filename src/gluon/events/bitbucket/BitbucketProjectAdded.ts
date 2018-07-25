@@ -117,7 +117,7 @@ If you would like to associate more teams to the *${addedEvent.project.name}* pr
                             associateTeamCommand),
                     ],
                 }],
-        }, addedEvent.teams.map(team => team.slackIdentity.teamChannel));
+        }, addedEvent.teams.map(team => team.slackIdentity.teamChannel), {id: `bitBucketConfig-${addedEvent.bitbucketProject.name}`, ttl: 1000});
     }
 
     private docs(extension): string {

@@ -94,7 +94,7 @@ export class ConfigurePackage extends RecursiveParameterRequestCommand {
         try {
             await ctx.messageClient.addressChannels({
                 text: "🚀 Your package is being configured...",
-            }, this.teamChannel);
+            }, this.teamChannel, {id: `packageConfig-${this.applicationName}`});
             return await this.configurePackage(ctx);
         } catch (error) {
             return await handleQMError(new ResponderMessageClient(ctx), error);
@@ -412,7 +412,7 @@ You can kick off the build pipeline for your ${packageTypeString} by clicking th
                 ],
             }],
         }, associatedTeams.map(team =>
-            team.slack.teamChannel));
+            team.slack.teamChannel), {id: `packageConfig-${applicationName}`, ttl: 1000});
     }
 
     private async createApplicationOpenshiftResources(tenantName: string, projectName: string, applicationName: string): Promise<HandlerResult> {

@@ -72,7 +72,7 @@ export class LinkExistingLibrary extends RecursiveParameterRequestCommand {
         try {
             await ctx.messageClient.addressChannels({
                 text: "🚀 Your new library is being created...",
-            }, this.teamChannel);
+            }, this.teamChannel, {id: `applicationCreated-${this.name}`});
 
             return await this.packageCommandService.linkBitbucketRepoToGluonPackage(
                 this.screenName,

@@ -203,7 +203,7 @@ export class ListExistingBitbucketProject extends RecursiveParameterRequestComma
 
         await ctx.messageClient.addressChannels({
             text: `🚀 The Bitbucket project with key ${this.bitbucketProjectKey} is being configured...`,
-        }, this.teamChannel);
+        }, this.teamChannel, {id: `bitBucketConfig-${this.bitbucketProjectKey}`});
 
         const bitbucketProject = await this.getBitbucketProject(this.bitbucketProjectKey);
 
