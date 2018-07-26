@@ -1,4 +1,6 @@
 import {logger} from "@atomist/automation-client";
+import * as fs from "fs";
+import _ = require("lodash");
 import {QMConfig} from "../../../config/QMConfig";
 import {OCCommandResult} from "../../../openshift/base/OCCommandResult";
 import {AbstractOption} from "../../../openshift/base/options/AbstractOption";
@@ -8,11 +10,13 @@ import {StandardOption} from "../../../openshift/base/options/StandardOption";
 import {OCClient} from "../../../openshift/OCClient";
 import {OCCommon} from "../../../openshift/OCCommon";
 import {getProjectDisplayName} from "../../util/project/Project";
+import {BaseProjectTemplateLoader} from "../../util/resources/BaseProjectTemplateLoader";
 import {QuotaLoader} from "../../util/resources/QuotaLoader";
 
 export class OCService {
 
     private quotaLoader: QuotaLoader = new QuotaLoader();
+    private baseProjectTemplateLoader: BaseProjectTemplateLoader = new BaseProjectTemplateLoader();
 
     public async login() {
         return await OCClient.login(QMConfig.subatomic.openshift.masterUrl, QMConfig.subatomic.openshift.auth.token);
@@ -287,5 +291,18 @@ export class OCService {
     public async createPVC(pvcName: string, namespace: string): Promise<OCCommandResult> {
         logger.debug(`Trying to create pvc in namespace. pvcName: ${pvcName}; namespace: ${namespace}`);
         return await OCClient.createPvc(pvcName, namespace);
+    }
+
+    public async initilizeProjectWithDefaultProjectTemplate(projectId: string) {
+        const template = this.baseProjectTemplateLoader.getTemplate();
+        if (!_.isEmpty(template.objects)) {
+            logger.info(`Applying base project template to ${projectId}`);
+            const fileName = Date.now() + ".json";
+            fs.writeFileSync(`/tmp/${fileName}`, JSON.stringify(template));
+            const processedTemplateResult = await OCCommon.commonCommand("process", `-f /tmp/${fileName}`);
+            await OCCommon.createFromData(processedTemplateResult.output, [new SimpleOption("-namespace", projectId)]);
+        } else {
+            logger.debug(`Base template is empty. Not applying to project ${projectId}`);
+        }
     }
 }

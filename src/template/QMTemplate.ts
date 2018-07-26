@@ -1,17 +1,16 @@
-import {logger} from "@atomist/automation-client";
 import * as Handlebars from "handlebars";
 
 export class QMTemplate {
 
     private readonly template: HandlebarsTemplateDelegate;
 
-    constructor(templateFile: string, trimLines = false) {
+    constructor(templateFile: string) {
         const fs = require("fs");
         const buffer = fs.readFileSync(templateFile);
         this.template = Handlebars.compile(buffer.toString());
     }
 
-    public build(parameters: { [k: string]: any }) {
+    public build(parameters: { [k: string]: any }): string {
         const safeParameters: { [k: string]: any } = Object.assign([], parameters);
         this.toSafeStrings(safeParameters);
         return this.template(safeParameters);
