@@ -12,11 +12,15 @@ import {OCCommon} from "../../../openshift/OCCommon";
 import {getProjectDisplayName} from "../../util/project/Project";
 import {BaseProjectTemplateLoader} from "../../util/resources/BaseProjectTemplateLoader";
 import {QuotaLoader} from "../../util/resources/QuotaLoader";
+import {OCImageService} from "./OCImageService";
 
 export class OCService {
 
     private quotaLoader: QuotaLoader = new QuotaLoader();
     private baseProjectTemplateLoader: BaseProjectTemplateLoader = new BaseProjectTemplateLoader();
+
+    constructor(private ocImageService = new OCImageService()) {
+    }
 
     public async login() {
         return await OCClient.login(QMConfig.subatomic.openshift.masterUrl, QMConfig.subatomic.openshift.auth.token);
@@ -99,15 +103,7 @@ export class OCService {
     }
 
     public async getSubatomicImageStreamTags(namespace = "subatomic") {
-        logger.debug(`Trying to get subatomic image stream. namespace: ${namespace}`);
-        return OCCommon.commonCommand("get", "istag",
-            [],
-            [
-                new SimpleOption("l", "usage=subatomic-is"),
-                new SimpleOption("-namespace", namespace),
-                new SimpleOption("-output", "json"),
-            ],
-        );
+        return this.ocImageService.getSubatomicImageStreamTags(namespace);
     }
 
     public async createResourceFromDataInNamespace(resourceDefinition: any, projectNamespace: string, applyNotReplace: boolean = false): Promise<OCCommandResult> {
@@ -120,10 +116,14 @@ export class OCService {
     }
 
     public async tagSubatomicImageToNamespace(imageStreamTagName: string, destinationProjectNamespace: string, destinationImageStreamTagName: string = imageStreamTagName): Promise<OCCommandResult> {
-        logger.debug(`Trying tag subatomic image to namespace. imageStreamTagName: ${imageStreamTagName}; destinationProjectNamespace: ${destinationProjectNamespace}; destingationImageStreamTagName: ${destinationImageStreamTagName}`);
-        return await OCCommon.commonCommand("tag",
-            `subatomic/${imageStreamTagName}`,
-            [`${destinationProjectNamespace}/${destinationImageStreamTagName}`]);
+        return await this.ocImageService.tagImageToNamespace("subatomic", imageStreamTagName, destinationProjectNamespace, destinationImageStreamTagName);
+    }
+
+    public async tagAllSubatomicImageStreamsToDevOpsEnvironment(devopsProjectId) {
+        const imageStreamTagsResult = await this.getSubatomicImageStreamTags();
+        const imageStreamTags = JSON.parse(imageStreamTagsResult.output).items;
+
+        await this.ocImageService.tagAllImagesToNamespace("subatomic", imageStreamTags.map(item => item.metadata.name), devopsProjectId);
     }
 
     public async processJenkinsTemplateForDevOpsProject(devopsNamespace: string): Promise<OCCommandResult> {
@@ -304,5 +304,16 @@ export class OCService {
         } else {
             logger.debug(`Base template is empty. Not applying to project ${projectId}`);
         }
+    }
+
+    public async findProject(projectId: string) {
+        const listOfProjectsResult = await OCCommon.commonCommand("get", "projects",
+            [], [new SimpleOption("-output", "json")]);
+        for (const project of JSON.parse(listOfProjectsResult.output).items) {
+            if (project.metadata.name === projectId) {
+                return project;
+            }
+        }
+        return null;
     }
 }

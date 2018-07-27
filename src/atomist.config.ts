@@ -28,6 +28,8 @@ import {JoinTeam} from "./gluon/commands/team/JoinTeam";
 import {LinkExistingTeamSlackChannel} from "./gluon/commands/team/LinkExistingTeamSlackChannel";
 import {NewOrUseTeamSlackChannel} from "./gluon/commands/team/NewOrExistingTeamSlackChannel";
 import {NewTeamSlackChannel} from "./gluon/commands/team/NewSlackChannel";
+import {TagAllLatestImages} from "./gluon/commands/team/TagAllLatestImages";
+import {TagLatestImage} from "./gluon/commands/team/TagLatestImage";
 import {BitbucketProjectAdded} from "./gluon/events/bitbucket/BitbucketProjectAdded";
 import {BitbucketProjectRequested} from "./gluon/events/bitbucket/BitbucketProjectRequested";
 import {TeamMemberCreated} from "./gluon/events/member/TeamMemberCreated";
@@ -103,6 +105,8 @@ export const configuration: any = {
         ListProjectDetails,
         ConfigurePackage,
         ConfigureBasicPackage,
+        TagAllLatestImages,
+        TagLatestImage,
     ],
     events: [
         TeamsLinkedToProject,

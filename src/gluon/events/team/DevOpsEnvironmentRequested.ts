@@ -99,7 +99,7 @@ export class DevOpsEnvironmentRequested implements HandleEvent<any> {
 
             await this.copyJenkinsTemplateToDevOpsEnvironment(projectId);
 
-            await this.copyImageStreamsToDevOpsEnvironment(projectId);
+            await this.ocService.tagAllSubatomicImageStreamsToDevOpsEnvironment(projectId);
 
             await taskList.setTaskStatus("Resources", TaskStatus.Successful);
 
@@ -160,16 +160,6 @@ export class DevOpsEnvironmentRequested implements HandleEvent<any> {
         const jenkinsTemplate: any = JSON.parse(jenkinsTemplateJSON.output);
         jenkinsTemplate.metadata.namespace = projectId;
         await this.ocService.createResourceFromDataInNamespace(jenkinsTemplate, projectId);
-    }
-
-    private async copyImageStreamsToDevOpsEnvironment(projectId) {
-        const imageStreamTagsResult = await this.ocService.getSubatomicImageStreamTags();
-        const imageStreamTags = JSON.parse(imageStreamTagsResult.output).items;
-
-        for (const imageStreamTag of imageStreamTags) {
-            const imageStreamTagName = imageStreamTag.metadata.name;
-            await this.ocService.tagSubatomicImageToNamespace(imageStreamTagName, projectId);
-        }
     }
 
     private async createJenkinsDeploymentConfig(projectId: string) {
