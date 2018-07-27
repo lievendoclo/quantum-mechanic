@@ -134,7 +134,7 @@ describe("TeamSlackChannelService createTeamSlackChannel", () => {
 
         await service.createTeamSlackChannel(fakeContext, "Team1Id", "channelName");
 
-        assert(fakeContext.messageClient.textMsg[0].indexOf("The channel has been successfully linked to your team but since the channel \"channelName\" is private") > -1);
+        assert(fakeContext.messageClient.textMsg[0].indexOf("❗ The channel has been successfully linked to your team but since the channel \*channelName\* is private") > -1);
     });
     it("should create channel and add bot", async () => {
 

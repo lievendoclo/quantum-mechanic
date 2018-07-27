@@ -29,9 +29,11 @@ export class TeamSlackChannelService {
 
         const channel = await this.createTeamSlackChannel(ctx, slackTeamId, slackChannelName);
 
-        await this.inviteListOfGluonMembersToChannel(ctx, slackTeamId, channel.createSlackChannel.id, slackChannelName, team.members);
+        if (channel.createSlackChannel != null) {
+            await this.inviteListOfGluonMembersToChannel(ctx, slackTeamId, channel.createSlackChannel.id, slackChannelName, team.members);
 
-        await this.inviteListOfGluonMembersToChannel(ctx, slackTeamId, channel.createSlackChannel.id, slackChannelName, team.owners);
+            await this.inviteListOfGluonMembersToChannel(ctx, slackTeamId, channel.createSlackChannel.id, slackChannelName, team.owners);
+        }
 
     }
 
@@ -78,8 +80,9 @@ export class TeamSlackChannelService {
             // allow error to fall through to final return otherwise
         } catch (err) {
             if (err.networkError && err.networkError.response && err.networkError.response.status === 400) {
-                return await ctx.messageClient.respond(`The channel has been successfully linked to your team but since the channel "${slackChannelName}" is private` +
-                    ` the atomist bot cannot be automatically invited. Please manually invite the atomist bot using the \`/invite @atomist\` command in the "${slackChannelName}" slack channel.`);
+                return await ctx.messageClient.respond(`❗ The channel has been successfully linked to your team but since the channel *${slackChannelName}* is private` +
+                    ` the atomist bot cannot be automatically invited. Please manually invite the atomist bot using the \`/invite @atomist\` command in the *${slackChannelName}* slack channel.` +
+                    ` You will then need to manually invite your team members to the *${slackChannelName}* channel using the \`/invite @teamMembersName\`.`);
             }
             // allow error to fall through to final return otherwise
         }
