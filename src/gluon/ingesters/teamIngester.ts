@@ -34,6 +34,13 @@ export const DevOpsEnvironmentRequestedEvent: Ingester = {
             name: "DevOpsEnvironmentRequestedEvent",
             fields: [
                 {
+                    name: "messageId",
+                    type: {
+                        kind: "SCALAR",
+                        name: "String",
+                    },
+                },
+                {
                     name: "team",
                     type: {
                         kind: "OBJECT",

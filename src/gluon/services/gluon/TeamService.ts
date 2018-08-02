@@ -101,10 +101,11 @@ export class TeamService {
             membershipRequestDetails);
     }
 
-    public async requestDevOpsEnvironment(teamId: string, memberId: string): Promise<any> {
-        logger.debug(`Trying to request team devops environment. teamId: ${teamId}, memberId: ${memberId}`);
+    public async requestDevOpsEnvironment(teamId: string, memberId: string, msgId: string): Promise<any> {
+        logger.debug(`Trying to request team devops environment. teamId: ${teamId}, memberId: ${memberId}. msgId: ${msgId}`);
         return await axios.put(`${QMConfig.subatomic.gluon.baseUrl}/teams/${teamId}`,
             {
+                messageId: msgId,
                 devOpsEnvironment: {
                     requestedBy: memberId,
                 },

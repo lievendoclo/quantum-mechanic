@@ -28,6 +28,7 @@ const promiseRetry = require("promise-retry");
 subscription DevOpsEnvironmentRequestedEvent {
   DevOpsEnvironmentRequestedEvent {
     id
+    messageId
     team {
       teamId
       name
@@ -71,7 +72,7 @@ export class DevOpsEnvironmentRequested implements HandleEvent<any> {
 
         const teamChannel = devOpsRequestedEvent.team.slackIdentity.teamChannel;
 
-        const taskList = new TaskListMessage(`🚀 Provisioning of DevOps environment for team *${devOpsRequestedEvent.team.name}* started:`, new ChannelMessageClient(ctx).addDestination(teamChannel), `devOpsEnvRequest-${devOpsRequestedEvent.team.name}`);
+        const taskList = new TaskListMessage(`🚀 Provisioning of DevOps environment for team *${devOpsRequestedEvent.team.name}* started:`, new ChannelMessageClient(ctx).addDestination(teamChannel), devOpsRequestedEvent.messageId);
         taskList.addTask("OpenshiftEnv", "Create DevOps Openshift Project");
         taskList.addTask("OpenshiftPermissions", "Add Openshift Permissions");
         taskList.addTask("Resources", "Copy Subatomic resources to DevOps Project");

@@ -67,9 +67,11 @@ export class NewDevOpsEnvironment extends RecursiveParameterRequestCommand {
                                            teamName: string,
                                            teamChannel: string): Promise<any> {
 
+        const messageId = Date.now().toString();
+        logger.info(`!!${messageId}`);
         await ctx.messageClient.addressChannels({
             text: `Requesting DevOps environment for *${teamName}* team.`,
-        }, teamChannel, {id: `devOpsEnvRequest-${teamName}`});
+        }, teamChannel, {id: messageId});
 
         const member = await this.gluonService.members.gluonMemberFromScreenName(screenName);
 
@@ -83,7 +85,7 @@ export class NewDevOpsEnvironment extends RecursiveParameterRequestCommand {
         const team = teamQueryResult.data._embedded.teamResources[0];
         logger.info("Requesting DevOps environment for team: " + teamName);
 
-        const teamUpdateResult = await this.requestDevOpsEnvironmentThroughGluon(team.teamId, member.memberId);
+        const teamUpdateResult = await this.requestDevOpsEnvironmentThroughGluon(team.teamId, member.memberId, messageId);
 
         if (!isSuccessCode(teamUpdateResult.status)) {
             logger.error(`Unable to request ${teamName} devops environment. Error: ${JSON.stringify(teamUpdateResult)}`);
@@ -97,8 +99,8 @@ export class NewDevOpsEnvironment extends RecursiveParameterRequestCommand {
         return await this.gluonService.teams.gluonTeamByName(teamName);
     }
 
-    private async requestDevOpsEnvironmentThroughGluon(teamId: string, memberId: string) {
-        return await this.gluonService.teams.requestDevOpsEnvironment(teamId, memberId);
+    private async requestDevOpsEnvironmentThroughGluon(teamId: string, memberId: string, messageId: string) {
+        return await this.gluonService.teams.requestDevOpsEnvironment(teamId, memberId, messageId);
     }
 
 }
