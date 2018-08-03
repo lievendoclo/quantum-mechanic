@@ -111,7 +111,7 @@ If you would like to associate more teams to the *${projectCreatedEvent.project.
                         associateTeamCommand),
                 ],
             }],
-        }, projectCreatedEvent.team.slackIdentity.teamChannel, {id: `projectCreated-${projectCreatedEvent.team.name}`});
+        }, projectCreatedEvent.team.slackIdentity.teamChannel, {id: `projectCreated-${projectCreatedEvent.project.name}`});
     }
 
     private docs(extension): string {

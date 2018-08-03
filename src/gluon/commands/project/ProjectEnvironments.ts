@@ -53,17 +53,18 @@ export class NewProjectEnvironments extends RecursiveParameterRequestCommand {
 
     protected async runCommand(ctx: HandlerContext) {
         logger.info("Creating new OpenShift environments...");
+        const messageId = Date.now().toString();
 
         try {
             await ctx.messageClient.addressChannels({
                 text: `Requesting project environment's for project *${this.projectName}*`,
-            }, this.teamChannel, {id: `projectEnvRequest-${this.projectName}`});
+            }, this.teamChannel, {id: messageId});
 
             const member = await this.gluonService.members.gluonMemberFromScreenName(this.screenName);
 
             const project = await this.gluonService.projects.gluonProjectFromProjectName(this.projectName);
 
-            await this.requestProjectEnvironment(project.projectId, member.memberId);
+            await this.requestProjectEnvironment(project.projectId, member.memberId, messageId);
 
             return await success();
         } catch (error) {
@@ -98,9 +99,9 @@ export class NewProjectEnvironments extends RecursiveParameterRequestCommand {
         }
     }
 
-    private async requestProjectEnvironment(projectId: string, memberId: string) {
+    private async requestProjectEnvironment(projectId: string, memberId: string, messageId: string) {
         const projectEnvironmentRequestResult = await this.gluonService.projects.requestProjectEnvironment(projectId,
-            memberId,
+            memberId, messageId,
         );
 
         if (!isSuccessCode(projectEnvironmentRequestResult.status)) {

@@ -68,7 +68,7 @@ export class NewDevOpsEnvironment extends RecursiveParameterRequestCommand {
                                            teamChannel: string): Promise<any> {
 
         const messageId = Date.now().toString();
-        logger.info(`!!${messageId}`);
+
         await ctx.messageClient.addressChannels({
             text: `Requesting DevOps environment for *${teamName}* team.`,
         }, teamChannel, {id: messageId});

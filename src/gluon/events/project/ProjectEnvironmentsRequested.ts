@@ -33,6 +33,7 @@ import {TaskListMessage, TaskStatus} from "../../util/shared/TaskListMessage";
 subscription ProjectEnvironmentsRequestedEvent {
   ProjectEnvironmentsRequestedEvent {
     id
+    messageId
     project {
       projectId
       name
@@ -89,7 +90,7 @@ export class ProjectEnvironmentsRequested implements HandleEvent<any> {
 
         this.qmMessageClient = this.createMessageClient(ctx, environmentsRequestedEvent.teams);
 
-        this.taskList = this.initialiseTaskList(environmentsRequestedEvent.project.name, this.qmMessageClient, environmentsRequestedEvent.teams.name);
+        this.taskList = this.initialiseTaskList(environmentsRequestedEvent.project.name, this.qmMessageClient, environmentsRequestedEvent.messageId);
         await this.taskList.display();
 
         try {
@@ -129,8 +130,8 @@ export class ProjectEnvironmentsRequested implements HandleEvent<any> {
         return messageClient;
     }
 
-    private initialiseTaskList(projectName: string, messageClient: QMMessageClient, teamName: string) {
-        const taskList = new TaskListMessage(`🚀 Provisioning of environment's for project *${projectName}* started:`, messageClient, `projectEnvRequest-${projectName}`);
+    private initialiseTaskList(projectName: string, messageClient: QMMessageClient, messageId: string) {
+        const taskList = new TaskListMessage(`🚀 Provisioning of environment's for project *${projectName}* started:`, messageClient, messageId);
         taskList.addTask("devEnvironment", "Create Dev Environment");
         taskList.addTask("sitEnvironment", "Create SIT Environment");
         taskList.addTask("uatEnvironment", "Create UAT Environment");

@@ -132,10 +132,11 @@ Consider creating a new project called ${projectName}. Click the button below to
             bitbucketConfirmationDetails);
     }
 
-    public async requestProjectEnvironment(projectId: string, memberId: string): Promise<any> {
+    public async requestProjectEnvironment(projectId: string, memberId: string, msgId: string): Promise<any> {
         logger.debug(`Trying to request project environments. projectId: ${projectId}; memberId: ${memberId}`);
         return await axios.put(`${QMConfig.subatomic.gluon.baseUrl}/projects/${projectId}`,
             {
+                messageId: msgId,
                 projectEnvironment: {
                     requestedBy: memberId,
                 },

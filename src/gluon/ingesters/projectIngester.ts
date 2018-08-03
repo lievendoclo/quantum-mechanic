@@ -48,6 +48,13 @@ export const ProjectEnvironmentsRequestedEvent: Ingester = {
             name: "ProjectEnvironmentsRequestedEvent",
             fields: [
                 {
+                    name: "messageId",
+                    type: {
+                        kind: "SCALAR",
+                        name: "String",
+                    },
+                },
+                {
                     name: "project",
                     type: {
                         kind: "OBJECT",
