@@ -5,19 +5,21 @@ import {
     logger,
     MappedParameter,
     MappedParameters,
-    Parameter,
 } from "@atomist/automation-client";
 import * as _ from "lodash";
 import {QMConfig} from "../../../config/QMConfig";
 import {QMTemplate} from "../../../template/QMTemplate";
 import {GluonService} from "../../services/gluon/GluonService";
+import {menuForApplications} from "../../util/packages/Applications";
 import {PackageDefinition} from "../../util/packages/PackageDefinition";
+import {menuForProjects} from "../../util/project/Project";
 import {handleQMError, ResponderMessageClient} from "../../util/shared/Error";
 import {createMenu} from "../../util/shared/GenericMenu";
 import {
     RecursiveParameter,
     RecursiveParameterRequestCommand,
 } from "../../util/shared/RecursiveParameterRequestCommand";
+import {menuForTeams} from "../../util/team/Teams";
 import {ConfigurePackage} from "./ConfigurePackage";
 
 @CommandHandler("Configure an existing application/library using a predefined template", QMConfig.subatomic.commandPrefix + " configure package")
@@ -28,26 +30,26 @@ export class ConfigureBasicPackage extends RecursiveParameterRequestCommand {
     @MappedParameter(MappedParameters.SlackChannelName)
     public teamChannel: string;
 
-    @Parameter({
+    @RecursiveParameter({
+        description: "team name",
+        required: false,
+        displayable: false,
+    })
+    public teamName: string;
+
+    @RecursiveParameter({
         description: "application name",
         required: false,
         displayable: false,
     })
     public applicationName: string;
 
-    @Parameter({
+    @RecursiveParameter({
         description: "project name",
         required: false,
         displayable: false,
     })
     public projectName: string;
-
-    @Parameter({
-        description: "team name",
-        required: false,
-        displayable: false,
-    })
-    public teamName: string;
 
     @RecursiveParameter({
         description: "package type",
@@ -75,6 +77,29 @@ export class ConfigureBasicPackage extends RecursiveParameterRequestCommand {
     }
 
     protected async setNextParameter(ctx: HandlerContext): Promise<HandlerResult> {
+        if (_.isEmpty(this.teamName)) {
+            try {
+                const team = await this.gluonService.teams.gluonTeamForSlackTeamChannel(this.teamChannel);
+                this.teamName = team.name;
+                return await this.handle(ctx);
+            } catch (error) {
+                const teams = await this.gluonService.teams.gluonTeamsWhoSlackScreenNameBelongsTo(this.screenName);
+                return await menuForTeams(
+                    ctx,
+                    teams,
+                    this,
+                    "Please select a team associated with the project you wish to configure the package for");
+            }
+
+        }
+        if (_.isEmpty(this.projectName)) {
+            const projects = await this.gluonService.projects.gluonProjectsWhichBelongToGluonTeam(this.teamName);
+            return await menuForProjects(ctx, projects, this, "Please select the owning project of the package you wish to configure");
+        }
+        if (_.isEmpty(this.applicationName)) {
+            const applications = await this.gluonService.applications.gluonApplicationsLinkedToGluonProject(this.projectName);
+            return await menuForApplications(ctx, applications, this, "Please select the package you wish to configure");
+        }
         if (_.isEmpty(this.packageType)) {
             const application = await this.gluonService.applications.gluonApplicationForNameAndProjectName(this.applicationName, this.projectName, false);
             this.packageType = application.applicationType;

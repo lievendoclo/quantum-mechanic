@@ -1,7 +1,7 @@
 import {HandlerResult} from "@atomist/automation-client";
 import {Attachment, SlackMessage} from "@atomist/slack-messages";
 import {v4 as uuid} from "uuid";
-import {QMMessageClient} from "./Error";
+import {QMMessageClient} from "../util/shared/Error";
 
 export class TaskListMessage {
 
@@ -31,6 +31,10 @@ export class TaskListMessage {
     public addTask(key: string, description: string) {
         this.tasks[key] = {description, status: TaskStatus.Pending};
         this.taskOrder.push(key);
+    }
+
+    public async succeedTask(key: string) {
+        return await this.setTaskStatus(key, TaskStatus.Successful);
     }
 
     public async setTaskStatus(key: string, status: TaskStatus): Promise<HandlerResult> {

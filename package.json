@@ -13,7 +13,7 @@
     "url": "https://github.com/absa-subatomic/quantum-mechanic/issues"
   },
   "dependencies": {
-    "@atomist/automation-client": "^0.17.3",
+    "@atomist/automation-client": "^0.18.0",
     "@atomist/lifecycle-automation": "https://r.atomist.com/ryNj6btAKM",
     "@atomist/slack-messages": "^0.12.1",
     "app-root-path": "^2.0.1",
@@ -22,7 +22,9 @@
     "promise-retry": "^1.1.1",
     "promise-timeout": "^1.1.1",
     "query-string": "^6.1.0",
-    "superagent": "^3.8.2"
+    "superagent": "^3.8.2",
+    "murmurhash-js": "^1.0.0",
+    "strip-json-comments": "^2.0.1"
   },
   "devDependencies": {
     "@types/app-root-path": "^1.2.4",
@@ -37,6 +39,7 @@
     "graphql-code-generator": "^0.8.21",
     "mocha": "^5.0.0",
     "mockttp": "^0.7.1",
+    "nodemon": "^1.14.12",
     "npm-run-all": "^4.1.3",
     "nyc": "^6.4.4",
     "power-assert": "^1.4.4",

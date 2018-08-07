@@ -52,6 +52,43 @@ export const DevOpsEnvironmentRequestedEvent: Ingester = {
     ],
 };
 
+export const DevOpsEnvironmentProvisionedEvent: Ingester = {
+    root_type: "DevOpsEnvironmentProvisionedEvent",
+    types: [
+        {
+            kind: "OBJECT",
+            name: "DevOpsEnvironmentProvisionedEvent",
+            fields: [
+                {
+                    name: "team",
+                    type: {
+                        kind: "OBJECT",
+                        name: "GluonTeam",
+                    },
+                    args: [{
+                        defaultValue: null,
+                        name: "name",
+                        type: {
+                            kind: "LIST",
+                            ofType: {
+                                kind: "SCALAR",
+                                name: "String",
+                            },
+                        },
+                    }],
+                },
+                {
+                    name: "devOpsEnvironment",
+                    type: {
+                        kind: "OBJECT",
+                        name: "DevOpsEnvironmentDetails",
+                    },
+                },
+            ],
+        },
+    ],
+};
+
 export const MembershipRequestCreatedEvent: Ingester = {
     root_type: "MembershipRequestCreatedEvent",
     types: [

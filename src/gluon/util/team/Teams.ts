@@ -1,4 +1,5 @@
 import {HandleCommand, HandlerContext} from "@atomist/automation-client";
+import * as _ from "lodash";
 import {createMenu} from "../shared/GenericMenu";
 
 export function menuForTeams(ctx: HandlerContext, teams: any[],
@@ -16,4 +17,12 @@ export function menuForTeams(ctx: HandlerContext, teams: any[],
         "Select Team",
         projectNameVariable,
     );
+}
+
+export function getDevOpsEnvironmentDetails(teamName) {
+    return {
+     openshiftProjectId : `${_.kebabCase(teamName).toLowerCase()}-devops`,
+     name : `${teamName} DevOps`,
+     description: `DevOps environment for ${teamName} [managed by Subatomic]`,
+    };
 }

@@ -332,3 +332,76 @@ export const GluonTenantId: Ingester = {
         },
     ],
 };
+
+export const BitbucketRepository: Ingester = {
+    root_type: "BitbucketRepository",
+    types: [
+        {
+            kind: "OBJECT",
+            name: "BitbucketRepository",
+            fields: [
+                {
+                    name: "bitbucketId",
+                    type: {
+                        kind: "SCALAR",
+                        name: "String",
+                    },
+                },
+                {
+                    name: "name",
+                    type: {
+                        kind: "SCALAR",
+                        name: "String",
+                    },
+                },
+                {
+                    name: "repoUrl",
+                    type: {
+                        kind: "SCALAR",
+                        name: "String",
+                    },
+                },
+                {
+                    name: "remoteUrl",
+                    type: {
+                        kind: "SCALAR",
+                        name: "String",
+                    },
+                },
+            ],
+        },
+    ],
+};
+
+export const DevOpsEnvironmentDetails = {
+    root_type: "DevOpsEnvironmentDetails",
+    types: [
+        {
+            kind: "OBJECT",
+            name: "DevOpsEnvironmentDetails",
+            fields: [
+                {
+                    name: "openshiftProjectId",
+                    type: {
+                        kind: "SCALAR",
+                        name: "String",
+                    },
+                },
+                {
+                    name: "name",
+                    type: {
+                        kind: "SCALAR",
+                        name: "String",
+                    },
+                },
+                {
+                    name: "description",
+                    type: {
+                        kind: "SCALAR",
+                        name: "String",
+                    },
+                },
+            ],
+        },
+    ],
+};

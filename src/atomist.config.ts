@@ -43,7 +43,10 @@ import {MembersAddedToTeam} from "./gluon/events/team/MembersAddedToTeam";
 import {MembershipRequestClosed} from "./gluon/events/team/MembershipRequestClosed";
 import {MembershipRequestCreated} from "./gluon/events/team/MembershipRequestCreated";
 import {TeamCreated} from "./gluon/events/team/TeamCreated";
-import {ApplicationCreatedEvent} from "./gluon/ingesters/applicationsIngester";
+import {
+    ApplicationCreatedEvent,
+    PackageConfiguredEvent,
+} from "./gluon/ingesters/applicationsIngester";
 import {
     BitbucketProjectAddedEvent,
     BitbucketProjectRequestedEvent,
@@ -56,13 +59,17 @@ import {
 import {
     ActionedBy,
     BitbucketProject,
+    BitbucketRepository,
+    DevOpsEnvironmentDetails,
     GluonTeam,
     GluonTenant,
     GluonTenantId,
     Project,
     SlackIdentity,
 } from "./gluon/ingesters/sharedIngester";
+import {TeamDevOpsDetails} from "./gluon/ingesters/teamDevOpsDetails";
 import {
+    DevOpsEnvironmentProvisionedEvent,
     DevOpsEnvironmentRequestedEvent,
     MembersAddedToTeamEvent,
     MembershipRequestCreatedEvent,
@@ -136,11 +143,16 @@ export const configuration: any = {
         MembershipRequestCreatedEvent,
         Project,
         BitbucketProject,
+        BitbucketRepository,
         ActionedBy,
         MembersAddedToTeamEvent,
         GluonTenant,
         GluonTenantId,
         TeamsLinkedToProjectEvent,
+        DevOpsEnvironmentProvisionedEvent,
+        DevOpsEnvironmentDetails,
+        PackageConfiguredEvent,
+        TeamDevOpsDetails,
     ],
     token,
     http,
