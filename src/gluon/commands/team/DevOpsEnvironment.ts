@@ -1,26 +1,32 @@
 import {
     CommandHandler,
     HandlerContext,
-    HandlerResult,
     logger,
     MappedParameter,
     MappedParameters,
     success,
     Tags,
 } from "@atomist/automation-client";
-import * as _ from "lodash";
 import {QMConfig} from "../../../config/QMConfig";
 import {GluonService} from "../../services/gluon/GluonService";
-import {isSuccessCode} from "../../util/shared/Http";
+import {
+    GluonTeamNameSetter,
+    setGluonTeamName,
+} from "../../util/recursiveparam/GluonParameterSetters";
 import {
     RecursiveParameter,
     RecursiveParameterRequestCommand,
-} from "../../util/shared/RecursiveParameterRequestCommand";
-import {menuForTeams} from "../../util/team/Teams";
+} from "../../util/recursiveparam/RecursiveParameterRequestCommand";
+import {isSuccessCode} from "../../util/shared/Http";
 
 @CommandHandler("Check whether to create a new OpenShift DevOps environment or use an existing one", QMConfig.subatomic.commandPrefix + " request devops environment")
 @Tags("subatomic", "slack", "team", "openshift", "devops")
-export class NewDevOpsEnvironment extends RecursiveParameterRequestCommand {
+export class NewDevOpsEnvironment extends RecursiveParameterRequestCommand
+    implements GluonTeamNameSetter {
+
+    private static RecursiveKeys = {
+        teamName: "TEAM_NAME",
+    };
 
     @MappedParameter(MappedParameters.SlackUserName)
     public screenName: string;
@@ -29,11 +35,12 @@ export class NewDevOpsEnvironment extends RecursiveParameterRequestCommand {
     public teamChannel: string;
 
     @RecursiveParameter({
-        description: "team name",
+        recursiveKey: NewDevOpsEnvironment.RecursiveKeys.teamName,
+        selectionMessage: "Please select a team you would like to create a DevOps environment for",
     })
     public teamName: string;
 
-    constructor(private gluonService = new GluonService()) {
+    constructor(public gluonService = new GluonService()) {
         super();
     }
 
@@ -46,21 +53,8 @@ export class NewDevOpsEnvironment extends RecursiveParameterRequestCommand {
         );
     }
 
-    protected async setNextParameter(ctx: HandlerContext): Promise<HandlerResult> {
-        if (_.isEmpty(this.teamName)) {
-            try {
-                const team = await this.gluonService.teams.gluonTeamForSlackTeamChannel(this.teamChannel);
-                this.teamName = team.name;
-                return await this.handle(ctx);
-            } catch (slackChannelError) {
-                const teams = await this.gluonService.teams.gluonTeamsWhoSlackScreenNameBelongsTo(this.screenName);
-                return await menuForTeams(
-                    ctx,
-                    teams,
-                    this,
-                    "Please select a team you would like to create a DevOps environment for");
-            }
-        }
+    protected configureParameterSetters() {
+        this.addRecursiveSetter(NewDevOpsEnvironment.RecursiveKeys.teamName, setGluonTeamName);
     }
 
     private async requestDevOpsEnvironment(ctx: HandlerContext, screenName: string,

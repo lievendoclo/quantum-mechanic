@@ -14,14 +14,27 @@ import * as _ from "lodash";
 import {QMConfig} from "../../../config/QMConfig";
 import {GluonService} from "../../services/gluon/GluonService";
 import {OCService} from "../../services/openshift/OCService";
-import {handleQMError, ResponderMessageClient} from "../../util/shared/Error";
+import {
+    GluonProjectNameSetter,
+    GluonTeamNameSetter,
+    setGluonProjectName,
+    setGluonTeamName,
+} from "../../util/recursiveparam/GluonParameterSetters";
 import {
     RecursiveParameter,
     RecursiveParameterRequestCommand,
-} from "../../util/shared/RecursiveParameterRequestCommand";
+} from "../../util/recursiveparam/RecursiveParameterRequestCommand";
+import {handleQMError, ResponderMessageClient} from "../../util/shared/Error";
 
 @CommandHandler("Create a new OpenShift Persistent Volume Claim", QMConfig.subatomic.commandPrefix + " create openshift pvc")
-export class CreateOpenShiftPvc extends RecursiveParameterRequestCommand {
+export class CreateOpenShiftPvc extends RecursiveParameterRequestCommand
+    implements GluonTeamNameSetter, GluonProjectNameSetter {
+
+    private static RecursiveKeys = {
+        teamName: "TEAM_NAME",
+        projectName: "PROJECT_NAME",
+        openshiftProjectNames: "OPENSHIFT_PROJECT_NAMES",
+    };
 
     @MappedParameter(MappedParameters.SlackUserName)
     public screenName: string;
@@ -29,20 +42,21 @@ export class CreateOpenShiftPvc extends RecursiveParameterRequestCommand {
     @MappedParameter(MappedParameters.SlackChannelName)
     public teamChannel: string;
 
-    @Parameter({
-        description: "Gluon team name associated with the project the PVC will be created for",
-        required: false,
-        displayable: false,
+    @RecursiveParameter({
+        recursiveKey: CreateOpenShiftPvc.RecursiveKeys.teamName,
+        selectionMessage: `Please select a team associated with the project you wish to create a PVC for`,
     })
-    public gluonTeamName;
+    public teamName: string;
 
     @RecursiveParameter({
-        description: "Gluon project name",
+        recursiveKey: CreateOpenShiftPvc.RecursiveKeys.projectName,
+        selectionMessage: `Please select the project, whose OpenShift environments the PVCs will be created in`,
     })
-    public gluonProjectName: string;
+    public projectName: string;
 
     @RecursiveParameter({
-        description: "OpenShift project names (comma separated) that the PVCs will be create in",
+        recursiveKey: CreateOpenShiftPvc.RecursiveKeys.openshiftProjectNames,
+        selectionMessage: "Please select the project environment(s) to create the PVCs in",
     })
     public openShiftProjectNames: string;
 
@@ -52,7 +66,7 @@ export class CreateOpenShiftPvc extends RecursiveParameterRequestCommand {
     })
     public pvcName: string;
 
-    constructor(private gluonService = new GluonService(),
+    constructor(public gluonService = new GluonService(),
                 private ocService = new OCService()) {
         super();
     }
@@ -62,7 +76,7 @@ export class CreateOpenShiftPvc extends RecursiveParameterRequestCommand {
 
             await this.ocService.login();
 
-            const projectId = _.kebabCase(this.gluonProjectName);
+            const projectId = _.kebabCase(this.projectName);
 
             if (this.openShiftProjectNames === "all") {
                 this.openShiftProjectNames = `${projectId}-dev,${projectId}-sit,${projectId}-uat`;
@@ -91,20 +105,11 @@ export class CreateOpenShiftPvc extends RecursiveParameterRequestCommand {
         }
     }
 
-    protected async setNextParameter(ctx: HandlerContext): Promise<HandlerResult> {
-        if (_.isEmpty(this.gluonProjectName)) {
-            const team = await this.gluonService.teams.gluonTeamForSlackTeamChannel(this.teamChannel);
+    protected configureParameterSetters() {
+        this.addRecursiveSetter(CreateOpenShiftPvc.RecursiveKeys.teamName, setGluonTeamName);
+        this.addRecursiveSetter(CreateOpenShiftPvc.RecursiveKeys.projectName, setGluonProjectName);
+        this.addRecursiveSetter(CreateOpenShiftPvc.RecursiveKeys.openshiftProjectNames, setProjectForPvc);
 
-            if (!_.isEmpty(team)) {
-                return await this.presentMenuToSelectProjectToCreatePvcFor(ctx);
-            } else {
-                return await this.presentMenuToSelectProjectAssociatedTeam(ctx);
-            }
-        }
-        if (_.isEmpty(this.openShiftProjectNames)) {
-            const projectId = _.kebabCase(this.gluonProjectName);
-            return await this.presentMenuToSelectOpenshiftProjectToCreatePvcIn(ctx, projectId);
-        }
     }
 
     private async sendPvcResultMessage(ctx: HandlerContext, pvcAttachments: any[]): Promise<HandlerResult> {
@@ -124,101 +129,48 @@ Now that your PVCs have been created, you can add this PVC as storage to an appl
         return await ctx.messageClient.addressChannels(msg, this.teamChannel);
     }
 
-    private async presentMenuToSelectProjectAssociatedTeam(ctx: HandlerContext): Promise<HandlerResult> {
-
-        const teams = await this.gluonService.teams.gluonTeamsWhoSlackScreenNameBelongsTo(this.screenName);
-        const msg: SlackMessage = {
-            text: "Please select a team associated with the project you wish to create a PVC for",
-            attachments: [{
-                fallback: "Please select a team",
-                actions: [
-                    menuForCommand({
-                            text: "Select Team", options:
-                                teams.map(team => {
-                                    return {
-                                        value: team.name,
-                                        text: team.name,
-                                    };
-                                }),
-                        },
-                        this, "gluonTeamName",
-                        {pvcName: this.pvcName}),
-                ],
-            }],
-        };
-
-        return await ctx.messageClient.respond(msg);
-    }
-
-    private async presentMenuToSelectProjectToCreatePvcFor(ctx: HandlerContext): Promise<HandlerResult> {
-        const teams = await this.gluonService.projects.gluonProjectsWhichBelongToGluonTeam(this.gluonTeamName);
-
-        const msg: SlackMessage = {
-            text: "Please select the project, whose OpenShift environments the PVCs will be created in",
-            attachments: [{
-                fallback: "Please select a project",
-                actions: [
-                    menuForCommand({
-                            text: "Select Project", options:
-                                teams.map(project => {
-                                    return {
-                                        value: project.name,
-                                        text: project.name,
-                                    };
-                                }),
-                        },
-                        this, "gluonProjectName",
-                        {
-                            gluonTeamName: this.gluonTeamName,
-                            pvcName: this.pvcName,
-                        }),
-                ],
-            }],
-        };
-
-        return await ctx.messageClient.respond(msg);
-    }
-
-    private async presentMenuToSelectOpenshiftProjectToCreatePvcIn(ctx: HandlerContext, projectId: string) {
-        const msg: SlackMessage = {
-            text: "Please select the project environment(s) to create the PVCs in",
-            attachments: [{
-                fallback: "Please select a project",
-                actions: [
-                    menuForCommand({
-                            text: "Select environment(s)", options:
-                                [
-                                    {value: "all", text: "All environments"},
-                                    {
-                                        value: `${projectId}-dev`,
-                                        text: `${projectId}-dev`,
-                                    },
-                                    {
-                                        value: `${projectId}-sit`,
-                                        text: `${projectId}-sit`,
-                                    },
-                                    {
-                                        value: `${projectId}-uat`,
-                                        text: `${projectId}-uat`,
-                                    },
-                                ],
-                        },
-                        this, "openShiftProjectNames",
-                        {
-                            gluonTeamName: this.gluonTeamName,
-                            gluonProjectName: this.gluonProjectName,
-                            pvcName: this.pvcName,
-                        }),
-                ],
-            }],
-        };
-
-        return await ctx.messageClient.respond(msg);
-    }
-
     private docs(): string {
         return `${url(`${QMConfig.subatomic.docs.baseUrl}/storage`,
             "documentation")}`;
     }
 
+}
+
+async function setProjectForPvc(ctx: HandlerContext, commandHandler: CreateOpenShiftPvc, selectionMessage: string) {
+    const projectId = _.kebabCase(commandHandler.projectName);
+
+    const msg: SlackMessage = {
+        text: selectionMessage,
+        attachments: [{
+            fallback: "Please select a project",
+            actions: [
+                menuForCommand({
+                        text: "Select environment(s)", options:
+                            [
+                                {value: "all", text: "All environments"},
+                                {
+                                    value: `${projectId}-dev`,
+                                    text: `${projectId}-dev`,
+                                },
+                                {
+                                    value: `${projectId}-sit`,
+                                    text: `${projectId}-sit`,
+                                },
+                                {
+                                    value: `${projectId}-uat`,
+                                    text: `${projectId}-uat`,
+                                },
+                            ],
+                    },
+                    commandHandler, "openShiftProjectNames",
+                    {
+                        teamName: commandHandler.teamName,
+                        projectName: commandHandler.projectName,
+                        pvcName: commandHandler.pvcName,
+                    }),
+            ],
+        }],
+    };
+
+    return await ctx.messageClient.respond(msg);
 }

@@ -12,15 +12,23 @@ import * as _ from "lodash";
 import {QMConfig} from "../../../config/QMConfig";
 import {GluonService} from "../../services/gluon/GluonService";
 import {OCService} from "../../services/openshift/OCService";
-import {handleQMError, ResponderMessageClient} from "../../util/shared/Error";
+import {
+    GluonTeamNameSetter,
+    setGluonTeamName,
+} from "../../util/recursiveparam/GluonParameterSetters";
 import {
     RecursiveParameter,
     RecursiveParameterRequestCommand,
-} from "../../util/shared/RecursiveParameterRequestCommand";
-import {menuForTeams} from "../../util/team/Teams";
+} from "../../util/recursiveparam/RecursiveParameterRequestCommand";
+import {handleQMError, ResponderMessageClient} from "../../util/shared/Error";
 
 @CommandHandler("Add a new Subatomic Config Server", QMConfig.subatomic.commandPrefix + " add config server")
-export class AddConfigServer extends RecursiveParameterRequestCommand {
+export class AddConfigServer extends RecursiveParameterRequestCommand
+    implements GluonTeamNameSetter {
+
+    private static RecursiveKeys = {
+        teamName: "TEAM_NAME",
+    };
 
     @MappedParameter(MappedParameters.SlackUserName)
     public screenName: string;
@@ -29,9 +37,9 @@ export class AddConfigServer extends RecursiveParameterRequestCommand {
     public teamChannel: string;
 
     @RecursiveParameter({
-        description: "team name",
+        recursiveKey: AddConfigServer.RecursiveKeys.teamName,
     })
-    public gluonTeamName: string;
+    public teamName: string;
 
     @Parameter({
         description: "Remote Git repository SSH",
@@ -39,7 +47,7 @@ export class AddConfigServer extends RecursiveParameterRequestCommand {
     })
     public gitUri: string;
 
-    constructor(private gluonService = new GluonService(),
+    constructor(public gluonService = new GluonService(),
                 private ocService = new OCService()) {
         super();
     }
@@ -49,7 +57,7 @@ export class AddConfigServer extends RecursiveParameterRequestCommand {
             await this.ocService.login();
             return await this.addConfigServer(
                 ctx,
-                this.gluonTeamName,
+                this.teamName,
                 this.gitUri,
             );
         } catch (error) {
@@ -57,22 +65,8 @@ export class AddConfigServer extends RecursiveParameterRequestCommand {
         }
     }
 
-    protected async setNextParameter(ctx: HandlerContext): Promise<HandlerResult> {
-        if (_.isEmpty(this.gluonTeamName)) {
-            try {
-                const team = await this.gluonService.teams.gluonTeamForSlackTeamChannel(this.teamChannel);
-                this.gluonTeamName = team.name;
-            } catch (error) {
-                const teams = await this.gluonService.teams.gluonTeamsWhoSlackScreenNameBelongsTo(this.screenName);
-                return await menuForTeams(
-                    ctx,
-                    teams,
-                    this,
-                    "Please select a team, whose DevOps project the Subatomic Config Server will be added to",
-                    "gluonTeamName",
-                );
-            }
-        }
+    protected configureParameterSetters() {
+        this.addRecursiveSetter(AddConfigServer.RecursiveKeys.teamName, setGluonTeamName);
     }
 
     private async addConfigServer(ctx: HandlerContext,

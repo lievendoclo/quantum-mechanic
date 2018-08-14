@@ -2,37 +2,52 @@ import {
     CommandHandler,
     HandlerContext,
     HandlerResult,
-    logger,
     MappedParameter,
     MappedParameters,
     Parameter,
     success,
 } from "@atomist/automation-client";
-import {BitBucketServerRepoRef} from "@atomist/automation-client/operations/common/BitBucketServerRepoRef";
-import {GitCommandGitProject} from "@atomist/automation-client/project/git/GitCommandGitProject";
-import {GitProject} from "@atomist/automation-client/project/git/GitProject";
-import * as _ from "lodash";
 import {QMConfig} from "../../../config/QMConfig";
 import {GluonService} from "../../services/gluon/GluonService";
-import {JenkinsService} from "../../services/jenkins/JenkinsService";
 import {OCService} from "../../services/openshift/OCService";
 import {ConfigurePackageInJenkins} from "../../tasks/packages/ConfigurePackageInJenkins";
 import {ConfigurePackageInOpenshift} from "../../tasks/packages/ConfigurePackageInOpenshift";
 import {TaskListMessage} from "../../tasks/TaskListMessage";
 import {TaskRunner} from "../../tasks/TaskRunner";
-import {menuForApplications} from "../../util/packages/Applications";
-import {menuForProjects} from "../../util/project/Project";
-import {handleQMError, ResponderMessageClient} from "../../util/shared/Error";
-import {createMenu} from "../../util/shared/GenericMenu";
+import {
+    GluonApplicationNameSetter,
+    GluonProjectNameSetter,
+    GluonTeamNameSetter,
+    setGluonApplicationName,
+    setGluonProjectName,
+    setGluonTeamName,
+} from "../../util/recursiveparam/GluonParameterSetters";
+import {
+    JenkinsfileNameSetter,
+    setJenkinsfileName,
+} from "../../util/recursiveparam/JenkinsParameterSetters";
+import {
+    OpenshiftTemplateSetter,
+    setOpenshiftTemplate,
+} from "../../util/recursiveparam/OpenshiftParameterSetters";
 import {
     RecursiveParameter,
     RecursiveParameterRequestCommand,
-} from "../../util/shared/RecursiveParameterRequestCommand";
-import {menuForTeams} from "../../util/team/Teams";
+} from "../../util/recursiveparam/RecursiveParameterRequestCommand";
+import {handleQMError, ResponderMessageClient} from "../../util/shared/Error";
 import {GluonToEvent} from "../../util/transform/GluonToEvent";
 
 @CommandHandler("Configure an existing application/library", QMConfig.subatomic.commandPrefix + " configure custom package")
-export class ConfigurePackage extends RecursiveParameterRequestCommand {
+export class ConfigurePackage extends RecursiveParameterRequestCommand
+    implements GluonTeamNameSetter, GluonProjectNameSetter, GluonApplicationNameSetter, JenkinsfileNameSetter, OpenshiftTemplateSetter {
+
+    private static RecursiveKeys = {
+        teamName: "TEAM_NAME",
+        projectName: "PROJECT_NAME",
+        applicationName: "APPLICATION_NAME",
+        openshiftTemplate: "OPENSHIFT_TEMPLATE",
+        jenkinsfileName: "JENKINSFILE_NAME",
+    };
 
     @MappedParameter(MappedParameters.SlackUserName)
     public screenName: string;
@@ -41,27 +56,32 @@ export class ConfigurePackage extends RecursiveParameterRequestCommand {
     public teamChannel: string;
 
     @RecursiveParameter({
-        description: "application name",
+        recursiveKey: ConfigurePackage.RecursiveKeys.applicationName,
+        selectionMessage: "Please select the package you wish to configure",
     })
     public applicationName: string;
 
     @RecursiveParameter({
-        description: "project name",
+        recursiveKey: ConfigurePackage.RecursiveKeys.projectName,
+        selectionMessage: "Please select the owning project of the package you wish to configure",
     })
     public projectName: string;
 
     @RecursiveParameter({
-        description: "team name",
+        recursiveKey: ConfigurePackage.RecursiveKeys.teamName,
+        selectionMessage: "Please select a team associated with the project you wish to configure the package for",
     })
     public teamName: string;
 
     @RecursiveParameter({
-        description: "openshift template",
+        recursiveKey: ConfigurePackage.RecursiveKeys.openshiftTemplate,
+        selectionMessage: "Please select the correct openshift template for your package",
     })
     public openshiftTemplate: string;
 
     @RecursiveParameter({
-        description: "base jenkinsfile",
+        recursiveKey: ConfigurePackage.RecursiveKeys.jenkinsfileName,
+        selectionMessage: "Please select the correct jenkinsfile for your package",
     })
     public jenkinsfileName: string;
 
@@ -72,13 +92,8 @@ export class ConfigurePackage extends RecursiveParameterRequestCommand {
 
     public buildEnvironmentVariables: { [key: string]: string } = {};
 
-    private readonly JENKINSFILE_EXTENSION = ".groovy";
-    private readonly JENKINSFILE_FOLDER = "resources/templates/jenkins/jenkinsfile-repo/";
-    private readonly JENKINSFILE_EXISTS = "JENKINS_FILE_EXISTS";
-
-    constructor(private gluonService = new GluonService(),
-                private jenkinsService = new JenkinsService(),
-                private ocService = new OCService()) {
+    constructor(public gluonService = new GluonService(),
+                public ocService = new OCService()) {
         super();
     }
 
@@ -93,102 +108,12 @@ export class ConfigurePackage extends RecursiveParameterRequestCommand {
         }
     }
 
-    protected async setNextParameter(ctx: HandlerContext): Promise<HandlerResult> {
-        if (_.isEmpty(this.teamName)) {
-            try {
-                const team = await this.gluonService.teams.gluonTeamForSlackTeamChannel(this.teamChannel);
-                this.teamName = team.name;
-                return await this.handle(ctx);
-            } catch (error) {
-                const teams = await this.gluonService.teams.gluonTeamsWhoSlackScreenNameBelongsTo(this.screenName);
-                return await menuForTeams(
-                    ctx,
-                    teams,
-                    this,
-                    "Please select a team associated with the project you wish to configure the package for");
-            }
-
-        }
-        if (_.isEmpty(this.projectName)) {
-            const projects = await this.gluonService.projects.gluonProjectsWhichBelongToGluonTeam(this.teamName);
-            return await menuForProjects(ctx, projects, this, "Please select the owning project of the package you wish to configure");
-        }
-        if (_.isEmpty(this.applicationName)) {
-            const applications = await this.gluonService.applications.gluonApplicationsLinkedToGluonProject(this.projectName);
-            return await menuForApplications(ctx, applications, this, "Please select the package you wish to configure");
-        }
-        if (_.isEmpty(this.openshiftTemplate)) {
-            const namespace = `${_.kebabCase(this.teamName).toLowerCase()}-devops`;
-            const templatesResult = await this.ocService.getSubatomicAppTemplates(namespace);
-            const templates = JSON.parse(templatesResult.output).items;
-            return await createMenu(ctx, templates.map(template => {
-                    return {
-                        value: template.metadata.name,
-                        text: template.metadata.name,
-                    };
-                }),
-                this,
-                "Please select the correct openshift template for your package",
-                "Select a template",
-                "openshiftTemplate");
-        }
-        if (_.isEmpty(this.jenkinsfileName)) {
-            return await this.requestJenkinsFileParameter(ctx);
-        }
-    }
-
-    private async requestJenkinsFileParameter(ctx: HandlerContext): Promise<HandlerResult> {
-
-        const project = await this.gluonService.projects.gluonProjectFromProjectName(this.projectName);
-        const application = await this.gluonService.applications.gluonApplicationForNameAndProjectName(this.applicationName, this.projectName);
-        const username = QMConfig.subatomic.bitbucket.auth.username;
-        const password = QMConfig.subatomic.bitbucket.auth.password;
-        const gitProject: GitProject = await GitCommandGitProject.cloned({
-                username,
-                password,
-            },
-            new BitBucketServerRepoRef(
-                QMConfig.subatomic.bitbucket.baseUrl,
-                project.bitbucketProject.key,
-                application.bitbucketRepository.name));
-        try {
-            await gitProject.findFile("Jenkinsfile");
-            this.jenkinsfileName = this.JENKINSFILE_EXISTS;
-            return success();
-        } catch (error) {
-            return await this.createMenuForJenkinsFileSelection(ctx);
-        }
-    }
-
-    private async createMenuForJenkinsFileSelection(ctx: HandlerContext): Promise<HandlerResult> {
-        logger.info("Jenkinsfile does not exist. Requesting jenkinsfile selection.");
-        const fs = require("fs");
-        const jenkinsfileOptions: string [] = [];
-        logger.info(`Searching folder: ${this.JENKINSFILE_FOLDER}`);
-        fs.readdirSync(this.JENKINSFILE_FOLDER).forEach(file => {
-            logger.info(`Found file: ${file}`);
-            if (file.endsWith(this.JENKINSFILE_EXTENSION)) {
-                jenkinsfileOptions.push(this.getNameFromJenkinsfilePath(file));
-            }
-        });
-        return await createMenu(ctx, jenkinsfileOptions.map(jenkinsfile => {
-                return {
-                    value: jenkinsfile,
-                    text: jenkinsfile,
-                };
-            }),
-            this,
-            "Please select the correct jenkinsfile for your package",
-            "Select a jenkinsfile",
-            "jenkinsfileName");
-    }
-
-    private getNameFromJenkinsfilePath(jenkinsfilePath: string): string {
-        const jenkinsfileSlashSplit = jenkinsfilePath.split("/");
-        let name = jenkinsfileSlashSplit[jenkinsfileSlashSplit.length - 1];
-        // Remove file extension
-        name = name.substring(0, jenkinsfilePath.length - this.JENKINSFILE_EXTENSION.length);
-        return name;
+    protected configureParameterSetters() {
+        this.addRecursiveSetter(ConfigurePackage.RecursiveKeys.teamName, setGluonTeamName);
+        this.addRecursiveSetter(ConfigurePackage.RecursiveKeys.projectName, setGluonProjectName);
+        this.addRecursiveSetter(ConfigurePackage.RecursiveKeys.applicationName, setGluonApplicationName);
+        this.addRecursiveSetter(ConfigurePackage.RecursiveKeys.openshiftTemplate, setOpenshiftTemplate);
+        this.addRecursiveSetter(ConfigurePackage.RecursiveKeys.jenkinsfileName, setJenkinsfileName);
     }
 
     private async configurePackage(ctx: HandlerContext): Promise<HandlerResult> {

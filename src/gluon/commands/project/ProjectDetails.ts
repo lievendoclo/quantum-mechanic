@@ -9,22 +9,29 @@ import {
 } from "@atomist/automation-client";
 import {buttonForCommand} from "@atomist/automation-client/spi/message/MessageClient";
 import {SlackMessage} from "@atomist/slack-messages";
-import _ = require("lodash");
 import {QMConfig} from "../../../config/QMConfig";
 import {GluonService} from "../../services/gluon/GluonService";
+import {
+    GluonTeamNameSetter,
+    setGluonTeamName,
+} from "../../util/recursiveparam/GluonParameterSetters";
+import {
+    RecursiveParameter,
+    RecursiveParameterRequestCommand,
+} from "../../util/recursiveparam/RecursiveParameterRequestCommand";
 import {
     handleQMError,
     logErrorAndReturnSuccess,
     ResponderMessageClient,
 } from "../../util/shared/Error";
-import {
-    RecursiveParameter,
-    RecursiveParameterRequestCommand,
-} from "../../util/shared/RecursiveParameterRequestCommand";
-import {menuForTeams} from "../../util/team/Teams";
 
 @CommandHandler("List projects belonging to a team", QMConfig.subatomic.commandPrefix + " list projects")
-export class ListTeamProjects extends RecursiveParameterRequestCommand {
+export class ListTeamProjects extends RecursiveParameterRequestCommand
+    implements GluonTeamNameSetter {
+
+    private static RecursiveKeys = {
+        teamName: "TEAM_NAME",
+    };
 
     @MappedParameter(MappedParameters.SlackUserName)
     public screenName: string;
@@ -33,11 +40,12 @@ export class ListTeamProjects extends RecursiveParameterRequestCommand {
     public teamChannel: string;
 
     @RecursiveParameter({
-        description: "team name",
+        recursiveKey: ListTeamProjects.RecursiveKeys.teamName,
+        selectionMessage: "Please select a team you wish to list associated projects for",
     })
     public teamName: string;
 
-    constructor(private gluonService = new GluonService()) {
+    constructor(public gluonService = new GluonService()) {
         super();
     }
 
@@ -49,22 +57,8 @@ export class ListTeamProjects extends RecursiveParameterRequestCommand {
         }
     }
 
-    protected async setNextParameter(ctx: HandlerContext): Promise<HandlerResult> {
-        if (_.isEmpty(this.teamName)) {
-            try {
-                const team = await this.gluonService.teams.gluonTeamForSlackTeamChannel(this.teamChannel);
-                this.teamName = team.name;
-                return await this.handle(ctx);
-            } catch (error) {
-                const teams = await this.gluonService.teams.gluonTeamsWhoSlackScreenNameBelongsTo(this.screenName);
-                return await menuForTeams(
-                    ctx,
-                    teams,
-                    this,
-                    "Please select a team you wish to list associated projects for",
-                );
-            }
-        }
+    protected configureParameterSetters() {
+        this.addRecursiveSetter(ListTeamProjects.RecursiveKeys.teamName, setGluonTeamName);
     }
 
     private async listTeamProjects(ctx: HandlerContext, teamName: string): Promise<HandlerResult> {

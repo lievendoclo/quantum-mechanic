@@ -10,7 +10,7 @@ import {buttonForCommand} from "@atomist/automation-client/spi/message/MessageCl
 import {url} from "@atomist/slack-messages";
 import {QMConfig} from "../../../config/QMConfig";
 import {AssociateTeam} from "../../commands/project/AssociateTeam";
-import {NewProjectEnvironments} from "../../commands/project/ProjectEnvironments";
+import {NewProjectEnvironments} from "../../commands/project/NewProjectEnvironments";
 import {BitbucketService} from "../../services/bitbucket/BitbucketService";
 import {handleQMError, QMError, UserMessageClient} from "../../util/shared/Error";
 

@@ -1,13 +1,11 @@
 import {
     CommandHandler,
     HandlerContext,
-    HandlerResult,
     logger,
     MappedParameter,
     MappedParameters,
     Tags,
 } from "@atomist/automation-client";
-import * as _ from "lodash";
 import {inspect} from "util";
 import {v4 as uuid} from "uuid";
 import {QMConfig} from "../../../config/QMConfig";
@@ -15,20 +13,29 @@ import {GluonService} from "../../services/gluon/GluonService";
 import {OCService} from "../../services/openshift/OCService";
 import {getProjectDevOpsId} from "../../util/project/Project";
 import {
+    GluonTeamNameSetter,
+    setGluonTeamName,
+} from "../../util/recursiveparam/GluonParameterSetters";
+import {setImageName} from "../../util/recursiveparam/OpenshiftParameterSetters";
+import {
+    RecursiveParameter,
+    RecursiveParameterRequestCommand,
+} from "../../util/recursiveparam/RecursiveParameterRequestCommand";
+import {
     handleQMError,
     QMError,
     ResponderMessageClient,
 } from "../../util/shared/Error";
-import {createMenu} from "../../util/shared/GenericMenu";
-import {
-    RecursiveParameter,
-    RecursiveParameterRequestCommand,
-} from "../../util/shared/RecursiveParameterRequestCommand";
-import {menuForTeams} from "../../util/team/Teams";
 
 @CommandHandler("Tag an individual subatomic image to a devops environment ", QMConfig.subatomic.commandPrefix + " tag image")
 @Tags("subatomic", "devops", "team", "openshift", "images")
-export class TagLatestImage extends RecursiveParameterRequestCommand {
+export class TagLatestImage extends RecursiveParameterRequestCommand
+    implements GluonTeamNameSetter {
+
+    private static RecursiveKeys = {
+        teamName: "TEAM_NAME",
+        imageName: "IMAGE_NAME",
+    };
 
     @MappedParameter(MappedParameters.SlackUserName)
     public screenName: string;
@@ -37,16 +44,18 @@ export class TagLatestImage extends RecursiveParameterRequestCommand {
     public teamChannel: string;
 
     @RecursiveParameter({
-        description: "team name",
+        recursiveKey: TagLatestImage.RecursiveKeys.teamName,
+        selectionMessage: "Please select the team you would like to tag the image to",
     })
     public teamName: string;
 
     @RecursiveParameter({
-        description: "image name",
+        recursiveKey: TagLatestImage.RecursiveKeys.imageName,
+        selectionMessage: "Please select the image you would like tagged to your DevOps environment",
     })
     public imageName: string;
 
-    constructor(private gluonService = new GluonService(), private ocService = new OCService()) {
+    constructor(public gluonService = new GluonService(), private ocService = new OCService()) {
         super();
     }
 
@@ -60,38 +69,9 @@ export class TagLatestImage extends RecursiveParameterRequestCommand {
         }
     }
 
-    protected async setNextParameter(ctx: HandlerContext): Promise<HandlerResult> {
-        if (_.isEmpty(this.teamName)) {
-            try {
-                const team = await this.gluonService.teams.gluonTeamForSlackTeamChannel(this.teamChannel);
-                this.teamName = team.name;
-                return await this.handle(ctx);
-            } catch (slackChannelError) {
-                const teams = await this.gluonService.teams.gluonTeamsWhoSlackScreenNameBelongsTo(this.screenName);
-                return await menuForTeams(
-                    ctx,
-                    teams,
-                    this,
-                    "Please select a team whose DevOps environment you would like to update");
-            }
-        }
-        if (_.isEmpty(this.imageName)) {
-            const imagesResult = await this.ocService.getSubatomicImageStreamTags();
-            const images = JSON.parse(imagesResult.output).items;
-            return await createMenu(
-                ctx,
-                images.map(image => {
-                    return {
-                        value: image.metadata.name,
-                        text: image.metadata.name,
-                    };
-                }),
-                this,
-                "Please select the image you would like tagged to your project",
-                "Select Image",
-                "imageName");
-
-        }
+    protected configureParameterSetters() {
+        this.addRecursiveSetter(TagLatestImage.RecursiveKeys.teamName, setGluonTeamName);
+        this.addRecursiveSetter(TagLatestImage.RecursiveKeys.imageName, setImageName);
     }
 
     private async tagImage(ctx: HandlerContext) {

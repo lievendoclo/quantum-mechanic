@@ -15,11 +15,11 @@ import {AddConfigServer} from "./gluon/commands/project/AddConfigServer";
 import {AssociateTeam} from "./gluon/commands/project/AssociateTeam";
 import {CreateOpenShiftPvc} from "./gluon/commands/project/CreateOpenShiftPvc";
 import {CreateProject} from "./gluon/commands/project/CreateProject";
+import {NewProjectEnvironments} from "./gluon/commands/project/NewProjectEnvironments";
 import {
     ListProjectDetails,
     ListTeamProjects,
 } from "./gluon/commands/project/ProjectDetails";
-import {NewProjectEnvironments} from "./gluon/commands/project/ProjectEnvironments";
 import {AddMemberToTeam} from "./gluon/commands/team/AddMemberToTeam";
 import {CreateMembershipRequestToTeam} from "./gluon/commands/team/CreateMembershipRequestToTeam";
 import {CreateTeam} from "./gluon/commands/team/CreateTeam";

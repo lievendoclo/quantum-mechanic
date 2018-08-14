@@ -7,23 +7,36 @@ import {
     MappedParameters,
     Parameter,
 } from "@atomist/automation-client";
-import * as _ from "lodash";
 import {QMConfig} from "../../../config/QMConfig";
 import {BitbucketService} from "../../services/bitbucket/BitbucketService";
 import {GluonService} from "../../services/gluon/GluonService";
 import {PackageCommandService} from "../../services/packages/PackageCommandService";
-import {menuForBitbucketRepositories} from "../../util/bitbucket/Bitbucket";
 import {ApplicationType} from "../../util/packages/Applications";
-import {menuForProjects} from "../../util/project/Project";
-import {handleQMError, ResponderMessageClient} from "../../util/shared/Error";
+import {
+    BitbucketRepoSetter,
+    setBitbucketRepository,
+} from "../../util/recursiveparam/BitbucketParamSetters";
+import {
+    GluonProjectNameSetter,
+    GluonTeamNameSetter,
+    setGluonProjectName,
+    setGluonTeamName,
+} from "../../util/recursiveparam/GluonParameterSetters";
 import {
     RecursiveParameter,
     RecursiveParameterRequestCommand,
-} from "../../util/shared/RecursiveParameterRequestCommand";
-import {menuForTeams} from "../../util/team/Teams";
+} from "../../util/recursiveparam/RecursiveParameterRequestCommand";
+import {handleQMError, ResponderMessageClient} from "../../util/shared/Error";
 
 @CommandHandler("Link an existing application", QMConfig.subatomic.commandPrefix + " link application")
-export class LinkExistingApplication extends RecursiveParameterRequestCommand {
+export class LinkExistingApplication extends RecursiveParameterRequestCommand
+    implements GluonTeamNameSetter, GluonProjectNameSetter, BitbucketRepoSetter {
+
+    private static RecursiveKeys = {
+        teamName: "TEAM_NAME",
+        projectName: "PROJECT_NAME",
+        bitbucketRepositorySlug: "BITBUCKET_REPOSITORY_SLUG",
+    };
 
     @MappedParameter(MappedParameters.SlackUserName)
     public screenName: string;
@@ -41,25 +54,27 @@ export class LinkExistingApplication extends RecursiveParameterRequestCommand {
     })
     public description: string;
 
-    @Parameter({
-        description: "team name",
-        required: false,
-        displayable: false,
+    @RecursiveParameter({
+        recursiveKey: LinkExistingApplication.RecursiveKeys.teamName,
+        forceSet: false,
+        selectionMessage: "Please select a team, whose project you would like to link an application to",
     })
     public teamName: string;
 
     @RecursiveParameter({
-        description: "project name",
+        recursiveKey: LinkExistingApplication.RecursiveKeys.projectName,
+        selectionMessage: "Please select a project to which you would like to link an application to",
     })
     public projectName: string;
 
     @RecursiveParameter({
-        description: "Bitbucket repository slug",
+        recursiveKey: LinkExistingApplication.RecursiveKeys.bitbucketRepositorySlug,
+        selectionMessage: "Please select the Bitbucket repository which contains the application you want to link",
     })
     public bitbucketRepositorySlug: string;
 
-    constructor(private gluonService = new GluonService(),
-                private bitbucketService = new BitbucketService(),
+    constructor(public gluonService = new GluonService(),
+                public bitbucketService = new BitbucketService(),
                 private packageCommandService = new PackageCommandService()) {
         super();
     }
@@ -86,48 +101,9 @@ export class LinkExistingApplication extends RecursiveParameterRequestCommand {
         }
     }
 
-    protected async setNextParameter(ctx: HandlerContext): Promise<HandlerResult> {
-        if (_.isEmpty(this.teamName)) {
-            try {
-                const team = await this.gluonService.teams.gluonTeamForSlackTeamChannel(this.teamChannel);
-                this.teamName = team.name;
-                return await this.handle(ctx);
-            } catch (error) {
-                const teams = await this.gluonService.teams.gluonTeamsWhoSlackScreenNameBelongsTo(this.screenName);
-                return menuForTeams(
-                    ctx,
-                    teams,
-                    this,
-                    "Please select a team, whose project you would like to link a library to");
-
-            }
-        }
-        if (_.isEmpty(this.projectName)) {
-            const projects = await this.gluonService.projects.gluonProjectsWhichBelongToGluonTeam(this.teamName);
-            return menuForProjects(
-                ctx,
-                projects,
-                this,
-                "Please select a project to which you would like to link a library to");
-        }
-        if (_.isEmpty(this.bitbucketRepositorySlug)) {
-            const project = await this.gluonService.projects.gluonProjectFromProjectName(this.projectName);
-            if (_.isEmpty(project.bitbucketProject)) {
-                return await ctx.messageClient.respond(`❗The selected project does not have an associated bitbucket project. Please first associate a bitbucket project using the \`${QMConfig.subatomic.commandPrefix} link bitbucket project\` command.`);
-            }
-
-            const bitbucketRepos = await this.bitbucketService.bitbucketRepositoriesForProjectKey(project.bitbucketProject.key);
-
-            logger.debug(`Bitbucket project [${project.bitbucketProject.name}] has repositories: ${JSON.stringify(bitbucketRepos)}`);
-
-            return await menuForBitbucketRepositories(
-                ctx,
-                bitbucketRepos,
-                this,
-                "Please select the Bitbucket repository which contains the library you want to link",
-                "bitbucketRepositorySlug",
-                "https://raw.githubusercontent.com/absa-subatomic/subatomic-documentation/gh-pages/images/atlassian-bitbucket-logo.png",
-            );
-        }
+    protected configureParameterSetters() {
+        this.addRecursiveSetter(LinkExistingApplication.RecursiveKeys.teamName, setGluonTeamName);
+        this.addRecursiveSetter(LinkExistingApplication.RecursiveKeys.projectName, setGluonProjectName);
+        this.addRecursiveSetter(LinkExistingApplication.RecursiveKeys.bitbucketRepositorySlug, setBitbucketRepository);
     }
 }

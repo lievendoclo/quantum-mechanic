@@ -14,7 +14,7 @@ import {
     NewBitbucketProject,
 } from "../../commands/bitbucket/BitbucketProject";
 import {AssociateTeam} from "../../commands/project/AssociateTeam";
-import {NewProjectEnvironments} from "../../commands/project/ProjectEnvironments";
+import {NewProjectEnvironments} from "../../commands/project/NewProjectEnvironments";
 
 @EventHandler("Receive ProjectCreated events", `
 subscription ProjectCreatedEvent {

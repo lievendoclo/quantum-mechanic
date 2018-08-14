@@ -6,25 +6,34 @@ import {
     MappedParameters,
     Parameter,
 } from "@atomist/automation-client";
-import * as _ from "lodash";
 import {QMConfig} from "../../../config/QMConfig";
 import {GluonService} from "../../services/gluon/GluonService";
 import {ApplicationType} from "../../util/packages/Applications";
-import {menuForProjects} from "../../util/project/Project";
+import {
+    GluonProjectNameSetter,
+    GluonTeamNameSetter,
+    setGluonProjectName,
+    setGluonTeamName,
+} from "../../util/recursiveparam/GluonParameterSetters";
+import {
+    RecursiveParameter,
+    RecursiveParameterRequestCommand,
+} from "../../util/recursiveparam/RecursiveParameterRequestCommand";
 import {
     handleQMError,
     QMError,
     ResponderMessageClient,
 } from "../../util/shared/Error";
 import {isSuccessCode} from "../../util/shared/Http";
-import {
-    RecursiveParameter,
-    RecursiveParameterRequestCommand,
-} from "../../util/shared/RecursiveParameterRequestCommand";
-import {menuForTeams} from "../../util/team/Teams";
 
 @CommandHandler("Create a new Bitbucket project", QMConfig.subatomic.commandPrefix + " create bitbucket project")
-export class CreateApplication extends RecursiveParameterRequestCommand {
+export class CreateApplication extends RecursiveParameterRequestCommand
+    implements GluonTeamNameSetter, GluonProjectNameSetter {
+
+    private static RecursiveKeys = {
+        teamName: "TEAM_NAME",
+        projectName: "PROJECT_NAME",
+    };
 
     @MappedParameter(MappedParameters.SlackUserName)
     public screenName: string;
@@ -53,16 +62,18 @@ export class CreateApplication extends RecursiveParameterRequestCommand {
     public bitbucketRepositoryRepoUrl: string;
 
     @RecursiveParameter({
-        description: "project name",
+        recursiveKey: CreateApplication.RecursiveKeys.projectName,
+        selectionMessage: "Please select the owning project of the Bitbucket project you wish to create",
     })
     public projectName: string;
 
     @RecursiveParameter({
-        description: "team name",
+        recursiveKey: CreateApplication.RecursiveKeys.teamName,
+        selectionMessage: "Please select a team associated with the project you wish to create the Bitbucket project in",
     })
     public teamName: string;
 
-    constructor(private gluonService = new GluonService()) {
+    constructor(public gluonService = new GluonService()) {
         super();
     }
 
@@ -85,24 +96,11 @@ export class CreateApplication extends RecursiveParameterRequestCommand {
         } catch (error) {
             return await handleQMError(new ResponderMessageClient(ctx), error);
         }
-
     }
 
-    protected async setNextParameter(ctx: HandlerContext) {
-        if (_.isEmpty(this.teamName)) {
-            try {
-                const team = await this.gluonService.teams.gluonTeamForSlackTeamChannel(this.teamChannel);
-                this.teamName = team.name;
-                return await this.handle(ctx);
-            } catch (error) {
-                const teams = await this.gluonService.teams.gluonTeamsWhoSlackScreenNameBelongsTo(this.screenName);
-                return await menuForTeams(ctx, teams, this);
-            }
-        }
-        if (_.isEmpty(this.projectName)) {
-            const projects = await this.gluonService.projects.gluonProjectsWhichBelongToGluonTeam(this.teamName);
-            return await menuForProjects(ctx, projects, this);
-        }
+    protected configureParameterSetters() {
+        this.addRecursiveSetter(CreateApplication.RecursiveKeys.teamName, setGluonTeamName);
+        this.addRecursiveSetter(CreateApplication.RecursiveKeys.projectName, setGluonProjectName);
     }
 
     private async createApplicationInGluon(project, member) {
