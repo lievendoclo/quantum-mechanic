@@ -4,6 +4,7 @@ import {GluonService} from "../../../../src/gluon/services/gluon/GluonService";
 import {MemberService} from "../../../../src/gluon/services/gluon/MemberService";
 import {TeamService} from "../../../../src/gluon/services/gluon/TeamService";
 import {TeamSlackChannelService} from "../../../../src/gluon/services/team/TeamSlackChannelService";
+import {AwaitAxios} from "../../../../src/gluon/util/shared/AwaitAxios";
 import {TestGraphClient} from "../../TestGraphClient";
 import {TestMessageClient} from "../../TestMessageClient";
 
@@ -11,7 +12,7 @@ describe("TeamSlackChannelService getGluonTeam", () => {
     it("should fail to get team details", async () => {
         const mockedTeamService = mock(TeamService);
         when(mockedTeamService.gluonTeamByName("Team1")).thenResolve({status: 400});
-        const gluonService = new GluonService(instance(mockedTeamService));
+        const gluonService = new GluonService(undefined, instance(mockedTeamService));
         const service = new TeamSlackChannelService(gluonService);
 
         let thrownError = null;
@@ -41,7 +42,7 @@ describe("TeamSlackChannelService getGluonTeam", () => {
                         },
                     },
                 });
-        const gluonService = new GluonService(instance(mockedTeamService));
+        const gluonService = new GluonService(undefined, instance(mockedTeamService));
         const service = new TeamSlackChannelService(gluonService);
 
         const result = await service.getGluonTeam("Team1", "something");
@@ -54,7 +55,7 @@ describe("TeamSlackChannelService addSlackDetailsToGluonTeam", () => {
     it("should fail to add slack details", async () => {
         const mockedTeamService = mock(TeamService);
         when(mockedTeamService.addSlackDetailsToTeam("Team1Id", anything())).thenResolve({status: 400});
-        const gluonService = new GluonService(instance(mockedTeamService));
+        const gluonService = new GluonService(undefined, instance(mockedTeamService));
         const service = new TeamSlackChannelService(gluonService);
 
         let thrownError = null;
@@ -71,7 +72,7 @@ describe("TeamSlackChannelService addSlackDetailsToGluonTeam", () => {
     it("should succeed and add slack details", async () => {
         const mockedTeamService = mock(TeamService);
         when(mockedTeamService.addSlackDetailsToTeam("Team1Id", anything())).thenResolve({status: 200});
-        const gluonService = new GluonService(instance(mockedTeamService));
+        const gluonService = new GluonService(undefined, instance(mockedTeamService));
         const service = new TeamSlackChannelService(gluonService);
 
         let thrownError = false;
@@ -166,7 +167,7 @@ describe("TeamSlackChannelService tryInviteGluonMemberToChannel", () => {
     it("should fail to find member", async () => {
         const mockedMemberService = mock(MemberService);
         when(mockedMemberService.gluonMemberFromMemberId("Member1Id")).thenResolve({status: 400});
-        const gluonService = new GluonService(undefined, instance(mockedMemberService));
+        const gluonService = new GluonService(undefined, undefined, instance(mockedMemberService));
         const service = new TeamSlackChannelService(gluonService);
 
         const fakeContext = {
@@ -192,7 +193,7 @@ describe("TeamSlackChannelService tryInviteGluonMemberToChannel", () => {
             status: 200,
             data: {firstName: "Kyle"},
         });
-        const gluonService = new GluonService(undefined, instance(mockedMemberService));
+        const gluonService = new GluonService(undefined, undefined, instance(mockedMemberService));
         const service = new TeamSlackChannelService(gluonService);
 
         const fakeContext = {
@@ -218,7 +219,7 @@ describe("TeamSlackChannelService tryInviteGluonMemberToChannel", () => {
             status: 200,
             data: {firstName: "Kyle", slack: {userId: "userId1"}},
         });
-        const gluonService = new GluonService(undefined, instance(mockedMemberService));
+        const gluonService = new GluonService(undefined, undefined, instance(mockedMemberService));
         const service = new TeamSlackChannelService(gluonService);
 
         const fakeContext = {
@@ -250,7 +251,7 @@ describe("TeamSlackChannelService inviteListOfGluonMembersToChannel", () => {
         when(mockedMemberService.gluonMemberFromMemberId("2")).thenResolve({
             status: 400,
         });
-        const gluonService = new GluonService(undefined, instance(mockedMemberService));
+        const gluonService = new GluonService(undefined, undefined, instance(mockedMemberService));
         const service = new TeamSlackChannelService(gluonService);
 
         const fakeContext = {

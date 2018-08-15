@@ -1,14 +1,18 @@
 import {logger} from "@atomist/automation-client";
-import axios from "axios";
 import * as _ from "lodash";
 import * as util from "util";
 import {QMConfig} from "../../../config/QMConfig";
+import {AwaitAxios} from "../../util/shared/AwaitAxios";
 import {QMError} from "../../util/shared/Error";
 import {isSuccessCode} from "../../util/shared/Http";
 
 export class TenantService {
+
+    constructor(public axiosInstance = new AwaitAxios()) {
+    }
+
     public async gluonTenantList(): Promise<any> {
-        const tenantResult = await axios.get(`${QMConfig.subatomic.gluon.baseUrl}/tenants`);
+        const tenantResult = await this.axiosInstance.get(`${QMConfig.subatomic.gluon.baseUrl}/tenants`);
         if (isSuccessCode(tenantResult.status)) {
             if (!_.isEmpty(tenantResult.data._embedded)) {
                 return tenantResult.data._embedded.tenantResources;
@@ -22,7 +26,7 @@ export class TenantService {
     }
 
     public async gluonTenantFromTenantName(tenantName: string): Promise<any> {
-        const tenantResult = await axios.get(`${QMConfig.subatomic.gluon.baseUrl}/tenants?name=${tenantName}`);
+        const tenantResult = await this.axiosInstance.get(`${QMConfig.subatomic.gluon.baseUrl}/tenants?name=${tenantName}`);
         if (!isSuccessCode(tenantResult.status)) {
             logger.error(`No gluon tenant found associated with tenant name: ${tenantName}`);
             throw new QMError(`No tenant associated with tenant name: ${tenantName}`);
@@ -31,7 +35,7 @@ export class TenantService {
     }
 
     public async gluonTenantFromTenantId(tenantId: string): Promise<any> {
-        const tenantResult = await axios.get(`${QMConfig.subatomic.gluon.baseUrl}/tenants/${tenantId}`);
+        const tenantResult = await this.axiosInstance.get(`${QMConfig.subatomic.gluon.baseUrl}/tenants/${tenantId}`);
         if (!isSuccessCode(tenantResult.status)) {
             logger.error(`No gluon tenant found associated with tenant id: ${tenantId}`);
             throw new QMError(`No tenant associated with tenant id: ${tenantId}`);

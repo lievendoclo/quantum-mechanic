@@ -4,6 +4,7 @@ import {GluonService} from "../../../../src/gluon/services/gluon/GluonService";
 import {MemberService} from "../../../../src/gluon/services/gluon/MemberService";
 import {TeamService} from "../../../../src/gluon/services/gluon/TeamService";
 import {AddMemberToTeamService} from "../../../../src/gluon/services/team/AddMemberToTeamService";
+import {AwaitAxios} from "../../../../src/gluon/util/shared/AwaitAxios";
 import {QMError} from "../../../../src/gluon/util/shared/Error";
 import {TestGraphClient} from "../../TestGraphClient";
 import {TestMessageClient} from "../../TestMessageClient";
@@ -24,7 +25,7 @@ describe("AddMemberToTeamService getNewMember", () => {
                 screenName: "Dex",
             },
         }));
-        const gluonService = new GluonService(undefined, instance(mockedMemberService));
+        const gluonService = new GluonService(undefined, undefined, instance(mockedMemberService));
         const service = new AddMemberToTeamService(gluonService);
 
         let errorThrown: QMError = null;
@@ -53,7 +54,7 @@ describe("AddMemberToTeamService getNewMember", () => {
                 screenName: "Dex",
             },
         }));
-        const gluonService = new GluonService(undefined, instance(mockedMemberService));
+        const gluonService = new GluonService(undefined, undefined, instance(mockedMemberService));
         const service = new AddMemberToTeamService(gluonService);
 
         const result = await service.getNewMember("Dex", "Channel2");
@@ -69,7 +70,7 @@ describe("AddMemberToTeamService addUserToGluonTeam", () => {
         when(mockedTeamService.addMemberToTeam("team1", anything())).thenReturn(Promise.resolve({
             status: 400,
         }));
-        const gluonService = new GluonService(instance(mockedTeamService));
+        const gluonService = new GluonService(undefined, instance(mockedTeamService));
         const service = new AddMemberToTeamService(gluonService);
 
         let errorThrown: QMError = null;
@@ -88,7 +89,7 @@ describe("AddMemberToTeamService addUserToGluonTeam", () => {
         when(mockedTeamService.addMemberToTeam("team1", anything())).thenReturn(Promise.resolve({
             status: 200,
         }));
-        const gluonService = new GluonService(instance(mockedTeamService));
+        const gluonService = new GluonService(undefined, instance(mockedTeamService));
         const service = new AddMemberToTeamService(gluonService);
 
         await service.addUserToGluonTeam("User1", "User2", "http://gluon/teams/team1");
@@ -101,7 +102,7 @@ describe("AddMemberToTeamService addUserToGluonTeam", () => {
         when(mockedTeamService.addMemberToTeam("team1", anything())).thenReturn(Promise.resolve({
             status: 200,
         }));
-        const gluonService = new GluonService(instance(mockedTeamService));
+        const gluonService = new GluonService(undefined, instance(mockedTeamService));
         const service = new AddMemberToTeamService(gluonService);
 
         let errorThrown: boolean = false;

@@ -66,7 +66,10 @@ export class PackageCommandService {
                 requestConfiguration: true,
             });
 
-        if (!isSuccessCode(createApplicationResult.status)) {
+        if (createApplicationResult.status === 409) {
+            logger.error(`Failed to create application since the name of the application is already in use.`);
+            throw new QMError(`Failed to create application since the name of the application is already in use. Please retry using a different name.`);
+        } else if (!isSuccessCode(createApplicationResult.status)) {
             logger.error(`Failed to link package. Error: ${JSON.stringify(createApplicationResult)}`);
             throw new QMError("Failed to link the specified package from bitbucket.");
         }

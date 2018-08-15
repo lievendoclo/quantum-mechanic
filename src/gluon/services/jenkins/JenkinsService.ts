@@ -11,6 +11,7 @@ import {isSuccessCode} from "../../util/shared/Http";
 import {retryFunction} from "../../util/shared/RetryFunction";
 
 export class JenkinsService {
+
     public kickOffFirstBuild(jenkinsHost: string,
                              token: string,
                              gluonProjectName: string,

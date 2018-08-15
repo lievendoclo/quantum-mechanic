@@ -61,8 +61,11 @@ export class CreateTeam implements HandleCommand<HandlerResult> {
     private async createTeamInGluon(teamName: string, teamDescription: string, createdBy: string) {
         const teamCreationResult = await this.gluonService.teams.createGluonTeam(teamName, teamDescription, createdBy);
 
-        if (!isSuccessCode(teamCreationResult.status)) {
-            logger.error(`Failed to create the team with name ${name}. Error: ${teamCreationResult.status}`);
+        if (teamCreationResult.status === 409) {
+            logger.error(`Failed to create team since the team name is already in use.`);
+            throw new QMError(`Failed to create team since the team name is already in use. Please retry using a different team name.`);
+        } else if (!isSuccessCode(teamCreationResult.status)) {
+            logger.error(`Failed to create the team with name ${teamName}. Error: ${teamCreationResult.status}`);
             throw new QMError("Unable to create team.");
         }
     }

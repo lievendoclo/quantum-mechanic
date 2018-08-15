@@ -1,14 +1,16 @@
-import axios from "axios";
 import * as assert from "power-assert";
 import {QMConfig} from "../../../../src/config/QMConfig";
 import {OnboardMember} from "../../../../src/gluon/commands/member/OnboardMember";
+import {GluonService} from "../../../../src/gluon/services/gluon/GluonService";
+import {AwaitAxios} from "../../../../src/gluon/util/shared/AwaitAxios";
 import {TestMessageClient} from "../../TestMessageClient";
 
 const MockAdapter = require("axios-mock-adapter");
 
 describe("Onboard new member test", () => {
     it("should welcome new user", async () => {
-        const mock = new MockAdapter(axios);
+        const axiosWrapper = new AwaitAxios();
+        const mock = new MockAdapter(axiosWrapper.axiosInstance);
 
         mock.onPost(`${QMConfig.subatomic.gluon.baseUrl}/members`).reply(201, {
             firstName: "Test",
@@ -21,7 +23,9 @@ describe("Onboard new member test", () => {
             },
         });
 
-        const subject = new OnboardMember();
+        const gluonService = new GluonService(axiosWrapper);
+
+        const subject = new OnboardMember(gluonService);
         subject.domainUsername = "tete528";
         subject.email = "test.user@foo.co.za";
         subject.firstName = "Test";

@@ -1,18 +1,22 @@
 import {logger} from "@atomist/automation-client";
 import {buttonForCommand} from "@atomist/automation-client/spi/message/MessageClient";
 import {SlackMessage, url} from "@atomist/slack-messages";
-import axios from "axios";
 import * as _ from "lodash";
 import {QMConfig} from "../../../config/QMConfig";
 import {CreateApplication} from "../../commands/packages/CreateApplication";
+import {AwaitAxios} from "../../util/shared/AwaitAxios";
 import {QMError} from "../../util/shared/Error";
 import {isSuccessCode} from "../../util/shared/Http";
 
 export class ApplicationService {
+
+    constructor(public axiosInstance = new AwaitAxios()) {
+    }
+
     public async gluonApplicationsLinkedToGluonProject(gluonProjectName: string, requestActionOnFailure: boolean = true): Promise<any> {
         logger.debug(`Trying to get gluon applications associated to projectName. gluonProjectName: ${gluonProjectName} `);
 
-        const result = await axios.get(`${QMConfig.subatomic.gluon.baseUrl}/applications?projectName=${gluonProjectName}`);
+        const result = await this.axiosInstance.get(`${QMConfig.subatomic.gluon.baseUrl}/applications?projectName=${gluonProjectName}`);
 
         if (!isSuccessCode(result.status)) {
             throw new QMError(`Failed to get applications linked to project ${gluonProjectName}`);
@@ -50,7 +54,7 @@ export class ApplicationService {
                                                        requestActionOnFailure: boolean = true): Promise<any> {
         logger.debug(`Trying to get gluon applications associated to name and project. applicationName: ${applicationName}; projectName: ${projectName}`);
 
-        const result = await axios.get(`${QMConfig.subatomic.gluon.baseUrl}/applications?name=${applicationName}&projectName=${projectName}`);
+        const result = await this.axiosInstance.get(`${QMConfig.subatomic.gluon.baseUrl}/applications?name=${applicationName}&projectName=${projectName}`);
 
         if (!isSuccessCode(result.status) || _.isEmpty(result.data._embedded)) {
             const errorMessage = `Application with name ${applicationName} in project ${projectName} does not exist`;
@@ -90,7 +94,7 @@ Consider creating a new application called ${applicationName}. Click the button 
 
     public gluonApplicationsLinkedToGluonProjectId(gluonProjectId: string): Promise<any[]> {
         logger.debug(`Trying to get gluon applications associated to project Id. gluonProjectId: ${gluonProjectId} `);
-        return axios.get(`${QMConfig.subatomic.gluon.baseUrl}/applications?projectId=${gluonProjectId}`)
+        return this.axiosInstance.get(`${QMConfig.subatomic.gluon.baseUrl}/applications?projectId=${gluonProjectId}`)
             .then(applications => {
                 if (!_.isEmpty(applications.data._embedded)) {
                     return Promise.resolve(applications.data._embedded.applicationResources);
@@ -101,6 +105,6 @@ Consider creating a new application called ${applicationName}. Click the button 
 
     public async createGluonApplication(applicationDetails: any): Promise<any> {
         logger.debug(`Trying to create application.`);
-        return await axios.post(`${QMConfig.subatomic.gluon.baseUrl}/applications`, applicationDetails);
+        return await this.axiosInstance.post(`${QMConfig.subatomic.gluon.baseUrl}/applications`, applicationDetails);
     }
 }

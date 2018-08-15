@@ -1,14 +1,16 @@
 import "mocha";
 import * as assert from "power-assert";
 const MockAdapter = require("axios-mock-adapter");
-import axios from "axios";
 import {QMConfig} from "../../../../src/config/QMConfig";
 import {NewDevOpsEnvironment} from "../../../../src/gluon/commands/team/DevOpsEnvironment";
+import {GluonService} from "../../../../src/gluon/services/gluon/GluonService";
+import {AwaitAxios} from "../../../../src/gluon/util/shared/AwaitAxios";
 import {TestMessageClient} from "../../TestMessageClient";
 
 describe("Create a new or use an existing Openshift DevOps environment", () => {
     it("Should use existing DevOps environment", async () => {
-        const mock = new MockAdapter(axios);
+        const axiosWrapper = new AwaitAxios();
+        const mock = new MockAdapter(axiosWrapper.axiosInstance);
         const teamName = "test_name";
         const screenName = "Test.User";
         const teamChannel = "test_channel";
@@ -68,7 +70,9 @@ describe("Create a new or use an existing Openshift DevOps environment", () => {
             },
         });
 
-        const subject = new NewDevOpsEnvironment();
+        const gluonService = new GluonService(axiosWrapper);
+
+        const subject = new NewDevOpsEnvironment(gluonService);
         subject.teamName = `${teamName}`;
         subject.teamChannel = `${teamChannel}`;
         subject.screenName = `${screenName}`;

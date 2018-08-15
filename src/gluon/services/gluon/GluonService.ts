@@ -1,3 +1,4 @@
+import {AwaitAxios} from "../../util/shared/AwaitAxios";
 import {ApplicationService} from "./ApplicationService";
 import {MemberService} from "./MemberService";
 import {ProjectService} from "./ProjectService";
@@ -5,8 +6,9 @@ import {TeamService} from "./TeamService";
 import {TenantService} from "./TenantService";
 
 export class GluonService {
-    constructor(public teams = new TeamService(),
-                public members = new MemberService(),
+    constructor(public axiosInstance = new AwaitAxios(),
+                public teams = new TeamService(axiosInstance),
+                public members = new MemberService(axiosInstance),
                 public applications = new ApplicationService(),
                 public projects = new ProjectService(),
                 public tenants = new TenantService()) {

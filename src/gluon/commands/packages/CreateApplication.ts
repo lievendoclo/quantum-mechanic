@@ -2,6 +2,7 @@ import {
     CommandHandler,
     HandlerContext,
     HandlerResult,
+    logger,
     MappedParameter,
     MappedParameters,
     Parameter,
@@ -118,7 +119,10 @@ export class CreateApplication extends RecursiveParameterRequestCommand
                 requestConfiguration: true,
             });
 
-        if (!isSuccessCode(createApplicationResult.status)) {
+        if (createApplicationResult.status === 409) {
+            logger.error(`Failed to create application since the name of the application is already in use.`);
+            throw new QMError(`Failed to create application since the name of the application is already in use. Please retry using a different name.`);
+        } else if (!isSuccessCode(createApplicationResult.status)) {
             throw new QMError("Your new application could not be created. Please ensure it does not already exist.");
         }
     }

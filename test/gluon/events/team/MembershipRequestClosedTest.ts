@@ -1,15 +1,19 @@
 import "mocha";
 import * as assert from "power-assert";
+
 const MockAdapter = require("axios-mock-adapter");
 import axios from "axios";
 import {QMConfig} from "../../../../src/config/QMConfig";
 import {MembershipRequestClosed} from "../../../../src/gluon/events/team/MembershipRequestClosed";
+import {GluonService} from "../../../../src/gluon/services/gluon/GluonService";
+import {AwaitAxios} from "../../../../src/gluon/util/shared/AwaitAxios";
 import {TestGraphClient} from "../../TestGraphClient";
 import {TestMessageClient} from "../../TestMessageClient";
 
 describe("Close a membership request", () => {
     it("should approve team member", async () => {
-        const mock = new MockAdapter(axios);
+        const axiosWrapper = new AwaitAxios();
+        const mock = new MockAdapter(axiosWrapper.axiosInstance);
         const approverUserName = "Approval.User";
         const slackTeam = "A-Team";
         const slackChannelId = "84383asda2123-334daeerasde";
@@ -49,7 +53,9 @@ describe("Close a membership request", () => {
             ],
         });
 
-        const subject = new MembershipRequestClosed();
+        const gluonService = new GluonService(axiosWrapper);
+
+        const subject = new MembershipRequestClosed(gluonService);
         subject.approverUserName = `${approverUserName}`;
         subject.slackTeam = `${slackTeam}`;
         subject.slackChannelId = `${slackChannelId}`;
@@ -74,7 +80,8 @@ describe("Close a membership request", () => {
     });
 
     it("should reject team member", async () => {
-        const mock = new MockAdapter(axios);
+        const axiosWrapper = new AwaitAxios();
+        const mock = new MockAdapter(axiosWrapper.axiosInstance);
         const approverUserName = "Approval.User";
         const slackTeam = "A-Team";
         const slackChannelId = "84383asda2123-334daeerasde";
@@ -114,7 +121,9 @@ describe("Close a membership request", () => {
             ],
         });
 
-        const subject = new MembershipRequestClosed();
+        const gluonService = new GluonService(axiosWrapper);
+
+        const subject = new MembershipRequestClosed(gluonService);
         subject.approverUserName = `${approverUserName}`;
         subject.slackTeam = `${slackTeam}`;
         subject.slackChannelId = `${slackChannelId}`;

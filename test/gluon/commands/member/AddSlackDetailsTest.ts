@@ -1,15 +1,17 @@
-import axios from "axios";
 import "mocha";
 import * as assert from "power-assert";
 import {QMConfig} from "../../../../src/config/QMConfig";
 import {AddSlackDetails} from "../../../../src/gluon/commands/member/AddSlackDetails";
+import {GluonService} from "../../../../src/gluon/services/gluon/GluonService";
+import {AwaitAxios} from "../../../../src/gluon/util/shared/AwaitAxios";
 import {TestMessageClient} from "../../TestMessageClient";
 
 const MockAdapter = require("axios-mock-adapter");
 
 describe("Add slack details to existing team member", () => {
     it("should add slack details to existing memnber", done => {
-        const mock = new MockAdapter(axios);
+        const axiosWrapper = new AwaitAxios();
+        const mock = new MockAdapter(axiosWrapper.axiosInstance);
         const screenName = "test.user";
         const userId = "9USD45612";
         const email = "test@tester.com";
@@ -36,7 +38,9 @@ describe("Add slack details to existing team member", () => {
             },
         });
 
-        const subject = new AddSlackDetails();
+        const gluonService = new GluonService(axiosWrapper);
+
+        const subject = new AddSlackDetails(gluonService);
         subject.screenName = `${screenName}`;
         subject.userId = `${userId}`;
         subject.email = `${email}`;
