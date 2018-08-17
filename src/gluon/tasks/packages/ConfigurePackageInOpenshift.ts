@@ -5,6 +5,7 @@ import {
     success,
 } from "@atomist/automation-client";
 import * as _ from "lodash";
+import {QMConfig} from "../../../config/QMConfig";
 import {GluonService} from "../../services/gluon/GluonService";
 import {OCService} from "../../services/openshift/OCService";
 import {ApplicationType} from "../../util/packages/Applications";
@@ -96,7 +97,7 @@ export class ConfigurePackageInOpenshift extends Task {
                     git: {
                         // temporary hack because of the NodePort
                         // TODO remove this!
-                        uri: `${bitbucketRepoRemoteUrl.replace("7999", "30999")}`,
+                        uri: `${bitbucketRepoRemoteUrl.replace("7999", String(QMConfig.subatomic.bitbucket.sshPort))}`,
                         ref: "master",
                     },
                     sourceSecret: {

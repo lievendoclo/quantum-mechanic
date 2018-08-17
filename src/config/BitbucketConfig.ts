@@ -7,6 +7,7 @@ export interface BitbucketConfig {
     cicdPrivateKeyPath: string;
     cicdKey: string;
     auth: SubatomicAuthCredentials;
+    sshPort: number;
 }
 
 export interface SubatomicAuthCredentials extends BasicAuthCredentials {
