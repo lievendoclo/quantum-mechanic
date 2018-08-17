@@ -19,14 +19,16 @@ RUN mkdir -p /opt/app
 
 WORKDIR /opt/app
 
-COPY . .
-
 ## Need to add node and npm to the path
 ENV PATH="/opt/rh/rh-nodejs8/root/usr/bin:${PATH}"
 
 ENV NPM_CONFIG_LOGLEVEL warn
 
+COPY ./package.json .
+
 RUN npm install
+
+COPY . .
 
 ENV SUPPRESS_NO_CONFIG_WARNING true
 
