@@ -300,7 +300,7 @@ export class OCService {
             const fileName = Date.now() + ".json";
             fs.writeFileSync(`/tmp/${fileName}`, JSON.stringify(template));
             const processedTemplateResult = await OCCommon.commonCommand("process", `-f /tmp/${fileName}`);
-            await OCCommon.createFromData(processedTemplateResult.output, [new SimpleOption("-namespace", projectId)]);
+            await OCCommon.createFromData(JSON.parse(processedTemplateResult.output), [new SimpleOption("-namespace", projectId)]);
         } else {
             logger.debug(`Base template is empty. Not applying to project ${projectId}`);
         }
