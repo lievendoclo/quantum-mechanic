@@ -117,7 +117,7 @@ export class ConfigureBasicPackage extends RecursiveParameterRequestCommand
     }
 
     private getPathFromDefinitionName(definitionName: string): string {
-        return `${PACKAGE_DEFINITION_FOLDER}${this.packageType}/${definitionName}${PACKAGE_DEFINITION_EXTENSION}`;
+        return `${PACKAGE_DEFINITION_FOLDER}${this.packageType.toLowerCase()}/${definitionName}${PACKAGE_DEFINITION_EXTENSION}`;
     }
 }
 

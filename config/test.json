@@ -20,6 +20,7 @@
         "password": "subatomic",
         "email": "subatomic@local"
       },
+      "sshPort": 30999,
       "cicdPrivateKeyPath": "/path/to/key",
       "cicdKey": "ssh-rsa somesecret"
     },
