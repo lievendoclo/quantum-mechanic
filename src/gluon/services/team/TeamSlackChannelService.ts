@@ -79,7 +79,7 @@ export class TeamSlackChannelService {
             }
             // allow error to fall through to final return otherwise
         } catch (err) {
-            if (err.networkError && err.networkError.response && err.networkError.response.status === 400) {
+            if (err.networkError && err.networkError.response && !isSuccessCode(err.networkError.response.status)) {
                 return await ctx.messageClient.respond(`❗ The channel has been successfully linked to your team but since the channel *${slackChannelName}* is private` +
                     ` the atomist bot cannot be automatically invited. Please manually invite the atomist bot using the \`/invite @atomist\` command in the *${slackChannelName}* slack channel.` +
                     ` You will then need to manually invite your team members to the *${slackChannelName}* channel using the \`/invite @teamMembersName\`.`);

@@ -46,9 +46,8 @@ export class ConfigurePackageInOpenshift extends Task {
         const teamDevOpsProjectId = `${_.kebabCase(this.packageDetails.owningTeamName).toLowerCase()}-devops`;
         logger.debug(`Using owning team DevOps project: ${teamDevOpsProjectId}`);
 
-        await this.ocService.login();
-
         if (this.packageDetails.packageType === ApplicationType.DEPLOYABLE.toString()) {
+            await this.ocService.login();
             const appBuildName = `${_.kebabCase(this.packageDetails.projectName).toLowerCase()}-${_.kebabCase(this.packageDetails.packageName).toLowerCase()}`;
             await this.createApplicationImageStream(appBuildName, teamDevOpsProjectId);
 

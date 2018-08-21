@@ -113,7 +113,7 @@ export class MembershipRequestClosed implements HandleCommand<HandlerResult> {
             });
 
         if (!isSuccessCode(updateMembershipRequestResult.status)) {
-            logger.error("Failed to update the member shiprequest.");
+            logger.error("Failed to update the membership request.");
             throw new QMError(`The membership request could not be updated. Please ensure that you are an owner of this team before responding to the membership request.`);
         }
     }

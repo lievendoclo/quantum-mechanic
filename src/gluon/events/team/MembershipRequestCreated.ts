@@ -44,7 +44,7 @@ export class MembershipRequestCreated implements HandleEvent<any> {
 
         const membershipRequestCreatedEvent = event.data.MembershipRequestCreatedEvent[0];
 
-        await this.tryAddressMember(ctx, `A membership request to team '${membershipRequestCreatedEvent.team.name}' has been sent for approval`, membershipRequestCreatedEvent.requestedBy.slackIdentity.screenName);
+        await this.tryAddressMember(ctx, `A membership request to team '${membershipRequestCreatedEvent.team.name}' has been sent for approval`, membershipRequestCreatedEvent.requestedBy);
 
         if (membershipRequestCreatedEvent.team.slackIdentity !== null) {
             const msg: SlackMessage = {

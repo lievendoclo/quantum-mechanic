@@ -9,14 +9,9 @@ import {
     Parameter,
     Tags,
 } from "@atomist/automation-client";
-import {CreateMembershipRequestToTeamMessages} from "../../messages/team/CreateMembershipRequestToTeamMessages";
 import {GluonService} from "../../services/gluon/GluonService";
 import {getScreenName, loadScreenNameByUserId} from "../../util/member/Members";
-import {
-    handleQMError,
-    QMError,
-    ResponderMessageClient,
-} from "../../util/shared/Error";
+import {handleQMError, QMError, ResponderMessageClient} from "../../util/shared/Error";
 import {isSuccessCode} from "../../util/shared/Http";
 
 @CommandHandler("Request membership to a team")
@@ -38,8 +33,6 @@ export class CreateMembershipRequestToTeam implements HandleCommand<HandlerResul
     })
     public slackName: string;
 
-    public createMembershipRequestToTeamMessages = new CreateMembershipRequestToTeamMessages();
-
     constructor(private gluonService = new GluonService()) {
     }
 
@@ -51,14 +44,9 @@ export class CreateMembershipRequestToTeam implements HandleCommand<HandlerResul
 
             const chatId = await loadScreenNameByUserId(ctx, screenName);
 
-            const newMemberQueryResult = await this.gluonService.members.gluonMemberFromScreenName(chatId);
+            const memberDetails = await this.gluonService.members.gluonMemberFromScreenName(chatId);
 
-            if (!isSuccessCode(newMemberQueryResult.status)) {
-                const message = this.createMembershipRequestToTeamMessages.alertGluonMemberForSlackMentionDoesNotExist(this.slackName);
-                return await ctx.messageClient.respond(message);
-            }
-
-            await this.createMembershipRequest(newMemberQueryResult.data._embedded.teamMemberResources[0]);
+            await this.createMembershipRequest(memberDetails);
 
             return await ctx.messageClient.respond("Your request to join then team has been sent.");
         } catch (error) {

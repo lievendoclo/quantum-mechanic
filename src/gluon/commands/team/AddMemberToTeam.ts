@@ -34,7 +34,7 @@ export class AddMemberToTeam implements HandleCommand<HandlerResult> {
     public teamChannel: string;
 
     @Parameter({
-        description: "slack name of the member to add",
+        description: "slack name (@User.Name) of the member to add",
     })
     public slackName: string;
 
