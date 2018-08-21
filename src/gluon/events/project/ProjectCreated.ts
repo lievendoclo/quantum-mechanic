@@ -81,23 +81,6 @@ This can be a new Bitbucket project that will be created and configured accordin
                 ],
             }, {
                 text: `
-A Subatomic project is deployed into the OpenShift platform. \
-The platform consists of two clusters, a Non Prod and a Prod cluster. The project environments span both clusters and are the deployment targets for the applications managed by Subatomic.
-These environments are realised as OpenShift projects and need to be created or linked to existing projects. If you haven't done either, please do that now.`,
-                fallback: "Create or link existing OpenShift environments",
-                footer: `For more information, please read the ${this.docs("request-project-environments")}`,
-                color: "#45B254",
-                thumb_url: "https://raw.githubusercontent.com/absa-subatomic/subatomic-documentation/gh-pages/images/openshift-logo.png",
-                actions: [
-                    buttonForCommand(
-                        {text: "Create OpenShift environments"},
-                        new NewProjectEnvironments(),
-                        {
-                            projectName: projectCreatedEvent.project.name,
-                        }),
-                ],
-            }, {
-                text: `
 Projects can be associated with multiple teams. \
 If you would like to associate more teams to the *${projectCreatedEvent.project.name}* project, please use the \`@atomist sub associate team\` command`,
                 fallback: "Associate multiple teams to this project",
