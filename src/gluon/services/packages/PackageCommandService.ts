@@ -1,5 +1,6 @@
 import {HandlerResult, logger, success} from "@atomist/automation-client";
 import * as _ from "lodash";
+import {inspect} from "util";
 import {ApplicationType} from "../../util/packages/Applications";
 import {QMError} from "../../util/shared/Error";
 import {isSuccessCode} from "../../util/shared/Http";
@@ -70,7 +71,7 @@ export class PackageCommandService {
             logger.error(`Failed to create application since the name of the application is already in use.`);
             throw new QMError(`Failed to create application since the name of the application is already in use. Please retry using a different name.`);
         } else if (!isSuccessCode(createApplicationResult.status)) {
-            logger.error(`Failed to link package. Error: ${JSON.stringify(createApplicationResult)}`);
+            logger.error(`Failed to link package. Error: ${inspect(createApplicationResult)}`);
             throw new QMError("Failed to link the specified package from bitbucket.");
         }
 

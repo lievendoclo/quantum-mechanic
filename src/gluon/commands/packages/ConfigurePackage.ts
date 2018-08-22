@@ -124,7 +124,7 @@ export class ConfigurePackage extends RecursiveParameterRequestCommand
 
         const taskListMessage = new TaskListMessage(":rocket: Configuring package...", new ResponderMessageClient(ctx));
         const taskRunner = new TaskRunner(taskListMessage);
-        if (application.packageType === ApplicationType.DEPLOYABLE.toString()) {
+        if (application.applicationType === ApplicationType.DEPLOYABLE.toString()) {
             taskRunner.addTask(
                 new ConfigurePackageInOpenshift(
                     {
