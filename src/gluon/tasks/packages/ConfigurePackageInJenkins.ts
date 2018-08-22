@@ -47,6 +47,7 @@ export class ConfigurePackageInJenkins extends Task {
     }
 
     protected async executeTask(ctx: HandlerContext): Promise<boolean> {
+        await this.ocService.login();
         await this.addJenkinsFile(
             this.jenkinsFile,
             this.bitbucketProject.key,
