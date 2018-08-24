@@ -230,11 +230,16 @@ export class OCService {
 
     public async createBitbucketSSHAuthSecret(secretName: string, namespace: string): Promise<OCCommandResult> {
         logger.debug(`Trying to create bitbucket ssh auth secret in namespace. secretName: ${secretName}, namespace: ${namespace}`);
+
+        logger.debug("Extracting raw ssh key from cicd key");
+        // Ignore the ssh-rsa encoding string, and any user name details at the end.
+        const rawSSHKey = QMConfig.subatomic.bitbucket.cicdKey.split(" ")[1];
+
         return await OCCommon.commonCommand("secrets new-sshauth",
             secretName,
             [],
             [
-                new SimpleOption("-ssh-privatekey", QMConfig.subatomic.bitbucket.cicdPrivateKeyPath),
+                new SimpleOption("-ssh-privatekey", rawSSHKey),
                 new SimpleOption("-ca-cert", QMConfig.subatomic.bitbucket.caPath),
                 new SimpleOption("-namespace", namespace),
             ]);
