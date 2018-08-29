@@ -231,27 +231,28 @@ export class OCService {
     public async createBitbucketSSHAuthSecret(secretName: string, namespace: string): Promise<OCCommandResult> {
         logger.debug(`Trying to create bitbucket ssh auth secret in namespace. secretName: ${secretName}, namespace: ${namespace}`);
 
-        logger.debug("Extracting raw ssh key from cicd key");
-        // Ignore the ssh-rsa encoding string, and any user name details at the end.
-        const rawSSHKey = QMConfig.subatomic.bitbucket.cicdKey.split(" ")[1];
-
-        return await OCCommon.commonCommand("secrets new-sshauth",
+        return await OCCommon.commonCommand("create secret generic",
             secretName,
             [],
             [
-                new SimpleOption("-ssh-privatekey", rawSSHKey),
-                new SimpleOption("-ca-cert", QMConfig.subatomic.bitbucket.caPath),
+                new SimpleOption("-from-file=ssh-privatekey", QMConfig.subatomic.bitbucket.cicdPrivateKeyPath),
+                new SimpleOption("-from-file=ca.crt", QMConfig.subatomic.bitbucket.caPath),
                 new SimpleOption("-namespace", namespace),
             ]);
     }
 
     public async createConfigServerSecret(namespace: string): Promise<OCCommandResult> {
         logger.debug(`Trying to create config server secret. namespace: ${namespace}`);
+
+        logger.debug("Extracting raw ssh key from cicd key");
+        // Ignore the ssh-rsa encoding string, and any user name details at the end.
+        const rawSSHKey = QMConfig.subatomic.bitbucket.cicdKey.split(" ")[1];
+
         return await OCCommon.commonCommand("create secret generic",
             "subatomic-config-server",
             [],
             [
-                new NamedSimpleOption("-from-literal=spring.cloud.config.server.git.hostKey", QMConfig.subatomic.bitbucket.cicdKey),
+                new NamedSimpleOption("-from-literal=spring.cloud.config.server.git.hostKey", rawSSHKey),
                 new NamedSimpleOption("-from-file=spring.cloud.config.server.git.privateKey", QMConfig.subatomic.bitbucket.cicdPrivateKeyPath),
                 new SimpleOption("-namespace", namespace),
             ]);
