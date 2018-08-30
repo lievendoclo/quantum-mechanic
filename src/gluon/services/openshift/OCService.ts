@@ -235,8 +235,8 @@ export class OCService {
             secretName,
             [],
             [
-                new SimpleOption("-from-file=ssh-privatekey", QMConfig.subatomic.bitbucket.cicdPrivateKeyPath),
-                new SimpleOption("-from-file=ca.crt", QMConfig.subatomic.bitbucket.caPath),
+                new NamedSimpleOption("-from-file=ssh-privatekey", QMConfig.subatomic.bitbucket.cicdPrivateKeyPath),
+                new NamedSimpleOption("-from-file=ca.crt", QMConfig.subatomic.bitbucket.caPath),
                 new SimpleOption("-namespace", namespace),
             ]);
     }
