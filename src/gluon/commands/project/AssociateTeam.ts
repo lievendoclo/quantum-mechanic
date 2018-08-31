@@ -22,7 +22,7 @@ import {
 import {isSuccessCode} from "../../util/shared/Http";
 import {menuForTeams} from "../../util/team/Teams";
 
-@CommandHandler("Add additional team/s to a project", QMConfig.subatomic.commandPrefix + " associate teamMinimal")
+@CommandHandler("Add additional team/s to a project", QMConfig.subatomic.commandPrefix + " associate team")
 export class AssociateTeam extends RecursiveParameterRequestCommand {
 
     private static RecursiveKeys = {

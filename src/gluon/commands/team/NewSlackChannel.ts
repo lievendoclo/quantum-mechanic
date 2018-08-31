@@ -13,7 +13,7 @@ import {QMConfig} from "../../../config/QMConfig";
 import {TeamSlackChannelService} from "../../services/team/TeamSlackChannelService";
 import {handleQMError, ResponderMessageClient} from "../../util/shared/Error";
 
-@CommandHandler("Create team channel", QMConfig.subatomic.commandPrefix + " create teamMinimal channel")
+@CommandHandler("Create team channel", QMConfig.subatomic.commandPrefix + " create team channel")
 @Tags("subatomic", "slack", "channel", "team")
 export class NewTeamSlackChannel implements HandleCommand {
 

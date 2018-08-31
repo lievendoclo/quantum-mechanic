@@ -32,10 +32,10 @@ export class TeamService {
             returnValue = result.data._embedded.teamResources;
         } else if (requestActionOnFailure) {
             const slackMessage: SlackMessage = {
-                text: "Unfortunately, you are not a member of any team. To associate this project you need to be a member of at least one teamMinimal.",
+                text: "Unfortunately, you are not a member of any team. To associate this project you need to be a member of at least one team.",
                 attachments: [{
-                    text: "You can either create a new team or apply to join an existing teamMinimal",
-                    fallback: "You can either create a new team or apply to join an existing teamMinimal",
+                    text: "You can either create a new team or apply to join an existing team",
+                    fallback: "You can either create a new team or apply to join an existing team",
                     actions: [
                         buttonForCommand(
                             {

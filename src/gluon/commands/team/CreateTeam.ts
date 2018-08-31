@@ -20,7 +20,7 @@ import {
 } from "../../util/shared/Error";
 import {isSuccessCode} from "../../util/shared/Http";
 
-@CommandHandler("Create a new team", QMConfig.subatomic.commandPrefix + " create teamMinimal")
+@CommandHandler("Create a new team", QMConfig.subatomic.commandPrefix + " create team")
 @Tags("subatomic", "team")
 export class CreateTeam implements HandleCommand<HandlerResult> {
 

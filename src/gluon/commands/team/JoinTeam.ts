@@ -14,7 +14,7 @@ import {GluonService} from "../../services/gluon/GluonService";
 import {handleQMError, ResponderMessageClient} from "../../util/shared/Error";
 import {isSuccessCode} from "../../util/shared/Http";
 
-@CommandHandler("Apply to join an existing team", QMConfig.subatomic.commandPrefix + " apply to teamMinimal")
+@CommandHandler("Apply to join an existing team", QMConfig.subatomic.commandPrefix + " apply to team")
 @Tags("subatomic", "team")
 export class JoinTeam implements HandleCommand<HandlerResult> {
 
