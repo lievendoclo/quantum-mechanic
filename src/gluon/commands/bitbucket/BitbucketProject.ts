@@ -28,7 +28,7 @@ import {
 } from "../../util/shared/Error";
 import {isSuccessCode} from "../../util/shared/Http";
 
-@CommandHandler("Create a new Bitbucket project", QMConfig.subatomic.commandPrefix + " create bitbucket project")
+@CommandHandler("Create a new Bitbucket project")
 export class NewBitbucketProject extends RecursiveParameterRequestCommand
     implements GluonTeamNameSetter, GluonProjectNameSetter {
 

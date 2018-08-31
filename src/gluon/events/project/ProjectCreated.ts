@@ -14,7 +14,6 @@ import {
     NewBitbucketProject,
 } from "../../commands/bitbucket/BitbucketProject";
 import {AssociateTeam} from "../../commands/project/AssociateTeam";
-import {NewProjectEnvironments} from "../../commands/project/NewProjectEnvironments";
 
 @EventHandler("Receive ProjectCreated events", `
 subscription ProjectCreatedEvent {
@@ -67,12 +66,6 @@ This can be a new Bitbucket project that will be created and configured accordin
                 color: "#45B254",
                 thumb_url: "https://raw.githubusercontent.com/absa-subatomic/subatomic-documentation/gh-pages/images/atlassian-bitbucket-logo.png",
                 actions: [
-                    buttonForCommand(
-                        {text: "Create Bitbucket project"},
-                        new NewBitbucketProject(),
-                        {
-                            name: projectCreatedEvent.project.name,
-                        }),
                     buttonForCommand(
                         {text: "Link existing Bitbucket project"},
                         new ListExistingBitbucketProject(), {
