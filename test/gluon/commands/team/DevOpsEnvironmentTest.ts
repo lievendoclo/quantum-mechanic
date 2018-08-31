@@ -1,11 +1,12 @@
 import "mocha";
 import * as assert from "power-assert";
-const MockAdapter = require("axios-mock-adapter");
 import {QMConfig} from "../../../../src/config/QMConfig";
 import {NewDevOpsEnvironment} from "../../../../src/gluon/commands/team/DevOpsEnvironment";
 import {GluonService} from "../../../../src/gluon/services/gluon/GluonService";
 import {AwaitAxios} from "../../../../src/gluon/util/shared/AwaitAxios";
 import {TestMessageClient} from "../../TestMessageClient";
+
+const MockAdapter = require("axios-mock-adapter");
 
 describe("Create a new or use an existing Openshift DevOps environment", () => {
     it("Should use existing DevOps environment", async () => {
@@ -80,6 +81,7 @@ describe("Create a new or use an existing Openshift DevOps environment", () => {
         const fakeContext = {
             teamId: `${teamId}`,
             correlationId: "1231343234234",
+            workspaceId: "2341234123",
             messageClient: new TestMessageClient(),
         };
 

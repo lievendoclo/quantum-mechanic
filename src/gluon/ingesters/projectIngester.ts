@@ -83,6 +83,49 @@ export const ProjectEnvironmentsRequestedEvent: Ingester = {
     ],
 };
 
+export const ProjectProductionEnvironmentsRequestedEvent: Ingester = {
+    root_type: "ProjectProductionEnvironmentsRequestedEvent",
+    types: [
+        {
+            kind: "OBJECT",
+            name: "ProjectProductionEnvironmentsRequestedEvent",
+            fields: [
+                {
+                    name: "project",
+                    type: {
+                        kind: "OBJECT",
+                        name: "Project",
+                    },
+                },
+                {
+                    name: "teams",
+                    type: {
+                        kind: "LIST",
+                        ofType: {
+                            kind: "OBJECT",
+                            name: "GluonTeam",
+                        },
+                    },
+                },
+                {
+                    name: "owningTenant",
+                    type: {
+                        kind: "OBJECT",
+                        name: "GluonTenant",
+                    },
+                },
+                {
+                    name: "requestedBy",
+                    type: {
+                        kind: "OBJECT",
+                        name: "ActionedBy",
+                    },
+                },
+            ],
+        },
+    ],
+};
+
 export const TeamsLinkedToProjectEvent: Ingester = {
     root_type: "TeamsLinkedToProjectEvent",
     types: [

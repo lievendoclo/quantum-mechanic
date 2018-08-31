@@ -68,40 +68,6 @@ export const ApplicationCreatedEvent: Ingester = {
                 },
             ],
         },
-        {
-            kind: "OBJECT",
-            name: "GluonApplication",
-            fields: [
-                {
-                    name: "applicationId",
-                    type: {
-                        kind: "SCALAR",
-                        name: "String",
-                    },
-                },
-                {
-                    name: "name",
-                    type: {
-                        kind: "SCALAR",
-                        name: "String",
-                    },
-                },
-                {
-                    name: "description",
-                    type: {
-                        kind: "SCALAR",
-                        name: "String",
-                    },
-                },
-                {
-                    name: "applicationType",
-                    type: {
-                        kind: "SCALAR",
-                        name: "String",
-                    },
-                },
-            ],
-        },
     ],
 };
 

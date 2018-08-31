@@ -34,9 +34,11 @@ export class TenantService {
         return tenantResult.data._embedded.tenantResources[0];
     }
 
-    public async gluonTenantFromTenantId(tenantId: string): Promise<any> {
+    public async gluonTenantFromTenantId(tenantId: string, rawResult = false): Promise<any> {
         const tenantResult = await this.axiosInstance.get(`${QMConfig.subatomic.gluon.baseUrl}/tenants/${tenantId}`);
-        if (!isSuccessCode(tenantResult.status)) {
+        if (rawResult) {
+            return tenantResult;
+        } else if (!isSuccessCode(tenantResult.status)) {
             logger.error(`No gluon tenant found associated with tenant id: ${tenantId}`);
             throw new QMError(`No tenant associated with tenant id: ${tenantId}`);
         }

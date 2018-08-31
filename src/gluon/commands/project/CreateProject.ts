@@ -85,7 +85,7 @@ export class CreateProject extends RecursiveParameterRequestCommand
 
         const member = await this.gluonService.members.gluonMemberFromScreenName(screenName);
 
-        const team = await this.getGluonTeamFromName(teamName);
+        const team = await this.gluonService.teams.gluonTeamByName(teamName);
 
         await this.createGluonProject(
             {
@@ -99,15 +99,6 @@ export class CreateProject extends RecursiveParameterRequestCommand
             });
 
         return await ctx.messageClient.respond("🚀Project successfully created.");
-    }
-
-    private async getGluonTeamFromName(teamName: string) {
-        const teamQueryResult = await this.gluonService.teams.gluonTeamByName(teamName);
-        if (!isSuccessCode(teamQueryResult.status)) {
-            logger.error(`Failed to find team ${teamName}. Error: ${JSON.stringify(teamQueryResult)}`);
-            throw new QMError(`Team ${teamName} does not appear to be a valid SubAtomic team.`);
-        }
-        return teamQueryResult.data._embedded.teamResources[0];
     }
 
     private async createGluonProject(projectDetails) {

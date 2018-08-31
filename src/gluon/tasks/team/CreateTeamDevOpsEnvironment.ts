@@ -1,32 +1,43 @@
 import {HandlerContext, logger} from "@atomist/automation-client";
-import * as _ from "lodash";
+import {OpenShiftConfig} from "../../../config/OpenShiftConfig";
+import {QMConfig} from "../../../config/QMConfig";
 import {OCService} from "../../services/openshift/OCService";
+import {
+    DevOpsEnvironmentDetails,
+    getDevOpsEnvironmentDetails,
+    QMTeam,
+} from "../../util/team/Teams";
 import {Task} from "../Task";
 import {TaskListMessage} from "../TaskListMessage";
 
 export class CreateTeamDevOpsEnvironment extends Task {
 
-    private readonly TASK_OPENSHIFT_ENV = "OpenshiftEnv";
-    private readonly TASK_OPENSHIFT_PERMISSIONS = "OpenshiftPermissions";
-    private readonly TASK_OPENSHIFT_RESOURCES = "Resources";
-    private readonly TASK_SECRETS = "ConfigSecrets";
+    private readonly TASK_HEADER = TaskListMessage.createUniqueTaskName("CreateTeamDevOpsEnvironmentHeader");
+    private readonly TASK_OPENSHIFT_ENV = TaskListMessage.createUniqueTaskName("OpenshiftEnv");
+    private readonly TASK_OPENSHIFT_PERMISSIONS = TaskListMessage.createUniqueTaskName("OpenshiftPermissions");
+    private readonly TASK_OPENSHIFT_RESOURCES = TaskListMessage.createUniqueTaskName("Resources");
+    private readonly TASK_SECRETS = TaskListMessage.createUniqueTaskName("ConfigSecrets");
 
-    constructor(private devOpsRequestedEvent, private ocService = new OCService()) {
+    constructor(private devOpsRequestedEvent: { team: QMTeam },
+                private devopsEnvironmentDetails: DevOpsEnvironmentDetails = getDevOpsEnvironmentDetails(devOpsRequestedEvent.team.name),
+                private openshiftEnvironment: OpenShiftConfig = QMConfig.subatomic.openshiftNonProd,
+                private ocService = new OCService()) {
         super();
     }
 
     protected configureTaskListMessage(taskListMessage: TaskListMessage) {
-        taskListMessage.addTask(this.TASK_OPENSHIFT_ENV, "Create DevOps Openshift Project");
-        taskListMessage.addTask(this.TASK_OPENSHIFT_PERMISSIONS, "Add Openshift Permissions");
-        taskListMessage.addTask(this.TASK_OPENSHIFT_RESOURCES, "Copy Subatomic resources to DevOps Project");
-        taskListMessage.addTask(this.TASK_SECRETS, "Add Secrets");
+        taskListMessage.addTask(this.TASK_HEADER, `*Create DevOpsEnvironment on ${this.openshiftEnvironment.name}*`);
+        taskListMessage.addTask(this.TASK_OPENSHIFT_ENV, `\tCreate DevOps Openshift Project`);
+        taskListMessage.addTask(this.TASK_OPENSHIFT_PERMISSIONS, `\tAdd Openshift Permissions`);
+        taskListMessage.addTask(this.TASK_OPENSHIFT_RESOURCES, `\tCopy Subatomic resources to DevOps Project`);
+        taskListMessage.addTask(this.TASK_SECRETS, `\tAdd Secrets`);
     }
 
     protected async executeTask(ctx: HandlerContext): Promise<boolean> {
-        const projectId = `${_.kebabCase(this.devOpsRequestedEvent.team.name).toLowerCase()}-devops`;
+        const projectId = this.devopsEnvironmentDetails.openshiftProjectId;
         logger.info(`Working with OpenShift project Id: ${projectId}`);
 
-        await this.ocService.login();
+        await this.ocService.login(this.openshiftEnvironment);
 
         await this.createDevOpsEnvironment(projectId, this.devOpsRequestedEvent.team.name);
 
@@ -45,6 +56,8 @@ export class CreateTeamDevOpsEnvironment extends Task {
         await this.addBitbucketSSHSecret(projectId);
 
         await this.taskListMessage.succeedTask(this.TASK_SECRETS);
+
+        await this.taskListMessage.succeedTask(this.TASK_HEADER);
 
         return true;
     }

@@ -1,6 +1,7 @@
 import {logger} from "@atomist/automation-client";
 import * as fs from "fs";
 import _ = require("lodash");
+import {OpenShiftConfig} from "../../../config/OpenShiftConfig";
 import {QMConfig} from "../../../config/QMConfig";
 import {OCCommandResult} from "../../../openshift/base/OCCommandResult";
 import {AbstractOption} from "../../../openshift/base/options/AbstractOption";
@@ -12,6 +13,7 @@ import {OCCommon} from "../../../openshift/OCCommon";
 import {getProjectDisplayName} from "../../util/project/Project";
 import {BaseProjectTemplateLoader} from "../../util/resources/BaseProjectTemplateLoader";
 import {QuotaLoader} from "../../util/resources/QuotaLoader";
+import {QMTeam} from "../../util/team/Teams";
 import {OCImageService} from "./OCImageService";
 
 export class OCService {
@@ -22,8 +24,8 @@ export class OCService {
     constructor(private ocImageService = new OCImageService()) {
     }
 
-    public async login() {
-        return await OCClient.login(QMConfig.subatomic.openshift.masterUrl, QMConfig.subatomic.openshift.auth.token);
+    public async login(openshiftDetails: OpenShiftConfig = QMConfig.subatomic.openshiftNonProd) {
+        return await OCClient.login(openshiftDetails.masterUrl, openshiftDetails.auth.token);
     }
 
     public async newDevOpsProject(openshiftProjectId: string, teamName: string): Promise<OCCommandResult> {
@@ -138,8 +140,8 @@ export class OCService {
             "JENKINS_ADMIN_EMAIL=subatomic@local",
             // TODO the registry Cluster IP we will have to get by introspecting the registry Service
             // If no team email then the address of the createdBy member
-            `MAVEN_SLAVE_IMAGE=${QMConfig.subatomic.openshift.dockerRepoUrl}/${devopsNamespace}/jenkins-slave-maven-subatomic:2.0`,
-            `NODEJS_SLAVE_IMAGE=${QMConfig.subatomic.openshift.dockerRepoUrl}/${devopsNamespace}/jenkins-slave-nodejs-subatomic:2.0`,
+            `MAVEN_SLAVE_IMAGE=${QMConfig.subatomic.openshiftNonProd.dockerRepoUrl}/${devopsNamespace}/jenkins-slave-maven-subatomic:2.0`,
+            `NODEJS_SLAVE_IMAGE=${QMConfig.subatomic.openshiftNonProd.dockerRepoUrl}/${devopsNamespace}/jenkins-slave-nodejs-subatomic:2.0`,
         ];
         return await this.processOpenshiftTemplate("jenkins-persistent-subatomic", devopsNamespace, parameters);
     }
@@ -201,7 +203,7 @@ export class OCService {
             "jenkins",
             [],
             [
-                new SimpleOption("-overwrite", "haproxy.router.openshift.io/timeout=120s"),
+                new SimpleOption("-overwrite", "haproxy.router.openshiftNonProd.io/timeout=120s"),
                 new SimpleOption("-namespace", namespace),
             ]);
     }
@@ -258,7 +260,7 @@ export class OCService {
             ]);
     }
 
-    public async addTeamMembershipPermissionsToProject(projectId: string, team: { owners: Array<{ domainUsername }>, members: Array<{ domainUsername }> }) {
+    public async addTeamMembershipPermissionsToProject(projectId: string, team: QMTeam) {
         logger.debug(`Trying to add team membership permission to project.`);
         await team.owners.map(async owner => {
             const ownerUsername = /[^\\]*$/.exec(owner.domainUsername)[0];
@@ -321,5 +323,11 @@ export class OCService {
             }
         }
         return null;
+    }
+
+    public async exportAllResources(projectId: string) {
+        const listOfResourcesResult = await OCCommon.commonCommand("export", "all",
+            [], [new SimpleOption("-output", "json"), new SimpleOption("-namespace", projectId)]);
+        return JSON.parse(listOfResourcesResult.output);
     }
 }

@@ -17,7 +17,7 @@ import {AddMemberToTeamService} from "../../services/team/AddMemberToTeamService
 import {getScreenName, loadScreenNameByUserId} from "../../util/member/Members";
 import {handleQMError, ResponderMessageClient} from "../../util/shared/Error";
 
-@CommandHandler("Add a member to a team", QMConfig.subatomic.commandPrefix + " add team member")
+@CommandHandler("Add a member to a team", QMConfig.subatomic.commandPrefix + " add teamMinimal member")
 @Tags("subatomic", "team", "member")
 export class AddMemberToTeam implements HandleCommand<HandlerResult> {
 

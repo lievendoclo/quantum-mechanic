@@ -16,9 +16,10 @@ export function getScreenName(screenName: string) {
 
 export async function loadScreenNameByUserId(ctx: HandlerContext, userId: string): Promise<string> {
     try {
-        const result = await ctx.graphClient.executeQueryFromFile<graphql.ChatId.Query, graphql.ChatId.Variables>(
-            "graphql/query/chatIdByUserId",
-            {userId});
+        const result = await ctx.graphClient.query<graphql.ChatId.Query, graphql.ChatId.Variables>({
+            name: "ChatId",
+            variables: {userId},
+        });
 
         if (result) {
             if (result.ChatId && result.ChatId.length > 0) {
@@ -29,4 +30,8 @@ export async function loadScreenNameByUserId(ctx: HandlerContext, userId: string
         logger.error("Error occurred running GraphQL query: %s", error);
     }
     return null;
+}
+
+export interface QMMember {
+    domainUsername: string;
 }

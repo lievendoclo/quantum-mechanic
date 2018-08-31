@@ -38,14 +38,12 @@ export class TeamSlackChannelService {
     }
 
     public async getGluonTeam(gluonTeamName, commandReferenceDocsExtension): Promise<any> {
-        const teamQueryResult = await this.gluonService.teams.gluonTeamByName(gluonTeamName);
-
-        if (!isSuccessCode(teamQueryResult.status)) {
+        try {
+            return await this.gluonService.teams.gluonTeamByName(gluonTeamName);
+        } catch (error) {
             throw new QMError(`Failed to find to gluon team ${gluonTeamName}`,
                 this.teamSlackChannelMessages.requestNonExistentTeamsCreation(gluonTeamName, commandReferenceDocsExtension));
         }
-
-        return teamQueryResult.data._embedded.teamResources[0];
     }
 
     public async addSlackDetailsToGluonTeam(gluonTeamId: string,

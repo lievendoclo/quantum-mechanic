@@ -1,13 +1,44 @@
 {
   "subatomic": {
     "commandPrefix": "sub",
-    "openshift": {
+    "openshiftNonProd": {
+      "name": "nonprod",
       "dockerRepoUrl": "123.123.0.0:5000",
       "masterUrl": "https://000.000.00.0:8443",
       "auth": {
         "token": "6kbO2PM3SbH9XrjQ3tw8crWq2_lduOnp-_tvq_VNy0c"
-      }
+      },
+      "defaultEnvironments": [
+        {
+          "id": "dev",
+          "description": "Development"
+        },
+        {
+          "id": "sit",
+          "description": "Integration testing"
+        },
+        {
+          "id": "uat",
+          "description": "User acceptance"
+        }
+      ]
     },
+    "openshiftProd": [
+      {
+        "name": "prod-a",
+        "dockerRepoUrl": "123.123.0.0:5000",
+        "masterUrl": "https://000.000.00.0:8443",
+        "auth": {
+          "token": "6kbO2PM3SbH9XrjQ3tw8crWq2_lduOnp-_tvq_VNy0c"
+        },
+        "defaultEnvironments": [
+          {
+            "id": "prod-a",
+            "description": "Production A"
+          }
+        ]
+      }
+    ],
     "gluon": {
       "baseUrl": "http://localhost:8080"
     },

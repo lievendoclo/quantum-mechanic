@@ -14,12 +14,14 @@ export class ProjectService {
     }
 
     public async gluonProjectFromProjectName(projectName: string,
-                                             requestActionOnFailure: boolean = true): Promise<any> {
+                                             requestActionOnFailure: boolean = true, rawResult = false): Promise<any> {
         logger.debug(`Trying to get gluon project by projectName. projectName: ${projectName} `);
 
         const result = await this.axiosInstance.get(`${QMConfig.subatomic.gluon.baseUrl}/projects?name=${projectName}`);
 
-        if (!isSuccessCode(result.status) || _.isEmpty(result.data._embedded)) {
+        if (rawResult) {
+            return result;
+        } else if (!isSuccessCode(result.status) || _.isEmpty(result.data._embedded)) {
             const errorMessage = `Project with name ${projectName} does not exist`;
             if (requestActionOnFailure) {
                 const slackMessage: SlackMessage = {

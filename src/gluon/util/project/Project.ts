@@ -1,6 +1,8 @@
 import {HandleCommand, HandlerContext} from "@atomist/automation-client";
 import * as _ from "lodash";
 import {createMenu} from "../shared/GenericMenu";
+import {QMTenant} from "../shared/Tenants";
+import {QMTeam} from "../team/Teams";
 
 export function getProjectId(tenant: string, project: string, environment: string): string {
     return `${_.kebabCase(tenant).toLowerCase()}-${_.kebabCase(project).toLowerCase()}-${environment.toLowerCase()}`;
@@ -33,4 +35,20 @@ export function menuForProjects(ctx: HandlerContext, projects: any[],
         "Select Project",
         projectNameVariable,
     );
+}
+
+export interface OpenshiftProjectEnvironmentRequest {
+    teams: QMTeam[];
+    project: QMProject;
+    owningTenant: QMTenant;
+}
+
+export function createQMProject(name: string = null): QMProject {
+    return {
+        name,
+    };
+}
+
+export interface QMProject {
+    name: string;
 }

@@ -14,10 +14,16 @@ export class MemberService {
     }
 
     public async gluonMemberFromScreenName(screenName: string,
-                                           requestOnboardingIfFailure: boolean = true): Promise<any> {
+                                           requestOnboardingIfFailure: boolean = true,
+                                           rawResult = false): Promise<any> {
         logger.info(`Trying to get gluon member from screen name. screenName: ${screenName} `);
 
         const result = await this.axiosInstance.get(`${QMConfig.subatomic.gluon.baseUrl}/members?slackScreenName=${screenName}`);
+
+        if (rawResult) {
+            return result;
+        }
+
         if (!isSuccessCode(result.status) || _.isEmpty(result.data._embedded)) {
             const errorMessage = `Failed to get member details. Member ${screenName} appears to not be onboarded.`;
             if (requestOnboardingIfFailure) {

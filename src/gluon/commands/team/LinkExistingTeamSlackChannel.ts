@@ -18,7 +18,7 @@ import {
     RecursiveParameterRequestCommand,
 } from "../../util/recursiveparam/RecursiveParameterRequestCommand";
 
-@CommandHandler("Link existing team channel", QMConfig.subatomic.commandPrefix + " link team channel")
+@CommandHandler("Link existing team channel", QMConfig.subatomic.commandPrefix + " link teamMinimal channel")
 @Tags("subatomic", "slack", "channel", "team")
 export class LinkExistingTeamSlackChannel extends RecursiveParameterRequestCommand
     implements GluonTeamNameSetter {

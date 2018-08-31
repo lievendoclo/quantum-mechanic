@@ -107,4 +107,5 @@ Consider creating a new application called ${applicationName}. Click the button 
         logger.debug(`Trying to create application.`);
         return await this.axiosInstance.post(`${QMConfig.subatomic.gluon.baseUrl}/applications`, applicationDetails);
     }
+
 }

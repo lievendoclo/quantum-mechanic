@@ -10,7 +10,8 @@ export interface SubatomicConfig {
     commandPrefix: string;
     docs: DocsConfig;
     gluon: GluonConfig;
-    openshift: OpenShiftConfig;
+    openshiftNonProd: OpenShiftConfig;
+    openshiftProd: OpenShiftConfig[];
     nexus: NexusConfig;
     maven: MavenConfig;
 }

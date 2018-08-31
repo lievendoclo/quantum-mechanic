@@ -27,7 +27,7 @@ import {
 } from "../../util/shared/Error";
 
 @CommandHandler("Tag all latest subatomic images to a devops environment ", QMConfig.subatomic.commandPrefix + " tag all images")
-@Tags("subatomic", "devops", "team", "openshift", "images")
+@Tags("subatomic", "devops", "team", "openshiftNonProd", "images")
 export class TagAllLatestImages extends RecursiveParameterRequestCommand
     implements GluonTeamNameSetter {
 

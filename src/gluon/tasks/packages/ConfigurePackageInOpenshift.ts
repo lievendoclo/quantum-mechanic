@@ -144,10 +144,8 @@ export class ConfigurePackageInOpenshift extends Task {
 
     private async createApplicationOpenshiftResources(tenantName: string, projectName: string, applicationName: string): Promise<HandlerResult> {
 
-        const environments: string [] = ["dev", "sit", "uat"];
-
-        for (const environment of environments) {
-            const projectId = getProjectId(tenantName, projectName, environment);
+        for (const environment of QMConfig.subatomic.openshiftNonProd.defaultEnvironments) {
+            const projectId = getProjectId(tenantName, projectName, environment.id);
             const appName = `${_.kebabCase(applicationName).toLowerCase()}`;
             const devOpsProjectId = getProjectDevOpsId(this.packageDetails.teamName);
             logger.info(`Processing app [${appName}] Template for: ${projectId}`);

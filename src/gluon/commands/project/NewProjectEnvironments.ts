@@ -30,7 +30,7 @@ import {
 import {isSuccessCode} from "../../util/shared/Http";
 
 @CommandHandler("Create new OpenShift environments for a project", QMConfig.subatomic.commandPrefix + " request project environments")
-@Tags("subatomic", "openshift", "project")
+@Tags("subatomic", "openshiftNonProd", "project")
 export class NewProjectEnvironments extends RecursiveParameterRequestCommand
     implements GluonTeamNameSetter, GluonProjectNameSetter {
 

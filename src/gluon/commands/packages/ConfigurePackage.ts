@@ -148,7 +148,7 @@ export class ConfigurePackage extends RecursiveParameterRequestCommand
                 project,
                 GluonToEvent.bitbucketRepository(application),
                 GluonToEvent.bitbucketProject(project),
-                GluonToEvent.team(project.owningTeam),
+                GluonToEvent.teamMinimal(project.owningTeam),
                 this.jenkinsfileName),
         );
 

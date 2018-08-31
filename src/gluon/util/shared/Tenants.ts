@@ -17,3 +17,13 @@ export function menuForTenants(ctx: HandlerContext, tenants: any[],
         tenantNameVariable,
     );
 }
+
+export function createQMTenant(name: string): QMTenant {
+    return {
+        name,
+    };
+}
+
+export interface QMTenant {
+    name: string;
+}

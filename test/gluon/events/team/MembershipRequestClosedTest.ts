@@ -1,14 +1,13 @@
 import "mocha";
 import * as assert from "power-assert";
-
-const MockAdapter = require("axios-mock-adapter");
-import axios from "axios";
 import {QMConfig} from "../../../../src/config/QMConfig";
 import {MembershipRequestClosed} from "../../../../src/gluon/events/team/MembershipRequestClosed";
 import {GluonService} from "../../../../src/gluon/services/gluon/GluonService";
 import {AwaitAxios} from "../../../../src/gluon/util/shared/AwaitAxios";
 import {TestGraphClient} from "../../TestGraphClient";
 import {TestMessageClient} from "../../TestMessageClient";
+
+const MockAdapter = require("axios-mock-adapter");
 
 describe("Close a membership request", () => {
     it("should approve team member", async () => {
@@ -70,6 +69,7 @@ describe("Close a membership request", () => {
         const fakeContext = {
             teamId: "TEST",
             correlationId: "1231343234234",
+            workspaceId: "2341234123",
             messageClient: new TestMessageClient(),
             graphClient: new TestGraphClient(),
 
@@ -138,6 +138,7 @@ describe("Close a membership request", () => {
         const fakeContext = {
             teamId: "TEST",
             correlationId: "1231343234234",
+            workspaceId: "2341234123",
             messageClient: new TestMessageClient(),
             graphClient: new TestGraphClient(),
 

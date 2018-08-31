@@ -48,6 +48,7 @@ describe("Add slack details to existing team member", () => {
         const fakeContext = {
             teamId: "TEST",
             correlationId: "1231343234234",
+            workspaceId: "2341234123",
             messageClient: new TestMessageClient(),
         };
 

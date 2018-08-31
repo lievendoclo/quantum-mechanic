@@ -35,7 +35,6 @@ export class AddMemberToTeamService {
                                           slackName: string) {
         try {
             logger.info(`Added team member! Inviting to channel [${channelId}] -> member [${screenName}]`);
-
             await inviteUserToSlackChannel(ctx,
                 teamId,
                 channelId,

@@ -20,7 +20,7 @@ import {
 import {isSuccessCode} from "../../util/shared/Http";
 
 @CommandHandler("Check whether to create a new OpenShift DevOps environment or use an existing one", QMConfig.subatomic.commandPrefix + " request devops environment")
-@Tags("subatomic", "slack", "team", "openshift", "devops")
+@Tags("subatomic", "slack", "team", "openshiftNonProd", "devops")
 export class NewDevOpsEnvironment extends RecursiveParameterRequestCommand
     implements GluonTeamNameSetter {
 
@@ -67,14 +67,7 @@ export class NewDevOpsEnvironment extends RecursiveParameterRequestCommand
 
         const member = await this.gluonService.members.gluonMemberFromScreenName(screenName);
 
-        const teamQueryResult = await this.getGluonTeamFromTeamName(teamName);
-
-        if (!isSuccessCode(teamQueryResult.status)) {
-            logger.error(`Could not find gluon team ${teamName}. This should only happen if the gluon server connection dropped.`);
-            return ctx.messageClient.respond(`❗Unable to find team with name ${teamName}.`);
-        }
-
-        const team = teamQueryResult.data._embedded.teamResources[0];
+        const team = await this.gluonService.teams.gluonTeamByName(teamName);
         logger.info("Requesting DevOps environment for team: " + teamName);
 
         const teamUpdateResult = await this.requestDevOpsEnvironmentThroughGluon(team.teamId, member.memberId);
@@ -85,10 +78,6 @@ export class NewDevOpsEnvironment extends RecursiveParameterRequestCommand
         }
 
         return await success();
-    }
-
-    private async getGluonTeamFromTeamName(teamName: string) {
-        return await this.gluonService.teams.gluonTeamByName(teamName);
     }
 
     private async requestDevOpsEnvironmentThroughGluon(teamId: string, memberId: string) {

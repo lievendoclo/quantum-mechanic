@@ -7,6 +7,7 @@ import {
     logger,
 } from "@atomist/automation-client";
 import * as _ from "lodash";
+import {QMConfig} from "../../../config/QMConfig";
 import {OCCommandResult} from "../../../openshift/base/OCCommandResult";
 import {BitbucketConfigurationService} from "../../services/bitbucket/BitbucketConfigurationService";
 import {BitbucketService} from "../../services/bitbucket/BitbucketService";
@@ -19,6 +20,7 @@ import {
     OCResultError,
     QMError,
 } from "../../util/shared/Error";
+import {getDevOpsEnvironmentDetails} from "../../util/team/Teams";
 
 @EventHandler("Receive MembershipRequestCreated events", `
 subscription MembersAddedToTeamEvent {
@@ -97,15 +99,15 @@ export class MembersAddedToTeam implements HandleEvent<any> {
     private async addPermissionsForUserToTeams(bitbucketConfiguration: BitbucketConfigurationService, teamName: string, projects, membersAddedToTeamEvent) {
         try {
             await this.ocService.login();
-            const devopsProject = `${_.kebabCase(teamName).toLowerCase()}-devops`;
+            const devopsProject = getDevOpsEnvironmentDetails(teamName).openshiftProjectId;
             await this.ocService.addTeamMembershipPermissionsToProject(devopsProject, membersAddedToTeamEvent);
             for (const project of projects) {
                 logger.info(`Configuring permissions for project: ${project}`);
                 // Add to bitbucket
                 await bitbucketConfiguration.configureBitbucketProject(project.bitbucketProject.key);
                 // Add to openshift environments
-                for (const environment of ["dev", "sit", "uat"]) {
-                    const projectId = getProjectDisplayName(project.owningTenant, project.name, environment);
+                for (const environment of QMConfig.subatomic.openshiftNonProd.defaultEnvironments) {
+                    const projectId = getProjectDisplayName(project.owningTenant, project.name, environment.id);
                     await this.ocService.addTeamMembershipPermissionsToProject(projectId, membersAddedToTeamEvent);
                 }
             }

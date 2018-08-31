@@ -4,14 +4,14 @@ import {GluonService} from "../../../../src/gluon/services/gluon/GluonService";
 import {MemberService} from "../../../../src/gluon/services/gluon/MemberService";
 import {TeamService} from "../../../../src/gluon/services/gluon/TeamService";
 import {TeamSlackChannelService} from "../../../../src/gluon/services/team/TeamSlackChannelService";
-import {AwaitAxios} from "../../../../src/gluon/util/shared/AwaitAxios";
+import {QMError} from "../../../../src/gluon/util/shared/Error";
 import {TestGraphClient} from "../../TestGraphClient";
 import {TestMessageClient} from "../../TestMessageClient";
 
 describe("TeamSlackChannelService getGluonTeam", () => {
     it("should fail to get team details", async () => {
         const mockedTeamService = mock(TeamService);
-        when(mockedTeamService.gluonTeamByName("Team1")).thenResolve({status: 400});
+        when(mockedTeamService.gluonTeamByName("Team1")).thenThrow(new QMError("Failed"));
         const gluonService = new GluonService(undefined, instance(mockedTeamService));
         const service = new TeamSlackChannelService(gluonService);
 
@@ -31,16 +31,7 @@ describe("TeamSlackChannelService getGluonTeam", () => {
         when(mockedTeamService.gluonTeamByName("Team1"))
             .thenResolve(
                 {
-                    status: 200,
-                    data: {
-                        _embedded: {
-                            teamResources: [
-                                {
-                                    id: "Team1Id",
-                                },
-                            ],
-                        },
-                    },
+                    id: "Team1Id",
                 });
         const gluonService = new GluonService(undefined, instance(mockedTeamService));
         const service = new TeamSlackChannelService(gluonService);
@@ -95,11 +86,12 @@ describe("TeamSlackChannelService createTeamSlackChannel", () => {
         const fakeContext = {
             teamId: "TEST",
             correlationId: "1231343234234",
+            workspaceId: "2341234123",
             messageClient: new TestMessageClient(),
             graphClient: new TestGraphClient(),
         };
 
-        fakeContext.graphClient.executeMutationFromFileResults.push({
+        fakeContext.graphClient.executeMutationResults.push({
             result: true,
             returnValue: {},
         });
@@ -120,15 +112,16 @@ describe("TeamSlackChannelService createTeamSlackChannel", () => {
         const fakeContext = {
             teamId: "TEST",
             correlationId: "1231343234234",
+            workspaceId: "2341234123",
             messageClient: new TestMessageClient(),
             graphClient: new TestGraphClient(),
         };
 
-        fakeContext.graphClient.executeMutationFromFileResults.push({
+        fakeContext.graphClient.executeMutationResults.push({
             result: true,
             returnValue: {createSlackChannel: {id: "Team1ChannelID"}},
         });
-        fakeContext.graphClient.executeMutationFromFileResults.push({
+        fakeContext.graphClient.executeMutationResults.push({
             result: false,
             returnValue: {networkError: {response: {status: 400}}},
         });
@@ -144,11 +137,12 @@ describe("TeamSlackChannelService createTeamSlackChannel", () => {
         const fakeContext = {
             teamId: "TEST",
             correlationId: "1231343234234",
+            workspaceId: "2341234123",
             messageClient: new TestMessageClient(),
             graphClient: new TestGraphClient(),
         };
 
-        fakeContext.graphClient.executeMutationFromFileResults.push({
+        fakeContext.graphClient.executeMutationResults.push({
             result: true,
             returnValue: {createSlackChannel: {id: "Team1ChannelID"}},
         });
@@ -173,6 +167,7 @@ describe("TeamSlackChannelService tryInviteGluonMemberToChannel", () => {
         const fakeContext = {
             teamId: "TEST",
             correlationId: "1231343234234",
+            workspaceId: "2341234123",
             messageClient: new TestMessageClient(),
             graphClient: new TestGraphClient(),
         };
@@ -199,6 +194,7 @@ describe("TeamSlackChannelService tryInviteGluonMemberToChannel", () => {
         const fakeContext = {
             teamId: "TEST",
             correlationId: "1231343234234",
+            workspaceId: "2341234123",
             messageClient: new TestMessageClient(),
             graphClient: new TestGraphClient(),
         };
@@ -225,6 +221,7 @@ describe("TeamSlackChannelService tryInviteGluonMemberToChannel", () => {
         const fakeContext = {
             teamId: "TEST",
             correlationId: "1231343234234",
+            workspaceId: "2341234123",
             messageClient: new TestMessageClient(),
             graphClient: new TestGraphClient(),
         };
@@ -257,6 +254,7 @@ describe("TeamSlackChannelService inviteListOfGluonMembersToChannel", () => {
         const fakeContext = {
             teamId: "TEST",
             correlationId: "1231343234234",
+            workspaceId: "2341234123",
             messageClient: new TestMessageClient(),
             graphClient: new TestGraphClient(),
         };

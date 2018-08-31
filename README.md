@@ -24,13 +24,44 @@ Here is an example `local.json`:
     "gluon": {
       "baseUrl": "http://localhost:8080"
     },
-    "openshift": {
-      "dockerRepoUrl": "172.30.1.1:5000"
+    "openshiftNonProd": {
+      "name": "nonprod",
+      "dockerRepoUrl": "172.30.1.1:5000",
       "masterUrl": "<minishift ip>",
       "auth": {
         "token": "<subatomic service account token>"
-      }
+      },
+      "defaultEnvironments": [
+        {
+          "id": "dev",
+          "description": "Development"
+        },
+        {
+          "id": "sit",
+          "description": "Integration testing"
+        },
+        {
+          "id": "uat",
+          "description": "User acceptance"
+        }
+      ]
     },
+    "openshiftProd": [
+      {
+        "name": "prod-a",
+        "dockerRepoUrl": "172.30.1.1:5000",
+        "masterUrl": "<minishift ip>",
+        "auth": {
+          "token": "<subatomic service account token>"
+        },
+        "defaultEnvironments": [
+          {
+            "id": "prod-a",
+            "description": "Production A"
+          }
+        ]
+      }
+    ],
     "bitbucket": {
       "baseUrl": "https://bitbucket.subatomic.local",
       "restUrl": "https://bitbucket.subatomic.local/rest",
@@ -112,6 +143,8 @@ Replace the relevant values above:
 | `<GitHub token>` | GitHub token | See [Atomist documentation](https://docs.atomist.com/developer/prerequisites/#github-token) |
 | `<bitbucket ssh port>` | Bitbucket SSH Port | Set this to the port used for ssh git commands on your Bitbucket instance. The default for Local Hadron Collider should be `30999` |
 
+Note that the settings should be change appropriately if using different environments for prod or multiple prod environments in the relative parts of the settings file.
+
 ### Maven settings
 
 Below is an example Maven settings file (`settings.xml`) that will be used to build projects in Jenkins:
@@ -137,7 +170,7 @@ Below is an example Maven settings file (`settings.xml`) that will be used to bu
 </settings>
 ```
 
-> The `local.json` file is excluded in `.gitignore` and therfore will not be staged by Git.
+> The `local.json` file is excluded in `.gitignore` and therefore will not be staged by Git.
 
 Next run with:
 

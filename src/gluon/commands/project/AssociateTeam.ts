@@ -22,7 +22,7 @@ import {
 import {isSuccessCode} from "../../util/shared/Http";
 import {menuForTeams} from "../../util/team/Teams";
 
-@CommandHandler("Add additional team/s to a project", QMConfig.subatomic.commandPrefix + " associate team")
+@CommandHandler("Add additional team/s to a project", QMConfig.subatomic.commandPrefix + " associate teamMinimal")
 export class AssociateTeam extends RecursiveParameterRequestCommand {
 
     private static RecursiveKeys = {
@@ -70,13 +70,13 @@ export class AssociateTeam extends RecursiveParameterRequestCommand {
         const gluonProject = await this.gluonService.projects.gluonProjectFromProjectName(this.projectName);
         let updateGluonWithProjectDetails;
         try {
-            updateGluonWithProjectDetails = await this.updateGluonProject(gluonProject.projectId, gluonProject.createdBy, team.data._embedded.teamResources[0].teamId, team.data._embedded.teamResources[0].name);
+            updateGluonWithProjectDetails = await this.updateGluonProject(gluonProject.projectId, gluonProject.createdBy, team.teamId, team.name);
         } catch (error) {
-            throw new QMError(`Team *${team.data._embedded.teamResources[0].name}* was already associated with project ${gluonProject.projectId}`);
+            throw new QMError(`Team *${team.name}* was already associated with project ${gluonProject.projectId}`);
         }
 
         if (isSuccessCode(updateGluonWithProjectDetails.status)) {
-            return await ctx.messageClient.respond(`Team *${team.data._embedded.teamResources[0].name}* has been successfully associated with ${gluonProject.projectId}`);
+            return await ctx.messageClient.respond(`Team *${team.name}* has been successfully associated with ${gluonProject.projectId}`);
         } else {
             logger.error(`Failed to link project. Error ${updateGluonWithProjectDetails.data}`);
             throw new QMError(`Failed to link project.`);

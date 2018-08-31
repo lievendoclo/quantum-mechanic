@@ -9,12 +9,14 @@ import {OnboardMember} from "./gluon/commands/member/OnboardMember";
 import {ConfigureBasicPackage} from "./gluon/commands/packages/ConfigureBasicPackage";
 import {ConfigurePackage} from "./gluon/commands/packages/ConfigurePackage";
 import {CreateApplication} from "./gluon/commands/packages/CreateApplication";
+import {CreateApplicationProd} from "./gluon/commands/packages/CreateApplicationProd";
 import {LinkExistingApplication} from "./gluon/commands/packages/LinkExistingApplication";
 import {LinkExistingLibrary} from "./gluon/commands/packages/LinkExistingLibrary";
 import {AddConfigServer} from "./gluon/commands/project/AddConfigServer";
 import {AssociateTeam} from "./gluon/commands/project/AssociateTeam";
 import {CreateOpenShiftPvc} from "./gluon/commands/project/CreateOpenShiftPvc";
 import {CreateProject} from "./gluon/commands/project/CreateProject";
+import {CreateProjectProdEnvironments} from "./gluon/commands/project/CreateProjectProdEnvironments";
 import {NewProjectEnvironments} from "./gluon/commands/project/NewProjectEnvironments";
 import {
     ListProjectDetails,
@@ -34,8 +36,10 @@ import {BitbucketProjectAdded} from "./gluon/events/bitbucket/BitbucketProjectAd
 import {BitbucketProjectRequested} from "./gluon/events/bitbucket/BitbucketProjectRequested";
 import {TeamMemberCreated} from "./gluon/events/member/TeamMemberCreated";
 import {ApplicationCreated} from "./gluon/events/packages/ApplicationCreated";
+import {ApplicationProdRequested} from "./gluon/events/packages/ApplicationProdRequested";
 import {ProjectCreated} from "./gluon/events/project/ProjectCreated";
 import {ProjectEnvironmentsRequested} from "./gluon/events/project/ProjectEnvironmentsRequested";
+import {ProjectProductionEnvironmentsRequested} from "./gluon/events/project/ProjectProductionEnvironmentsRequested";
 import {TeamsLinkedToProject} from "./gluon/events/project/TeamAssociated";
 import {BotJoinedChannel} from "./gluon/events/team/BotJoinedChannel";
 import {DevOpsEnvironmentRequested} from "./gluon/events/team/DevOpsEnvironmentRequested";
@@ -43,6 +47,7 @@ import {MembersAddedToTeam} from "./gluon/events/team/MembersAddedToTeam";
 import {MembershipRequestClosed} from "./gluon/events/team/MembershipRequestClosed";
 import {MembershipRequestCreated} from "./gluon/events/team/MembershipRequestCreated";
 import {TeamCreated} from "./gluon/events/team/TeamCreated";
+import {ApplicationProdRequestedEvent} from "./gluon/ingesters/applicationProdRequested";
 import {
     ApplicationCreatedEvent,
     PackageConfiguredEvent,
@@ -54,6 +59,7 @@ import {
 import {
     ProjectCreatedEvent,
     ProjectEnvironmentsRequestedEvent,
+    ProjectProductionEnvironmentsRequestedEvent,
     TeamsLinkedToProjectEvent,
 } from "./gluon/ingesters/projectIngester";
 import {
@@ -61,6 +67,7 @@ import {
     BitbucketProject,
     BitbucketRepository,
     DevOpsEnvironmentDetails,
+    GluonApplication,
     GluonTeam,
     GluonTenant,
     GluonTenantId,
@@ -114,6 +121,8 @@ export const configuration: any = {
         ConfigureBasicPackage,
         TagAllLatestImages,
         TagLatestImage,
+        CreateProjectProdEnvironments,
+        CreateApplicationProd,
     ],
     events: [
         TeamsLinkedToProject,
@@ -128,6 +137,8 @@ export const configuration: any = {
         MembershipRequestCreated,
         BotJoinedChannel,
         MembersAddedToTeam,
+        ProjectProductionEnvironmentsRequested,
+        ApplicationProdRequested,
     ],
     ingesters: [
         SlackIdentity,
@@ -139,6 +150,7 @@ export const configuration: any = {
         BitbucketProjectAddedEvent,
         DevOpsEnvironmentRequestedEvent,
         ProjectEnvironmentsRequestedEvent,
+        ProjectProductionEnvironmentsRequestedEvent,
         ApplicationCreatedEvent,
         MembershipRequestCreatedEvent,
         Project,
@@ -153,6 +165,8 @@ export const configuration: any = {
         DevOpsEnvironmentDetails,
         PackageConfiguredEvent,
         TeamDevOpsDetails,
+        GluonApplication,
+        ApplicationProdRequestedEvent,
     ],
     token,
     http,

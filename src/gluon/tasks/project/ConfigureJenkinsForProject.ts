@@ -1,4 +1,5 @@
 import {HandlerContext, logger} from "@atomist/automation-client";
+import {OpenShiftConfig} from "../../../config/OpenShiftConfig";
 import {QMConfig} from "../../../config/QMConfig";
 import {QMTemplate} from "../../../template/QMTemplate";
 import {JenkinsService} from "../../services/jenkins/JenkinsService";
@@ -12,20 +13,23 @@ import {TaskListMessage} from "../TaskListMessage";
 
 export class ConfigureJenkinsForProject extends Task {
 
-    private readonly TASK_ADD_JENKINS_SA_RIGHTS = "JenkinsSAEdit";
-    private readonly TASK_CREATE_JENKINS_BUILD_TEMPLATE = "JenkinsBuildTemplate";
-    private readonly TASK_ADD_JENKINS_CREDENTIALS = "JenkinsCredentials";
+    private readonly TASK_HEADER = TaskListMessage.createUniqueTaskName("ConfigureProjectJenkins");
+    private readonly TASK_ADD_JENKINS_SA_RIGHTS = TaskListMessage.createUniqueTaskName("JenkinsSAEdit");
+    private readonly TASK_CREATE_JENKINS_BUILD_TEMPLATE = TaskListMessage.createUniqueTaskName("JenkinsBuildTemplate");
+    private readonly TASK_ADD_JENKINS_CREDENTIALS = TaskListMessage.createUniqueTaskName("JenkinsCredentials");
 
     constructor(private environmentsRequestedEvent,
+                private openshiftEnvironment: OpenShiftConfig = QMConfig.subatomic.openshiftNonProd,
                 private ocService = new OCService(),
                 private jenkinsService = new JenkinsService()) {
         super();
     }
 
     protected configureTaskListMessage(taskListMessage: TaskListMessage) {
-        this.taskListMessage.addTask(this.TASK_ADD_JENKINS_SA_RIGHTS, "Grant Jenkins Service Account permissions");
-        this.taskListMessage.addTask(this.TASK_CREATE_JENKINS_BUILD_TEMPLATE, "Create Jenkins build folder");
-        this.taskListMessage.addTask(this.TASK_ADD_JENKINS_CREDENTIALS, "Add project environment credentials to Jenkins");
+        this.taskListMessage.addTask(this.TASK_HEADER, `*Configure project in Jenkins on ${this.openshiftEnvironment.name}*`);
+        this.taskListMessage.addTask(this.TASK_ADD_JENKINS_SA_RIGHTS, "\tGrant Jenkins Service Account permissions");
+        this.taskListMessage.addTask(this.TASK_CREATE_JENKINS_BUILD_TEMPLATE, "\tCreate Jenkins build folder");
+        this.taskListMessage.addTask(this.TASK_ADD_JENKINS_CREDENTIALS, "\tAdd project environment credentials to Jenkins");
     }
 
     protected async executeTask(ctx: HandlerContext): Promise<boolean> {
@@ -51,16 +55,17 @@ export class ConfigureJenkinsForProject extends Task {
 
         await this.taskListMessage.succeedTask(this.TASK_ADD_JENKINS_CREDENTIALS);
 
+        await this.taskListMessage.succeedTask(this.TASK_HEADER);
+
         return true;
     }
 
     private async addEditRolesToJenkinsServiceAccount(teamDevOpsProjectId: string, projectName: string, tenant: string) {
-        const environments = ["dev", "sit", "uat"];
 
-        await this.ocService.login();
+        await this.ocService.login(this.openshiftEnvironment);
 
-        for (const environment of environments) {
-            const openshiftProjectId = getProjectId(tenant, projectName, environment);
+        for (const environment of this.openshiftEnvironment.defaultEnvironments) {
+            const openshiftProjectId = getProjectId(tenant, projectName, environment.id);
             await this.ocService.addRoleToUserInNamespace(
                 `system:serviceaccount:${teamDevOpsProjectId}:jenkins`,
                 "edit",
@@ -70,16 +75,17 @@ export class ConfigureJenkinsForProject extends Task {
 
     private async createJenkinsBuildTemplate(environmentsRequestedEvent, teamDevOpsProjectId: string, jenkinsHost: string, token: string) {
         const projectTemplate: QMTemplate = new QMTemplate("resources/templates/jenkins/jenkins-openshift-environment-credentials.xml");
-        const builtTemplate: string = projectTemplate.build(
-            {
-                projectName: environmentsRequestedEvent.project.name,
-                docsUrl: QMConfig.subatomic.docs.baseUrl,
-                teamDevOpsProjectId,
-                devProjectId: getProjectId(environmentsRequestedEvent.owningTenant.name, environmentsRequestedEvent.project.name, "dev"),
-                sitProjectId: getProjectId(environmentsRequestedEvent.owningTenant.name, environmentsRequestedEvent.project.name, "sit"),
-                uatProjectId: getProjectId(environmentsRequestedEvent.owningTenant.name, environmentsRequestedEvent.project.name, "uat"),
-            },
-        );
+        const parameters: { [k: string]: any } = {
+            projectName: environmentsRequestedEvent.project.name,
+            docsUrl: QMConfig.subatomic.docs.baseUrl,
+            teamDevOpsProjectId,
+        };
+
+        for (const environment of this.openshiftEnvironment.defaultEnvironments) {
+            parameters[`${environment.id}ProjectId`] = getProjectId(environmentsRequestedEvent.owningTenant.name, environmentsRequestedEvent.project.name, environment.id);
+        }
+
+        const builtTemplate: string = projectTemplate.build(parameters);
         logger.info("Template found and built successfully.");
         const jenkinsCreateItemResult = await this.jenkinsService.createOpenshiftEnvironmentCredentials(jenkinsHost, token, environmentsRequestedEvent.project.name, builtTemplate);
 
