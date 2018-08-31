@@ -72,7 +72,7 @@ export class CreateProjectProdEnvironments extends RecursiveParameterRequestComm
 
             const member = await this.gluonService.members.gluonMemberFromScreenName(this.screenName);
 
-            return ctx.messageClient.send(this.buildCreateProjectProdEnvironmentsEvent(project, teams, owningTenant, member)
+            return await ctx.messageClient.send(this.buildCreateProjectProdEnvironmentsEvent(project, teams, owningTenant, member)
                 , addressEvent("ProjectProductionEnvironmentsRequestedEvent"));
         } catch (error) {
             return await this.handleError(ctx, error);
