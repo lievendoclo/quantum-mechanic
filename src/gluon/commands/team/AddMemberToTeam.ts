@@ -53,7 +53,7 @@ export class AddMemberToTeam implements HandleCommand<HandlerResult> {
 
             logger.info(`Got ChatId: ${chatId}`);
 
-            const newMember = await this.addMemberToTeamService.getNewMember(chatId, this.teamChannel);
+            const newMember = await this.addMemberToTeamService.getNewMember(ctx, chatId, this.teamChannel);
 
             logger.info(`Gluon member found: ${JSON.stringify(newMember)}`);
 

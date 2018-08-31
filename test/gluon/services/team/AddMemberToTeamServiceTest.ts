@@ -26,10 +26,16 @@ describe("AddMemberToTeamService getNewMember", () => {
         }));
         const gluonService = new GluonService(undefined, undefined, instance(mockedMemberService));
         const service = new AddMemberToTeamService(gluonService);
+        const fakeContext = {
+            teamId: "TEST",
+            correlationId: "1231343234234",
+            workspaceId: "2341234123",
+            messageClient: new TestMessageClient(),
+        };
 
         let errorThrown: QMError = null;
         try {
-            await service.getNewMember("Dex", "Channel1");
+            await service.getNewMember(fakeContext, "Dex", "Channel1");
         } catch (error) {
             errorThrown = error;
         }
@@ -55,8 +61,14 @@ describe("AddMemberToTeamService getNewMember", () => {
         }));
         const gluonService = new GluonService(undefined, undefined, instance(mockedMemberService));
         const service = new AddMemberToTeamService(gluonService);
+        const fakeContext = {
+            teamId: "TEST",
+            correlationId: "1231343234234",
+            workspaceId: "2341234123",
+            messageClient: new TestMessageClient(),
+        };
 
-        const result = await service.getNewMember("Dex", "Channel2");
+        const result = await service.getNewMember(fakeContext, "Dex", "Channel2");
 
         assert.equal(result.id, "User1");
 
