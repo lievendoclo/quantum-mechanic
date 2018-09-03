@@ -70,6 +70,9 @@ export class PackageCommandService {
         if (createApplicationResult.status === 409) {
             logger.error(`Failed to create application since the name of the application is already in use.`);
             throw new QMError(`Failed to create application since the name of the application is already in use. Please retry using a different name.`);
+        } else if (createApplicationResult.status === 403)  {
+            logger.error("Failed to create application since you are not a part of the team.");
+            throw new QMError(`You are not a part of this team. Please either apply to join or get added by a team admin then re-run your command.`);
         } else if (!isSuccessCode(createApplicationResult.status)) {
             logger.error(`Failed to link package. Error: ${inspect(createApplicationResult)}`);
             throw new QMError("Failed to link the specified package from bitbucket.");
