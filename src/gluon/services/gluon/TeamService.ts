@@ -89,6 +89,21 @@ export class TeamService {
         return teamQueryResult.data._embedded.teamResources[0];
     }
 
+    public async gluonTeamById(teamId: string, rawResult = false): Promise<any> {
+        logger.debug(`Trying to get gluon team with by name. teamId: ${teamId} `);
+
+        const teamQueryResult = await this.axiosInstance.get(`${QMConfig.subatomic.gluon.baseUrl}/teams/${teamId}`);
+
+        if (rawResult) {
+            return teamQueryResult;
+        } else if (!isSuccessCode(teamQueryResult.status)) {
+            logger.error(`Failed to find team ${teamId}. Error: ${inspect(teamQueryResult)}`);
+            throw new QMError(`Team with id ${teamId} does not appear to be a valid Subatomic team.`);
+        }
+
+        return teamQueryResult.data;
+    }
+
     public async createGluonTeam(teamName: string, teamDescription: string, createdBy: string): Promise<any> {
         logger.debug(`Trying to create team. teamName: ${teamName}; teamDescription: ${teamDescription}; createdBy: ${createdBy}`);
         return await this.axiosInstance.post(`${QMConfig.subatomic.gluon.baseUrl}/teams`, {

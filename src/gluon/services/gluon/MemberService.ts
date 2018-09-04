@@ -2,6 +2,7 @@ import {logger} from "@atomist/automation-client";
 import {buttonForCommand} from "@atomist/automation-client/spi/message/MessageClient";
 import {SlackMessage, url} from "@atomist/slack-messages";
 import * as _ from "lodash";
+import {inspect} from "util";
 import {QMConfig} from "../../../config/QMConfig";
 import {OnboardMember} from "../../commands/member/OnboardMember";
 import {AwaitAxios} from "../../util/shared/AwaitAxios";
@@ -85,5 +86,20 @@ To create a team you must first onboard yourself. Click the button below to do t
         logger.debug(`Trying to update member slack details. memberId: ${memberId}`);
         return await this.axiosInstance.put(
             `${QMConfig.subatomic.gluon.baseUrl}/members/${memberId}`, slackDetails);
+    }
+
+    public async findMembersAssociatedToTeam(teamId: string, rawResult = false): Promise<any> {
+        logger.debug(`Trying to get members associated to team with id. teamId: ${teamId} `);
+
+        const teamQueryResult = await this.axiosInstance.get(`${QMConfig.subatomic.gluon.baseUrl}/members?teamId=${teamId}`);
+
+        if (rawResult) {
+            return teamQueryResult;
+        } else if (!isSuccessCode(teamQueryResult.status)) {
+            logger.error(`Failed to find members associated to team with id ${teamId}. Error: ${inspect(teamQueryResult)}`);
+            throw new QMError(`Could not find any members associated to specified team ${teamId}.`);
+        }
+
+        return teamQueryResult.data._embedded.teamMemberResources;
     }
 }

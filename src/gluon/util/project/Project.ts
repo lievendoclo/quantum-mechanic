@@ -43,12 +43,12 @@ export interface OpenshiftProjectEnvironmentRequest {
     owningTenant: QMTenant;
 }
 
-export function createQMProject(name: string = null): QMProject {
-    return {
-        name,
-    };
-}
-
 export interface QMProject {
     name: string;
+}
+
+export enum ProjectProdRequestApprovalResponse {
+    approve = "approve",
+    reject = "reject",
+    ignore = "ignore",
 }
