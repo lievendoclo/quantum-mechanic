@@ -7,6 +7,7 @@ import {
     Parameter,
 } from "@atomist/automation-client";
 import {QMConfig} from "../../../config/QMConfig";
+import {isSuccessCode} from "../../../http/Http";
 import {GluonService} from "../../services/gluon/GluonService";
 import {
     GluonTeamNameSetter,
@@ -23,7 +24,6 @@ import {
     QMError,
     ResponderMessageClient,
 } from "../../util/shared/Error";
-import {isSuccessCode} from "../../util/shared/Http";
 
 @CommandHandler("Create a new project", QMConfig.subatomic.commandPrefix + " create project")
 export class CreateProject extends RecursiveParameterRequestCommand

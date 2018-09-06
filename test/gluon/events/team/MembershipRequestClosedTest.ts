@@ -3,7 +3,7 @@ import * as assert from "power-assert";
 import {QMConfig} from "../../../../src/config/QMConfig";
 import {MembershipRequestClosed} from "../../../../src/gluon/events/team/MembershipRequestClosed";
 import {GluonService} from "../../../../src/gluon/services/gluon/GluonService";
-import {AwaitAxios} from "../../../../src/gluon/util/shared/AwaitAxios";
+import {AwaitAxios} from "../../../../src/http/AwaitAxios";
 import {TestGraphClient} from "../../TestGraphClient";
 import {TestMessageClient} from "../../TestMessageClient";
 

@@ -6,6 +6,7 @@ import {
 } from "@atomist/automation-client";
 import * as _ from "lodash";
 import {QMConfig} from "../../../config/QMConfig";
+import {OpenshiftResource} from "../../../openshift/api/resources/OpenshiftResource";
 import {GluonService} from "../../services/gluon/GluonService";
 import {OCService} from "../../services/openshift/OCService";
 import {ApplicationType} from "../../util/packages/Applications";
@@ -68,7 +69,7 @@ export class ConfigurePackageInOpenshift extends Task {
     }
 
     private async createApplicationImageStream(appBuildName: string, teamDevOpsProjectId: string) {
-        await this.ocService.createResourceFromDataInNamespace({
+        await this.ocService.applyResourceFromDataInNamespace({
             apiVersion: "v1",
             kind: "ImageStream",
             metadata: {
@@ -77,7 +78,7 @@ export class ConfigurePackageInOpenshift extends Task {
         }, teamDevOpsProjectId);
     }
 
-    private getBuildConfigData(bitbucketRepoRemoteUrl: string, appBuildName: string, baseS2IImage: string): { [key: string]: any } {
+    private getBuildConfigData(bitbucketRepoRemoteUrl: string, appBuildName: string, baseS2IImage: string): OpenshiftResource {
         return {
             apiVersion: "v1",
             kind: "BuildConfig",
@@ -125,7 +126,7 @@ export class ConfigurePackageInOpenshift extends Task {
     private async createApplicationBuildConfig(bitbucketRepoRemoteUrl: string, appBuildName: string, baseS2IImage: string, teamDevOpsProjectId: string) {
 
         logger.info(`Using Git URI: ${bitbucketRepoRemoteUrl}`);
-        const buildConfig: { [key: string]: any } = this.getBuildConfigData(bitbucketRepoRemoteUrl, appBuildName, baseS2IImage);
+        const buildConfig: OpenshiftResource = this.getBuildConfigData(bitbucketRepoRemoteUrl, appBuildName, baseS2IImage);
 
         for (const envVariableName of Object.keys(this.deploymentDetails.buildEnvironmentVariables)) {
             buildConfig.spec.strategy.sourceStrategy.env.push(
@@ -136,7 +137,7 @@ export class ConfigurePackageInOpenshift extends Task {
             );
         }
 
-        await this.ocService.createResourceFromDataInNamespace(
+        await this.ocService.applyResourceFromDataInNamespace(
             buildConfig,
             teamDevOpsProjectId,
             true);  // TODO clean up this hack - cannot be a boolean (magic)
@@ -153,7 +154,7 @@ export class ConfigurePackageInOpenshift extends Task {
             const template = await this.ocService.getSubatomicTemplate(this.deploymentDetails.openshiftTemplate);
             const appBaseTemplate: any = JSON.parse(template.output);
             appBaseTemplate.metadata.namespace = projectId;
-            await this.ocService.createResourceFromDataInNamespace(appBaseTemplate, projectId);
+            await this.ocService.applyResourceFromDataInNamespace(appBaseTemplate, projectId);
 
             const templateParameters = [
                 `APP_NAME=${appName}`,
@@ -173,7 +174,7 @@ export class ConfigurePackageInOpenshift extends Task {
                 await this.ocService.getDeploymentConfigInNamespace(appName, projectId);
                 logger.warn(`App [${appName}] Template has already been processed, deployment exists`);
             } catch (error) {
-                await this.ocService.createResourceFromDataInNamespace(
+                await this.ocService.applyResourceFromDataInNamespace(
                     JSON.parse(appProcessedTemplate.output),
                     projectId,
                 );

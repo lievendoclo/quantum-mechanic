@@ -41,7 +41,7 @@ export async function handleQMError(messageClient: QMMessageClient, error) {
 }
 
 export class QMError extends Error {
-    constructor(message: string, protected slackMessage: SlackMessage | string = null) {
+    constructor(message: string, protected slackMessage: SlackMessage | string = null, public errorType: QMErrorType = QMErrorType.generic) {
         super(message);
     }
 
@@ -53,6 +53,11 @@ export class QMError extends Error {
         }
         return this.slackMessage;
     }
+}
+
+export enum QMErrorType {
+    generic = "generic",
+    conflict = "conflict",
 }
 
 export class OCResultError extends QMError {

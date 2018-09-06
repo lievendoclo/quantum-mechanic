@@ -5,9 +5,9 @@ import * as fs from "fs";
 import * as https from "https";
 import * as path from "path";
 import {QMConfig} from "../../../config/QMConfig";
-import {addAxiosLogger} from "../../util/shared/AxiosLogger";
+import {addAxiosLogger} from "../../../http/AxiosLogger";
+import {isSuccessCode} from "../../../http/Http";
 import {QMError} from "../../util/shared/Error";
-import {isSuccessCode} from "../../util/shared/Http";
 
 export class BitbucketService {
     public async bitbucketUserFromUsername(username: string): Promise<any> {

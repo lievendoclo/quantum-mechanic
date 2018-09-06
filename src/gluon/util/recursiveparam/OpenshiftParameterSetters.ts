@@ -19,8 +19,7 @@ export async function setOpenshiftTemplate(
     }
 
     const namespace = getDevOpsEnvironmentDetails(commandHandler.teamName).openshiftProjectId;
-    const templatesResult = await commandHandler.ocService.getSubatomicAppTemplates(namespace);
-    const templates = JSON.parse(templatesResult.output).items;
+    const templates = await commandHandler.ocService.getSubatomicAppTemplates(namespace);
     return await createMenu(ctx, templates.map(template => {
             return {
                 value: template.metadata.name,
@@ -48,8 +47,7 @@ export async function setImageName(
         throw new QMError(`setImageName commandHandler requires ocService parameter to be defined`);
     }
 
-    const imagesResult = await commandHandler.ocService.getSubatomicImageStreamTags();
-    const images = JSON.parse(imagesResult.output).items;
+    const images = await commandHandler.ocService.getSubatomicImageStreamTags();
     return await createMenu(
         ctx,
         images.map(image => {

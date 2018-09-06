@@ -10,6 +10,7 @@ import {
     Tags,
 } from "@atomist/automation-client";
 import {QMConfig} from "../../../config/QMConfig";
+import {isSuccessCode} from "../../../http/Http";
 import {OnboardMemberMessages} from "../../messages/member/OnboardMemberMessages";
 import {GluonService} from "../../services/gluon/GluonService";
 import {
@@ -17,7 +18,6 @@ import {
     QMError,
     ResponderMessageClient,
 } from "../../util/shared/Error";
-import {isSuccessCode} from "../../util/shared/Http";
 
 @CommandHandler("Onboard a new team member", QMConfig.subatomic.commandPrefix + " onboard me")
 @Tags("subatomic", "slack", "member")

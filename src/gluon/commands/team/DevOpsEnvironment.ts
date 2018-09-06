@@ -8,6 +8,7 @@ import {
     Tags,
 } from "@atomist/automation-client";
 import {QMConfig} from "../../../config/QMConfig";
+import {isSuccessCode} from "../../../http/Http";
 import {GluonService} from "../../services/gluon/GluonService";
 import {
     GluonTeamNameSetter,
@@ -17,7 +18,6 @@ import {
     RecursiveParameter,
     RecursiveParameterRequestCommand,
 } from "../../util/recursiveparam/RecursiveParameterRequestCommand";
-import {isSuccessCode} from "../../util/shared/Http";
 
 @CommandHandler("Check whether to create a new OpenShift DevOps environment or use an existing one", QMConfig.subatomic.commandPrefix + " request devops environment")
 @Tags("subatomic", "slack", "team", "openshiftNonProd", "devops")

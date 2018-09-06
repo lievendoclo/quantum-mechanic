@@ -1,8 +1,14 @@
 import {logger} from "@atomist/automation-client";
 import * as fs from "fs";
 import _ = require("lodash");
+import {inspect} from "util";
 import {OpenShiftConfig} from "../../../config/OpenShiftConfig";
 import {QMConfig} from "../../../config/QMConfig";
+import {isSuccessCode} from "../../../http/Http";
+import {OpenshiftApiResult} from "../../../openshift/api/base/OpenshiftApiResult";
+import {OpenShiftApi} from "../../../openshift/api/OpenShiftApi";
+import {OpenshiftResource} from "../../../openshift/api/resources/OpenshiftResource";
+import {ResourceFactory} from "../../../openshift/api/resources/ResourceFactory";
 import {OCCommandResult} from "../../../openshift/base/OCCommandResult";
 import {AbstractOption} from "../../../openshift/base/options/AbstractOption";
 import {NamedSimpleOption} from "../../../openshift/base/options/NamedSimpleOption";
@@ -10,13 +16,29 @@ import {SimpleOption} from "../../../openshift/base/options/SimpleOption";
 import {StandardOption} from "../../../openshift/base/options/StandardOption";
 import {OCClient} from "../../../openshift/OCClient";
 import {OCCommon} from "../../../openshift/OCCommon";
+import {OpaqueSecret} from "../../util/openshift/OpaqueSecret";
 import {getProjectDisplayName} from "../../util/project/Project";
 import {BaseProjectTemplateLoader} from "../../util/resources/BaseProjectTemplateLoader";
 import {QuotaLoader} from "../../util/resources/QuotaLoader";
+import {QMError, QMErrorType} from "../../util/shared/Error";
 import {QMTeam} from "../../util/team/Teams";
 import {OCImageService} from "./OCImageService";
 
 export class OCService {
+
+    get openShiftApi(): OpenShiftApi {
+        if (this.openShiftApiInstance === undefined) {
+            logger.error(`Failed to access the openShiftApiInstance. Make sure the you have performed an OCService.login command`);
+            throw new QMError("OpenShift login failure!");
+        }
+        return this.openShiftApiInstance;
+    }
+
+    set openShiftApi(value: OpenShiftApi) {
+        this.openShiftApiInstance = value;
+    }
+
+    private openShiftApiInstance: OpenShiftApi;
 
     private quotaLoader: QuotaLoader = new QuotaLoader();
     private baseProjectTemplateLoader: BaseProjectTemplateLoader = new BaseProjectTemplateLoader();
@@ -24,50 +46,121 @@ export class OCService {
     constructor(private ocImageService = new OCImageService()) {
     }
 
-    public async login(openshiftDetails: OpenShiftConfig = QMConfig.subatomic.openshiftNonProd) {
-        return await OCClient.login(openshiftDetails.masterUrl, openshiftDetails.auth.token);
+    public async login(openshiftDetails: OpenShiftConfig = QMConfig.subatomic.openshiftNonProd, softLogin = false) {
+        this.openShiftApi = new OpenShiftApi(openshiftDetails);
+        this.ocImageService.openShiftApi = this.openShiftApi;
+        if (!softLogin) {
+            return await OCClient.login(openshiftDetails.masterUrl, openshiftDetails.auth.token);
+        }
     }
 
-    public async newDevOpsProject(openshiftProjectId: string, teamName: string): Promise<OCCommandResult> {
+    public async newDevOpsProject(openshiftProjectId: string, teamName: string, rawResult = false): Promise<any> {
         logger.debug(`Trying to create new Dev Ops environment. openshiftProjectId: ${openshiftProjectId}; teamName: ${teamName} `);
-        return await OCClient.newProject(openshiftProjectId,
+
+        const createResult = await this.openShiftApi.newProject(openshiftProjectId,
             `${teamName} DevOps`,
             `DevOps environment for ${teamName} [managed by Subatomic]`);
+        if (rawResult) {
+            return createResult;
+        } else if (!isSuccessCode(createResult.status)) {
+            if (createResult.status === 409) {
+                throw new QMError("DevOps project already exists.", undefined, QMErrorType.conflict);
+            } else {
+                logger.error(`Failed to create DevOps project: ${inspect(createResult)}`);
+                throw new QMError("Failed to create the OpenShift DevOps project as requested");
+            }
+        }
+        return createResult.data;
     }
 
-    public async newSubatomicProject(openshiftProjectId: string, projectName: string, owningTenant: string, environment: string[]): Promise<OCCommandResult> {
+    public async newSubatomicProject(openshiftProjectId: string, projectName: string, owningTenant: string, environment: string[], rawResult = false): Promise<any> {
         logger.debug(`Trying to create new Subatomic Project. openshiftProjectId: ${openshiftProjectId}; projectName: ${projectName}; environment: ${JSON.stringify(environment)} `);
-        return await OCClient.newProject(openshiftProjectId,
+
+        const createResult = await this.openShiftApi.newProject(openshiftProjectId,
             getProjectDisplayName(owningTenant, projectName, environment[0]),
             `${environment[1]} environment for ${projectName} [managed by Subatomic]`);
+        if (rawResult) {
+            return createResult;
+        } else if (!isSuccessCode(createResult.status)) {
+            if (createResult.status === 409) {
+                throw new QMError("Requested project already exists.", undefined, QMErrorType.conflict);
+            } else {
+                logger.error(`Failed to create OpenShift project: ${inspect(createResult)}`);
+                throw new QMError("Failed to create the OpenShift project as requested");
+            }
+        }
+        return createResult.data;
     }
 
-    public async createDevOpsDefaultResourceQuota(openshiftProjectId: string): Promise<OCCommandResult> {
-        logger.debug(`Trying to create Dev Ops default resource quota. openshiftProjectId: ${openshiftProjectId}`);
-        return await OCCommon.createFromData(this.quotaLoader.getDevOpsDefaultResourceQuota(), [
-            new SimpleOption("-namespace", openshiftProjectId),
-        ]);
+    public async createDevOpsDefaultResourceQuota(openshiftProjectId: string, replace = true, rawResult = false): Promise<any> {
+        logger.debug(`Trying to create DevOps default resource quota. openshiftProjectId: ${openshiftProjectId}`);
+        const createResult = await this.openShiftApi.create.create(
+            this.quotaLoader.getDevOpsDefaultResourceQuota(),
+            openshiftProjectId,
+            replace,
+        );
+
+        if (rawResult) {
+            return createResult;
+        } else if (!isSuccessCode(createResult.status)) {
+            logger.error(`Failed to create default quota in DevOps: ${inspect(createResult)}`);
+            throw new QMError("Failed to create the OpenShift default Quota in DevOps as requested");
+        }
+        return createResult.data;
     }
 
-    public async createDevOpsDefaultLimits(openshiftProjectId: string): Promise<OCCommandResult> {
-        logger.debug(`Trying to create Dev Ops default limits. openshiftProjectId: ${openshiftProjectId}`);
-        return await OCCommon.createFromData(this.quotaLoader.getDevOpsDefaultLimitRange(), [
-            new SimpleOption("-namespace", openshiftProjectId),
-        ]);
+    public async createDevOpsDefaultLimits(openshiftProjectId: string, apply = true, rawResult = false): Promise<any> {
+        logger.debug(`Trying to create DevOps default limits. openshiftProjectId: ${openshiftProjectId}`);
+
+        const createResult = await this.openShiftApi.create.create(
+            this.quotaLoader.getDevOpsDefaultLimitRange(),
+            openshiftProjectId,
+            apply,
+        );
+
+        if (rawResult) {
+            return createResult;
+        } else if (!isSuccessCode(createResult.status)) {
+            logger.error(`Failed to create default limits in DevOps: ${inspect(createResult)}`);
+            throw new QMError("Failed to create the OpenShift default-limits in DevOps as requested");
+        }
+        return createResult.data;
     }
 
-    public async createProjectDefaultResourceQuota(openshiftProjectId: string): Promise<OCCommandResult> {
+    public async createProjectDefaultResourceQuota(openshiftProjectId: string, apply = true, rawResult = false): Promise<any> {
         logger.debug(`Trying to create project default resource quota. openshiftProjectId: ${openshiftProjectId}`);
-        return await OCCommon.createFromData(this.quotaLoader.getProjectDefaultResourceQuota(), [
-            new SimpleOption("-namespace", openshiftProjectId),
-        ]);
+
+        const createResult = await this.openShiftApi.create.create(
+            this.quotaLoader.getProjectDefaultResourceQuota(),
+            openshiftProjectId,
+            apply,
+        );
+
+        if (rawResult) {
+            return createResult;
+        } else if (!isSuccessCode(createResult.status)) {
+            logger.error(`Failed to create default quota in project: ${inspect(createResult)}`);
+            throw new QMError("Failed to create the OpenShift default Quota in project as requested");
+        }
+        return createResult.data;
     }
 
-    public async createProjectDefaultLimits(openshiftProjectId: string): Promise<OCCommandResult> {
+    public async createProjectDefaultLimits(openshiftProjectId: string, apply = true, rawResult = false): Promise<any> {
         logger.debug(`Trying to create project default limits. openshiftProjectId: ${openshiftProjectId}`);
-        return await OCCommon.createFromData(this.quotaLoader.getProjectDefaultLimitRange(), [
-            new SimpleOption("-namespace", openshiftProjectId),
-        ]);
+
+        const createResult = await this.openShiftApi.create.create(
+            this.quotaLoader.getProjectDefaultLimitRange(),
+            openshiftProjectId,
+            apply,
+        );
+
+        if (rawResult) {
+            return createResult;
+        } else if (!isSuccessCode(createResult.status)) {
+            logger.error(`Failed to create default limits in project: ${inspect(createResult)}`);
+            throw new QMError("Failed to create the OpenShift default-limits in project as requested");
+        }
+        return createResult.data;
     }
 
     public async getSubatomicTemplate(templateName: string): Promise<OCCommandResult> {
@@ -81,16 +174,27 @@ export class OCService {
         );
     }
 
-    public async getSubatomicAppTemplates(namespace = "subatomic"): Promise<OCCommandResult> {
+    public async getSubatomicAppTemplates(namespace = "subatomic"): Promise<OpenshiftResource[]> {
         logger.debug(`Trying to get subatomic templates. namespace: ${namespace}`);
-        return await OCCommon.commonCommand("get", "templates",
-            [],
-            [
-                new SimpleOption("l", "usage=subatomic-app"),
-                new SimpleOption("-namespace", namespace),
-                new SimpleOption("-output", "json"),
-            ],
-        );
+        const queryResult = await this.openShiftApi.get.getAllFromNamespace("Template", namespace, "template.openshift.io/v1");
+
+        if (isSuccessCode(queryResult.status)) {
+            const templates = [];
+            for (const template of queryResult.data.items) {
+                if (template.metadata.labels !== undefined) {
+                    if (template.metadata.labels.usage === "subatomic-app") {
+                        // These aren't set for some reason
+                        template.kind = "Template";
+                        template.apiVersion = "template.openshift.io/v1";
+                        templates.push(template);
+                    }
+                }
+            }
+            return templates;
+        } else {
+            logger.error(`Failed to find Subatomic App Templates in Subatomic namespace: ${inspect(queryResult)}`);
+            throw new QMError("Failed to find Subatomic App Templates in the Subatomic namespace");
+        }
     }
 
     public async getJenkinsTemplate(): Promise<OCCommandResult> {
@@ -108,13 +212,31 @@ export class OCService {
         return this.ocImageService.getSubatomicImageStreamTags(namespace);
     }
 
-    public async createResourceFromDataInNamespace(resourceDefinition: any, projectNamespace: string, applyNotReplace: boolean = false): Promise<OCCommandResult> {
+    public async applyResourceFromDataInNamespace(resourceDefinition: OpenshiftResource, projectNamespace: string, applyNotReplace: boolean = false): Promise<OpenshiftApiResult> {
         logger.debug(`Trying to create resource from data in namespace. projectNamespace: ${projectNamespace}`);
-        return await OCCommon.createFromData(resourceDefinition,
-            [
-                new SimpleOption("-namespace", projectNamespace),
-            ]
-            , applyNotReplace);
+
+        let response: OpenshiftApiResult;
+        if (applyNotReplace) {
+            response = await this.openShiftApi.create.apply(resourceDefinition, projectNamespace);
+        } else {
+            response = await this.openShiftApi.create.replace(resourceDefinition, projectNamespace);
+        }
+
+        if (!isSuccessCode(response.status)) {
+            logger.error(`Failed to create requested resource.\nResource: ${JSON.stringify(resourceDefinition)}`);
+            if (!_.isEmpty(response.data.items)) {
+                for (const item of response.data.items) {
+                    if (!isSuccessCode(item.status)) {
+                        logger.error(`Resource Failed: ${inspect(item.data)}`);
+                    }
+                }
+            } else {
+                logger.error(`Resource Failed: ${response}`);
+            }
+            throw new QMError("Failed to create requested resource");
+        }
+
+        return response;
     }
 
     public async tagSubatomicImageToNamespace(imageStreamTagName: string, destinationProjectNamespace: string, destinationImageStreamTagName: string = imageStreamTagName): Promise<OCCommandResult> {
@@ -122,10 +244,14 @@ export class OCService {
     }
 
     public async tagAllSubatomicImageStreamsToDevOpsEnvironment(devopsProjectId) {
-        const imageStreamTagsResult = await this.getSubatomicImageStreamTags();
-        const imageStreamTags = JSON.parse(imageStreamTagsResult.output).items;
+        const imageStreamTagsFromSubatomicNamespace = await this.getSubatomicImageStreamTags();
 
-        await this.ocImageService.tagAllImagesToNamespace("subatomic", imageStreamTags.map(item => item.metadata.name), devopsProjectId);
+        const imageStreamTags = await this.ocImageService.modifyImageStreamTagsToImportIntoNamespace(imageStreamTagsFromSubatomicNamespace, devopsProjectId);
+
+        const resourceList = ResourceFactory.resourceList();
+        resourceList.items.push(...imageStreamTags);
+
+        await this.applyResourceFromDataInNamespace(resourceList, devopsProjectId, false);
     }
 
     public async processJenkinsTemplateForDevOpsProject(devopsNamespace: string): Promise<OCCommandResult> {
@@ -186,15 +312,35 @@ export class OCService {
             ], true);
     }
 
-    public async getServiceAccountToken(serviceAccountName: string, namespace: string): Promise<OCCommandResult> {
+    public async getServiceAccountToken(serviceAccountName: string, namespace: string): Promise<string> {
         logger.debug(`Trying to get service account token in namespace. serviceAccountName: ${serviceAccountName}, namespace: ${namespace}`);
-        return await OCCommon.commonCommand("serviceaccounts",
-            "get-token",
-            [
-                serviceAccountName,
-            ], [
-                new SimpleOption("-namespace", namespace),
-            ]);
+
+        const serviceAccountResult = await this.openShiftApi.get.get("ServiceAccount", serviceAccountName, namespace);
+
+        if (!isSuccessCode(serviceAccountResult.status)) {
+            logger.error(`Failed to find service account ${serviceAccountName} in namespace ${namespace}. Error: ${inspect(serviceAccountResult)}`);
+            throw new QMError(`Failed to find service account ${serviceAccountName} in namespace ${namespace}. Please make sure it exists.`);
+        }
+
+        let tokenSecretName: string = "";
+        for (const secret of serviceAccountResult.data.secrets) {
+            if (secret.name.startsWith(`${serviceAccountName}-token`)) {
+                tokenSecretName = secret.name;
+            }
+        }
+
+        if (_.isEmpty(tokenSecretName)) {
+            throw new QMError(`Failed to find token for ServiceAccount ${serviceAccountName}`);
+        }
+
+        const secretDetailsResult = await this.openShiftApi.get.get("Secret", tokenSecretName, namespace);
+
+        if (!isSuccessCode(secretDetailsResult.status)) {
+            logger.error(`Failed to find secret ${tokenSecretName}. Error: ${inspect(secretDetailsResult)}`);
+            throw new QMError(`Failed to find secret containing the jenkins token. Please make sure it exists.`);
+        }
+
+        return Buffer.from(secretDetailsResult.data.data.token, "base64").toString("ascii");
     }
 
     public async annotateJenkinsRoute(namespace: string): Promise<OCCommandResult> {
@@ -220,27 +366,28 @@ export class OCService {
             ]);
     }
 
-    public async getSecretFromNamespace(secretName: string, namespace: string): Promise<OCCommandResult> {
+    public async getSecretFromNamespace(secretName: string, namespace: string): Promise<OpenshiftApiResult> {
         logger.debug(`Trying to get secret in namespace. secretName: ${secretName}, namespace: ${namespace}`);
-        return await OCCommon.commonCommand("get secrets",
-            secretName,
-            [],
-            [
-                new SimpleOption("-namespace", namespace),
-            ]);
+        const secretResult = await this.openShiftApi.get.get("Secret", secretName, namespace);
+        if (!isSuccessCode(secretResult.status)) {
+            throw new QMError(`Failed to secret ${secretName} from namespace ${namespace}`);
+        }
+        return secretResult;
     }
 
-    public async createBitbucketSSHAuthSecret(secretName: string, namespace: string): Promise<OCCommandResult> {
+    public async createBitbucketSSHAuthSecret(secretName: string, namespace: string, apply = true): Promise<OpenshiftApiResult> {
         logger.debug(`Trying to create bitbucket ssh auth secret in namespace. secretName: ${secretName}, namespace: ${namespace}`);
 
-        return await OCCommon.commonCommand("create secret generic",
-            secretName,
-            [],
-            [
-                new NamedSimpleOption("-from-file=ssh-privatekey", QMConfig.subatomic.bitbucket.cicdPrivateKeyPath),
-                new NamedSimpleOption("-from-file=ca.crt", QMConfig.subatomic.bitbucket.caPath),
-                new SimpleOption("-namespace", namespace),
-            ]);
+        const secret = new OpaqueSecret(secretName);
+        secret.addFile("ssh-privatekey", QMConfig.subatomic.bitbucket.cicdPrivateKeyPath);
+        secret.addFile("ca.crt", QMConfig.subatomic.bitbucket.caPath);
+
+        const createSecretResult = await this.openShiftApi.create.create(secret, namespace, apply);
+        if (!isSuccessCode(createSecretResult.status)) {
+            logger.error(`Failed to create the secret ${secretName} in namespace ${namespace}: ${inspect(createSecretResult)}`);
+            throw new QMError(`Failed to create secret ${secretName}.`);
+        }
+        return createSecretResult;
     }
 
     public async createConfigServerSecret(namespace: string): Promise<OCCommandResult> {
@@ -265,35 +412,29 @@ export class OCService {
         await team.owners.map(async owner => {
             const ownerUsername = /[^\\]*$/.exec(owner.domainUsername)[0];
             logger.info(`Adding role to project [${projectId}] and owner [${owner.domainUsername}]: ${ownerUsername}`);
-            return await OCClient.policy.addRoleToUser(ownerUsername,
-                "admin",
-                projectId);
+            return await this.openShiftApi.policy.addRoleToUser(ownerUsername, "admin", projectId);
         });
         await team.members.map(async member => {
             const memberUsername = /[^\\]*$/.exec(member.domainUsername)[0];
             await logger.info(`Adding role to project [${projectId}] and member [${member.domainUsername}]: ${memberUsername}`);
-            return await OCClient.policy.addRoleToUser(memberUsername,
-                "view",
-                projectId);
+            return await this.openShiftApi.policy.addRoleToUser(memberUsername, "view", projectId);
         });
     }
 
-    public async createPodNetwork(projectsToJoin: string[], projectToJoinTo: string): Promise<OCCommandResult> {
-        logger.debug(`Trying to create pod network. projectsToJoin: ${JSON.stringify(projectsToJoin)}; projectToJoinTo: ${projectToJoinTo}`);
-        return await OCCommon.commonCommand(
-            "adm pod-network",
-            "join-projects",
-            projectsToJoin,
-            [
-                new StandardOption("to", `${projectToJoinTo}`),
-            ]);
+    public async createPodNetwork(projectToJoin: string, projectToJoinTo: string): Promise<OpenshiftApiResult> {
+        logger.debug(`Trying to create pod network. projectToJoin: ${projectToJoin}; projectToJoinTo: ${projectToJoinTo}`);
+
+        return this.openShiftApi.adm.podNetworkJoinToProject(projectToJoin, projectToJoinTo);
     }
 
-    public async addRoleToUserInNamespace(user: string, role: string, namespace: string): Promise<OCCommandResult> {
+    public async addRoleToUserInNamespace(user: string, role: string, namespace: string): Promise<OpenshiftApiResult> {
         logger.debug(`Trying to add role to user in namespace: user: ${user}; role: ${role}; namespace: ${namespace}`);
-        return await OCClient.policy.addRoleToUser(user,
-            role,
-            namespace);
+        const addRoleResult = await this.openShiftApi.policy.addRoleToUser(user, role, namespace);
+        if (!isSuccessCode(addRoleResult.status)) {
+            logger.error(`Failed to grant the role ${role} to account ${user}. Error: ${inspect(addRoleResult)}`);
+            throw new QMError(`Failed to grant the role ${role} to account ${user}.`);
+        }
+        return addRoleResult;
     }
 
     public async createPVC(pvcName: string, namespace: string): Promise<OCCommandResult> {
@@ -301,14 +442,18 @@ export class OCService {
         return await OCClient.createPvc(pvcName, namespace);
     }
 
-    public async initilizeProjectWithDefaultProjectTemplate(projectId: string) {
+    public async initilizeProjectWithDefaultProjectTemplate(projectId: string, apply = true) {
         const template = this.baseProjectTemplateLoader.getTemplate();
         if (!_.isEmpty(template.objects)) {
             logger.info(`Applying base project template to ${projectId}`);
             const fileName = Date.now() + ".json";
             fs.writeFileSync(`/tmp/${fileName}`, JSON.stringify(template));
             const processedTemplateResult = await OCCommon.commonCommand("process", `-f /tmp/${fileName}`);
-            await OCCommon.createFromData(JSON.parse(processedTemplateResult.output), [new SimpleOption("-namespace", projectId)]);
+            const result = await this.openShiftApi.create.create(JSON.parse(processedTemplateResult.output), projectId, apply);
+            if (!isSuccessCode(result.status)) {
+                logger.error(`Template failed to create properly: ${inspect(result)}`);
+                throw new QMError("Failed to create all items in base project template.");
+            }
         } else {
             logger.debug(`Base template is empty. Not applying to project ${projectId}`);
         }

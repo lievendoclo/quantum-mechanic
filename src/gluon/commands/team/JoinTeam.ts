@@ -9,10 +9,10 @@ import {
     Tags,
 } from "@atomist/automation-client";
 import {QMConfig} from "../../../config/QMConfig";
+import {isSuccessCode} from "../../../http/Http";
 import {JoinTeamMessages} from "../../messages/team/JoinTeamMessages";
 import {GluonService} from "../../services/gluon/GluonService";
 import {handleQMError, ResponderMessageClient} from "../../util/shared/Error";
-import {isSuccessCode} from "../../util/shared/Http";
 
 @CommandHandler("Apply to join an existing team", QMConfig.subatomic.commandPrefix + " apply to team")
 @Tags("subatomic", "team")

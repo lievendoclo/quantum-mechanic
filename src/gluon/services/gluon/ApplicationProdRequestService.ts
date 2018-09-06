@@ -1,9 +1,9 @@
 import {logger} from "@atomist/automation-client";
 import {inspect} from "util";
 import {QMConfig} from "../../../config/QMConfig";
-import {AwaitAxios} from "../../util/shared/AwaitAxios";
+import {AwaitAxios} from "../../../http/AwaitAxios";
+import {isSuccessCode} from "../../../http/Http";
 import {QMError} from "../../util/shared/Error";
-import {isSuccessCode} from "../../util/shared/Http";
 
 export class ApplicationProdRequestService {
 

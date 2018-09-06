@@ -4,11 +4,11 @@ import {SlackMessage} from "@atomist/slack-messages";
 import * as _ from "lodash";
 import {inspect} from "util";
 import {QMConfig} from "../../../config/QMConfig";
+import {AwaitAxios} from "../../../http/AwaitAxios";
+import {isSuccessCode} from "../../../http/Http";
 import {CreateTeam} from "../../commands/team/CreateTeam";
 import {JoinTeam} from "../../commands/team/JoinTeam";
-import {AwaitAxios} from "../../util/shared/AwaitAxios";
 import {QMError} from "../../util/shared/Error";
-import {isSuccessCode} from "../../util/shared/Http";
 
 export class TeamService {
 

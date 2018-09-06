@@ -114,7 +114,7 @@ spring:
 `,
             },
         };
-        return await this.ocService.createResourceFromDataInNamespace(configurationMapDefintion, devOpsProjectId);
+        return await this.ocService.applyResourceFromDataInNamespace(configurationMapDefintion, devOpsProjectId);
     }
 
     private async tagConfigServerImageToDevOpsEnvironment(devOpsProjectId: string) {
@@ -152,7 +152,7 @@ spring:
 
             logger.debug(`Processed Subatomic Config Server Template: ${appTemplate.output}`);
 
-            await this.ocService.createResourceFromDataInNamespace(JSON.parse(appTemplate.output), devOpsProjectId);
+            await this.ocService.applyResourceFromDataInNamespace(JSON.parse(appTemplate.output), devOpsProjectId);
         }
     }
 

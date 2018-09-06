@@ -10,6 +10,7 @@ import {
 import {url} from "@atomist/slack-messages";
 import * as _ from "lodash";
 import {QMConfig} from "../../../config/QMConfig";
+import {isSuccessCode} from "../../../http/Http";
 import {BitbucketConfigurationService} from "../../services/bitbucket/BitbucketConfigurationService";
 import {BitbucketService} from "../../services/bitbucket/BitbucketService";
 import {GluonService} from "../../services/gluon/GluonService";
@@ -18,7 +19,6 @@ import {
     QMError,
     UserMessageClient,
 } from "../../util/shared/Error";
-import {isSuccessCode} from "../../util/shared/Http";
 
 @EventHandler("Receive BitbucketProjectRequestedEvent events", `
 subscription BitbucketProjectRequestedEvent {

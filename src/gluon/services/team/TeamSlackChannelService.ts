@@ -4,9 +4,9 @@ import {inviteUserToSlackChannel} from "@atomist/lifecycle-automation/handlers/c
 import {createChannel} from "@atomist/lifecycle-automation/handlers/command/slack/CreateChannel";
 import {CreateSlackChannel} from "@atomist/lifecycle-automation/typings/types";
 import * as _ from "lodash";
+import {isSuccessCode} from "../../../http/Http";
 import {TeamSlackChannelMessages} from "../../messages/team/TeamSlackChannelMessages";
 import {QMError} from "../../util/shared/Error";
-import {isSuccessCode} from "../../util/shared/Http";
 import {GluonService} from "../gluon/GluonService";
 
 export class TeamSlackChannelService {

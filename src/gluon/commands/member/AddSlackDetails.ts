@@ -9,8 +9,8 @@ import {
     Parameter,
 } from "@atomist/automation-client";
 import {QMConfig} from "../../../config/QMConfig";
+import {isSuccessCode} from "../../../http/Http";
 import {GluonService} from "../../services/gluon/GluonService";
-import {isSuccessCode} from "../../util/shared/Http";
 
 @CommandHandler("Add Slack details to an existing team member", QMConfig.subatomic.commandPrefix + " add slack")
 export class AddSlackDetails implements HandleCommand<HandlerResult> {

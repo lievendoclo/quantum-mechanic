@@ -10,13 +10,13 @@ import {GitProject} from "@atomist/automation-client/project/git/GitProject";
 import {buttonForCommand} from "@atomist/automation-client/spi/message/MessageClient";
 import {url} from "@atomist/slack-messages";
 import {QMConfig} from "../../../config/QMConfig";
+import {isSuccessCode} from "../../../http/Http";
 import {QMTemplate} from "../../../template/QMTemplate";
 import {KickOffJenkinsBuild} from "../../commands/jenkins/JenkinsBuild";
 import {JenkinsService} from "../../services/jenkins/JenkinsService";
 import {OCService} from "../../services/openshift/OCService";
 import {ApplicationType} from "../../util/packages/Applications";
 import {QMError} from "../../util/shared/Error";
-import {isSuccessCode} from "../../util/shared/Http";
 import {getDevOpsEnvironmentDetails} from "../../util/team/Teams";
 import {Task} from "../Task";
 import {TaskListMessage} from "../TaskListMessage";
@@ -154,7 +154,7 @@ export class ConfigurePackageInJenkins extends Task {
 
         const createJenkinsJobResponse = await this.jenkinsService.createJenkinsJob(
             jenkinsHost.output,
-            token.output,
+            token,
             gluonProjectName,
             gluonApplicationName,
             builtTemplate);

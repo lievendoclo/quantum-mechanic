@@ -8,6 +8,7 @@ import {
 } from "@atomist/automation-client";
 import * as _ from "lodash";
 import {QMConfig} from "../../../config/QMConfig";
+import {isSuccessCode} from "../../../http/Http";
 import {GluonService} from "../../services/gluon/GluonService";
 import {JenkinsService} from "../../services/jenkins/JenkinsService";
 import {OCService} from "../../services/openshift/OCService";
@@ -28,7 +29,6 @@ import {
     QMError,
     ResponderMessageClient,
 } from "../../util/shared/Error";
-import {isSuccessCode} from "../../util/shared/Http";
 
 @CommandHandler("Kick off a Jenkins build", QMConfig.subatomic.commandPrefix + " jenkins build")
 export class KickOffJenkinsBuild extends RecursiveParameterRequestCommand
@@ -103,7 +103,7 @@ export class KickOffJenkinsBuild extends RecursiveParameterRequestCommand
 
         const kickOffBuildResult = await this.jenkinsService.kickOffBuild(
             jenkinsHost.output,
-            token.output,
+            token,
             gluonProjectName,
             gluonApplicationName,
         );
@@ -116,7 +116,7 @@ export class KickOffJenkinsBuild extends RecursiveParameterRequestCommand
                 logger.warn(`This is probably the first build and therefore a master branch job does not exist`);
                 await this.jenkinsService.kickOffFirstBuild(
                     jenkinsHost.output,
-                    token.output,
+                    token,
                     gluonProjectName,
                     gluonApplicationName,
                 );

@@ -4,11 +4,11 @@ import {inviteUserToSlackChannel} from "@atomist/lifecycle-automation/handlers/c
 import {SlackMessage, url} from "@atomist/slack-messages";
 import * as _ from "lodash";
 import {QMConfig} from "../../../config/QMConfig";
+import {isSuccessCode} from "../../../http/Http";
 import {OnboardMember} from "../../commands/member/OnboardMember";
 import {AddMemberToTeam} from "../../commands/team/AddMemberToTeam";
 import {AddMemberToTeamMessages} from "../../messages/team/AddMemberToTeamMessages";
 import {QMError} from "../../util/shared/Error";
-import {isSuccessCode} from "../../util/shared/Http";
 import {GluonService} from "../gluon/GluonService";
 
 export class AddMemberToTeamService {

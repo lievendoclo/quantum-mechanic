@@ -36,13 +36,12 @@ export class CreateOpenshiftResourcesInProject extends Task {
     }
 
     private async doConfiguration() {
-        await this.ocService.login(this.openshiftEnvironment);
+        await this.ocService.login(this.openshiftEnvironment, true);
 
         for (const environment of this.openshiftEnvironment.defaultEnvironments) {
             const prodProjectId = getProjectId(this.tenantName, this.projectName, environment.id);
 
-            await this.ocService.createResourceFromDataInNamespace(this.openshiftResources, prodProjectId);
-            logger.info(JSON.stringify(this.dynamicTaskNameStore));
+            await this.ocService.applyResourceFromDataInNamespace(this.openshiftResources, prodProjectId);
             await this.taskListMessage.succeedTask(this.dynamicTaskNameStore[`${environment.id}Environment`]);
         }
 

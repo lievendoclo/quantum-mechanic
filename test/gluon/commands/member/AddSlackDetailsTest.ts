@@ -3,7 +3,7 @@ import * as assert from "power-assert";
 import {QMConfig} from "../../../../src/config/QMConfig";
 import {AddSlackDetails} from "../../../../src/gluon/commands/member/AddSlackDetails";
 import {GluonService} from "../../../../src/gluon/services/gluon/GluonService";
-import {AwaitAxios} from "../../../../src/gluon/util/shared/AwaitAxios";
+import {AwaitAxios} from "../../../../src/http/AwaitAxios";
 import {TestMessageClient} from "../../TestMessageClient";
 
 const MockAdapter = require("axios-mock-adapter");

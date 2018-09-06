@@ -2,9 +2,15 @@ import {HandlerContext, logger} from "@atomist/automation-client";
 import {OpenShiftConfig} from "../../../config/OpenShiftConfig";
 import {JenkinsService} from "../../services/jenkins/JenkinsService";
 import {OCService} from "../../services/openshift/OCService";
-import {roleBindingDefinition, serviceAccountDefinition} from "../../util/jenkins/JenkinsOpenshiftResources";
+import {
+    roleBindingDefinition,
+    serviceAccountDefinition,
+} from "../../util/jenkins/JenkinsOpenshiftResources";
 import {getProjectId} from "../../util/project/Project";
-import {getDevOpsEnvironmentDetails, getDevOpsEnvironmentDetailsProd} from "../../util/team/Teams";
+import {
+    getDevOpsEnvironmentDetails,
+    getDevOpsEnvironmentDetailsProd,
+} from "../../util/team/Teams";
 import {Task} from "../Task";
 import {TaskListMessage} from "../TaskListMessage";
 
@@ -35,7 +41,7 @@ export class AddJenkinsToProdEnvironment extends Task {
         const teamDevOpsProd = getDevOpsEnvironmentDetailsProd(this.devOpsRequestedEvent.team.name).openshiftProjectId;
         logger.info(`Working with OpenShift project Id: ${teamDevOpsProd}`);
 
-        await this.ocService.login(this.openshiftEnvironment);
+        await this.ocService.login(this.openshiftEnvironment, true);
 
         await this.createJenkinsServiceAccount(teamDevOpsProd);
         const token = await this.ocService.getServiceAccountToken("subatomic-jenkins", teamDevOpsProd);
@@ -52,7 +58,7 @@ export class AddJenkinsToProdEnvironment extends Task {
 
         const jenkinsHost = await this.ocService.getJenkinsHost(teamDevOpsProjectId);
 
-        await this.createJenkinsCredentials(teamDevOpsProjectId, jenkinsHost.output, token.output, this.openshiftEnvironment.name);
+        await this.createJenkinsCredentials(teamDevOpsProjectId, jenkinsHost.output, token, this.openshiftEnvironment.name);
 
         await this.taskListMessage.succeedTask(this.TASK_ADD_JENKINS_CREDENTIALS);
 
@@ -62,9 +68,9 @@ export class AddJenkinsToProdEnvironment extends Task {
     }
 
     private async createJenkinsServiceAccount(projectId: string) {
-        await this.ocService.createResourceFromDataInNamespace(serviceAccountDefinition(), projectId);
+        await this.ocService.applyResourceFromDataInNamespace(serviceAccountDefinition(), projectId);
 
-        await this.ocService.createResourceFromDataInNamespace(roleBindingDefinition(), projectId, true);
+        await this.ocService.applyResourceFromDataInNamespace(roleBindingDefinition(), projectId, true);
     }
 
     private async addEditRolesToJenkinsServiceAccount(teamDevOpsProd: string, destinationNamespace: string) {

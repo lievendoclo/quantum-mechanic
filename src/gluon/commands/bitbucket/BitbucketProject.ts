@@ -9,6 +9,7 @@ import {
     success,
 } from "@atomist/automation-client";
 import {QMConfig} from "../../../config/QMConfig";
+import {isSuccessCode} from "../../../http/Http";
 import {BitbucketService} from "../../services/bitbucket/BitbucketService";
 import {GluonService} from "../../services/gluon/GluonService";
 import {
@@ -26,7 +27,6 @@ import {
     QMError,
     ResponderMessageClient,
 } from "../../util/shared/Error";
-import {isSuccessCode} from "../../util/shared/Http";
 
 @CommandHandler("Create a new Bitbucket project")
 export class NewBitbucketProject extends RecursiveParameterRequestCommand

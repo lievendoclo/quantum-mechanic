@@ -8,6 +8,7 @@ import {
 } from "@atomist/automation-client";
 import * as _ from "lodash";
 import {QMConfig} from "../../../config/QMConfig";
+import {isSuccessCode} from "../../../http/Http";
 import {GluonService} from "../../services/gluon/GluonService";
 import {menuForProjects} from "../../util/project/Project";
 import {
@@ -19,7 +20,6 @@ import {
     QMError,
     ResponderMessageClient,
 } from "../../util/shared/Error";
-import {isSuccessCode} from "../../util/shared/Http";
 import {menuForTeams} from "../../util/team/Teams";
 
 @CommandHandler("Add additional team/s to a project", QMConfig.subatomic.commandPrefix + " associate team")

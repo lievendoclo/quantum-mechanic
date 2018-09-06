@@ -107,7 +107,8 @@ export class MembersAddedToTeam implements HandleEvent<any> {
                 await bitbucketConfiguration.configureBitbucketProject(project.bitbucketProject.key);
                 // Add to openshift environments
                 for (const environment of QMConfig.subatomic.openshiftNonProd.defaultEnvironments) {
-                    const projectId = getProjectDisplayName(project.owningTenant, project.name, environment.id);
+                    const tenant = await this.gluonService.tenants.gluonTenantFromTenantId(project.owningTenant);
+                    const projectId = getProjectDisplayName(tenant.name, project.name, environment.id);
                     await this.ocService.addTeamMembershipPermissionsToProject(projectId, membersAddedToTeamEvent);
                 }
             }

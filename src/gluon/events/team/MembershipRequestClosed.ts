@@ -13,13 +13,13 @@ import {addressSlackUsers} from "@atomist/automation-client/spi/message/MessageC
 import {inviteUserToSlackChannel} from "@atomist/lifecycle-automation/handlers/command/slack/AssociateRepo";
 import {SlackMessage} from "@atomist/slack-messages";
 import {QMConfig} from "../../../config/QMConfig";
+import {isSuccessCode} from "../../../http/Http";
 import {GluonService} from "../../services/gluon/GluonService";
 import {
     handleQMError,
     QMError,
     ResponderMessageClient,
 } from "../../util/shared/Error";
-import {isSuccessCode} from "../../util/shared/Http";
 
 @CommandHandler("Close a membership request")
 @Tags("subatomic", "team", "membership")

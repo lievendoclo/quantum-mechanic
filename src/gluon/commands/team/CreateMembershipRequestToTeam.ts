@@ -9,10 +9,10 @@ import {
     Parameter,
     Tags,
 } from "@atomist/automation-client";
+import {isSuccessCode} from "../../../http/Http";
 import {GluonService} from "../../services/gluon/GluonService";
 import {getScreenName, loadScreenNameByUserId} from "../../util/member/Members";
 import {handleQMError, QMError, ResponderMessageClient} from "../../util/shared/Error";
-import {isSuccessCode} from "../../util/shared/Http";
 
 @CommandHandler("Request membership to a team")
 @Tags("subatomic", "team", "member")

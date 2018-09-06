@@ -4,7 +4,10 @@ import {QMConfig} from "../../../config/QMConfig";
 import {DevOpsMessages} from "../../messages/team/DevOpsMessages";
 import {JenkinsService} from "../../services/jenkins/JenkinsService";
 import {OCService} from "../../services/openshift/OCService";
-import {roleBindingDefinition, serviceAccountDefinition} from "../../util/jenkins/JenkinsOpenshiftResources";
+import {
+    roleBindingDefinition,
+    serviceAccountDefinition,
+} from "../../util/jenkins/JenkinsOpenshiftResources";
 import {QMError} from "../../util/shared/Error";
 import {Task} from "../Task";
 import {TaskListMessage} from "../TaskListMessage";
@@ -54,13 +57,15 @@ export class AddJenkinsToDevOpsEnvironment extends Task {
 
         const jenkinsHost: string = await this.createJenkinsRoute(projectId);
 
-        const token: string = await this.getJenkinsServiceAccountToken(projectId);
+        const token: string = await this.ocService.getServiceAccountToken("subatomic-jenkins", projectId);
 
         logger.info(`Using Service Account token: ${token}`);
 
         await this.addJenkinsCredentials(projectId, jenkinsHost, token);
 
         await this.taskListMessage.succeedTask(this.TASK_CONFIG_JENKINS);
+
+        await this.taskListMessage.succeedTask(this.TASK_HEADER);
 
         await ctx.messageClient.addressChannels(
             this.devopsMessages.jenkinsSuccessfullyProvisioned(jenkinsHost, this.devOpsRequestedEvent.team.name),
@@ -75,7 +80,7 @@ export class AddJenkinsToDevOpsEnvironment extends Task {
 
         const jenkinsTemplate: any = JSON.parse(jenkinsTemplateJSON.output);
         jenkinsTemplate.metadata.namespace = projectId;
-        await this.ocService.createResourceFromDataInNamespace(jenkinsTemplate, projectId);
+        await this.ocService.applyResourceFromDataInNamespace(jenkinsTemplate, projectId);
     }
 
     private async createJenkinsDeploymentConfig(projectId: string) {
@@ -87,14 +92,14 @@ export class AddJenkinsToDevOpsEnvironment extends Task {
             await this.ocService.getDeploymentConfigInNamespace("jenkins", projectId);
             logger.warn("Jenkins QMTemplate has already been processed, deployment exists");
         } catch (error) {
-            await this.ocService.createResourceFromDataInNamespace(JSON.parse(jenkinsTemplateResultJSON.output), projectId);
+            await this.ocService.applyResourceFromDataInNamespace(JSON.parse(jenkinsTemplateResultJSON.output), projectId);
         }
     }
 
     private async createJenkinsServiceAccount(projectId: string) {
-        await this.ocService.createResourceFromDataInNamespace(serviceAccountDefinition(), projectId);
+        await this.ocService.applyResourceFromDataInNamespace(serviceAccountDefinition(), projectId);
 
-        await this.ocService.createResourceFromDataInNamespace(roleBindingDefinition(), projectId, true);
+        await this.ocService.applyResourceFromDataInNamespace(roleBindingDefinition(), projectId, true);
     }
 
     private async rolloutJenkinsDeployment(projectId) {
@@ -115,11 +120,6 @@ export class AddJenkinsToDevOpsEnvironment extends Task {
             retries: 59,
             minTimeout: 20000,
         });
-    }
-
-    private async getJenkinsServiceAccountToken(projectId: string) {
-        const tokenResult = await this.ocService.getServiceAccountToken("subatomic-jenkins", projectId);
-        return tokenResult.output;
     }
 
     private async createJenkinsRoute(projectId: string): Promise<string> {

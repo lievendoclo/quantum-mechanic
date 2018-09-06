@@ -10,6 +10,7 @@ import {
 } from "@atomist/automation-client";
 import {inspect} from "util";
 import {QMConfig} from "../../../config/QMConfig";
+import {isSuccessCode} from "../../../http/Http";
 import {TeamMembershipMessages} from "../../messages/member/TeamMembershipMessages";
 import {GluonService} from "../../services/gluon/GluonService";
 import {
@@ -27,7 +28,6 @@ import {
     QMError,
     ResponderMessageClient,
 } from "../../util/shared/Error";
-import {isSuccessCode} from "../../util/shared/Http";
 
 @CommandHandler("Create new OpenShift environments for a project", QMConfig.subatomic.commandPrefix + " request project environments")
 @Tags("subatomic", "openshiftNonProd", "project")

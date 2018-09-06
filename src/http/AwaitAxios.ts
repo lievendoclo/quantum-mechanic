@@ -1,4 +1,8 @@
-import Axios, {AxiosInstance, AxiosRequestConfig, AxiosResponse} from "axios-https-proxy-fix";
+import Axios, {
+    AxiosInstance,
+    AxiosRequestConfig,
+    AxiosResponse,
+} from "axios-https-proxy-fix";
 import * as https from "https";
 
 export class AwaitAxios {
@@ -35,6 +39,14 @@ export class AwaitAxios {
     public async get(url: string, config?: AxiosRequestConfig): Promise<AxiosResponse> {
         try {
             return await this.axiosInstance.get(url, config);
+        } catch (error) {
+            return error.response;
+        }
+    }
+
+    public async delete(url: string, config?: AxiosRequestConfig): Promise<AxiosResponse> {
+        try {
+            return await this.axiosInstance.delete(url, config);
         } catch (error) {
             return error.response;
         }

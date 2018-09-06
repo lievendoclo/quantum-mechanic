@@ -3,10 +3,10 @@ import {buttonForCommand} from "@atomist/automation-client/spi/message/MessageCl
 import {SlackMessage, url} from "@atomist/slack-messages";
 import _ = require("lodash");
 import {QMConfig} from "../../../config/QMConfig";
+import {AwaitAxios} from "../../../http/AwaitAxios";
+import {isSuccessCode} from "../../../http/Http";
 import {CreateProject} from "../../commands/project/CreateProject";
-import {AwaitAxios} from "../../util/shared/AwaitAxios";
 import {QMError} from "../../util/shared/Error";
-import {isSuccessCode} from "../../util/shared/Http";
 
 export class ProjectService {
 

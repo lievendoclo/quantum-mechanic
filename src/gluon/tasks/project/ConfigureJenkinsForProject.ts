@@ -1,12 +1,12 @@
 import {HandlerContext, logger} from "@atomist/automation-client";
 import {OpenShiftConfig} from "../../../config/OpenShiftConfig";
 import {QMConfig} from "../../../config/QMConfig";
+import {isSuccessCode} from "../../../http/Http";
 import {QMTemplate} from "../../../template/QMTemplate";
 import {JenkinsService} from "../../services/jenkins/JenkinsService";
 import {OCService} from "../../services/openshift/OCService";
 import {getProjectId} from "../../util/project/Project";
 import {QMError} from "../../util/shared/Error";
-import {isSuccessCode} from "../../util/shared/Http";
 import {getDevOpsEnvironmentDetails} from "../../util/team/Teams";
 import {Task} from "../Task";
 import {TaskListMessage} from "../TaskListMessage";
@@ -35,6 +35,8 @@ export class ConfigureJenkinsForProject extends Task {
     protected async executeTask(ctx: HandlerContext): Promise<boolean> {
         const teamDevOpsProjectId = getDevOpsEnvironmentDetails(this.environmentsRequestedEvent.teams[0].name).openshiftProjectId;
 
+        await this.ocService.login(this.openshiftEnvironment);
+
         await this.addEditRolesToJenkinsServiceAccount(
             teamDevOpsProjectId,
             this.environmentsRequestedEvent.project.name,
@@ -47,11 +49,11 @@ export class ConfigureJenkinsForProject extends Task {
 
         logger.debug(`Using Jenkins Route host [${jenkinsHost.output}] to add Bitbucket credentials`);
 
-        await this.createJenkinsBuildTemplate(this.environmentsRequestedEvent, teamDevOpsProjectId, jenkinsHost.output, token.output);
+        await this.createJenkinsBuildTemplate(this.environmentsRequestedEvent, teamDevOpsProjectId, jenkinsHost.output, token);
 
         await this.taskListMessage.succeedTask(this.TASK_CREATE_JENKINS_BUILD_TEMPLATE);
 
-        await this.createJenkinsCredentials(teamDevOpsProjectId, jenkinsHost.output, token.output);
+        await this.createJenkinsCredentials(teamDevOpsProjectId, jenkinsHost.output, token);
 
         await this.taskListMessage.succeedTask(this.TASK_ADD_JENKINS_CREDENTIALS);
 
@@ -61,8 +63,6 @@ export class ConfigureJenkinsForProject extends Task {
     }
 
     private async addEditRolesToJenkinsServiceAccount(teamDevOpsProjectId: string, projectName: string, tenant: string) {
-
-        await this.ocService.login(this.openshiftEnvironment);
 
         for (const environment of this.openshiftEnvironment.defaultEnvironments) {
             const openshiftProjectId = getProjectId(tenant, projectName, environment.id);

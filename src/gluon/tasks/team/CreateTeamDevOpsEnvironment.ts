@@ -1,7 +1,9 @@
 import {HandlerContext, logger} from "@atomist/automation-client";
 import {OpenShiftConfig} from "../../../config/OpenShiftConfig";
 import {QMConfig} from "../../../config/QMConfig";
+import {ResourceFactory} from "../../../openshift/api/resources/ResourceFactory";
 import {OCService} from "../../services/openshift/OCService";
+import {QMError, QMErrorType} from "../../util/shared/Error";
 import {
     DevOpsEnvironmentDetails,
     getDevOpsEnvironmentDetails,
@@ -37,7 +39,7 @@ export class CreateTeamDevOpsEnvironment extends Task {
         const projectId = this.devopsEnvironmentDetails.openshiftProjectId;
         logger.info(`Working with OpenShift project Id: ${projectId}`);
 
-        await this.ocService.login(this.openshiftEnvironment);
+        await this.ocService.login(this.openshiftEnvironment, true);
 
         await this.createDevOpsEnvironment(projectId, this.devOpsRequestedEvent.team.name);
 
@@ -66,7 +68,11 @@ export class CreateTeamDevOpsEnvironment extends Task {
         try {
             await this.ocService.newDevOpsProject(projectId, teamName);
         } catch (error) {
-            logger.warn("DevOps project already seems to exist. Trying to continue.");
+            if (error instanceof QMError && error.errorType === QMErrorType.conflict) {
+                logger.warn("DevOps project already exists. Continuing.");
+            } else {
+                throw error;
+            }
         }
 
         await this.ocService.createDevOpsDefaultResourceQuota(projectId);
@@ -79,13 +85,16 @@ export class CreateTeamDevOpsEnvironment extends Task {
     private async copySubatomicAppTemplatesToDevOpsEnvironment(projectId: string) {
         logger.info(`Finding templates in subatomic namespace`);
 
-        const appTemplatesJSON = await this.ocService.getSubatomicAppTemplates();
+        const appTemplates = await this.ocService.getSubatomicAppTemplates();
 
-        const appTemplates: any = JSON.parse(appTemplatesJSON.output);
-        for (const item of appTemplates.items) {
+        for (const item of appTemplates) {
             item.metadata.namespace = projectId;
         }
-        await this.ocService.createResourceFromDataInNamespace(appTemplates, projectId);
+
+        const resourceList = ResourceFactory.resourceList();
+        resourceList.items.push(...appTemplates);
+
+        await this.ocService.applyResourceFromDataInNamespace(resourceList, projectId);
     }
 
     private async addBitbucketSSHSecret(projectId: string) {

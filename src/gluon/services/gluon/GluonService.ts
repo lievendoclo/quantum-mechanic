@@ -1,4 +1,4 @@
-import {AwaitAxios} from "../../util/shared/AwaitAxios";
+import {AwaitAxios} from "../../../http/AwaitAxios";
 import {ApplicationService} from "./ApplicationService";
 import {GluonProdService} from "./GluonProdService";
 import {MemberService} from "./MemberService";
