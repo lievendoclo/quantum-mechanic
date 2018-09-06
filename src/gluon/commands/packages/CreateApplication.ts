@@ -27,7 +27,6 @@ import {
     ResponderMessageClient,
 } from "../../util/shared/Error";
 
-@CommandHandler("Create a new Application", QMConfig.subatomic.commandPrefix + " create application")
 export class CreateApplication extends RecursiveParameterRequestCommand
     implements GluonTeamNameSetter, GluonProjectNameSetter {
 

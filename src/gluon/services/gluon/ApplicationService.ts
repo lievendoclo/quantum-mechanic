@@ -5,7 +5,7 @@ import * as _ from "lodash";
 import {QMConfig} from "../../../config/QMConfig";
 import {AwaitAxios} from "../../../http/AwaitAxios";
 import {isSuccessCode} from "../../../http/Http";
-import {CreateApplication} from "../../commands/packages/CreateApplication";
+import {LinkExistingApplication} from "../../commands/packages/LinkExistingApplication";
 import {QMError} from "../../util/shared/Error";
 
 export class ApplicationService {
@@ -30,14 +30,14 @@ export class ApplicationService {
             const slackMessage: SlackMessage = {
                 text: "Unfortunately there are no applications linked to this project.",
                 attachments: [{
-                    text: "Would you like to create a new application?",
-                    fallback: "Would you like to create a new application?",
+                    text: "Would you like to link an existing application?",
+                    fallback: "Would you like to link an existing application?",
                     actions: [
                         buttonForCommand(
                             {
-                                text: "Create application",
+                                text: "Link existing application",
                             },
-                            new CreateApplication()),
+                            new LinkExistingApplication()),
                     ],
                 }],
             };
@@ -64,7 +64,7 @@ export class ApplicationService {
                     attachments: [{
                         text: `
 Unfortunately Subatomic does not manage this application.
-Consider creating a new application called ${applicationName}. Click the button below to do that now.
+Consider linking an existing application called ${applicationName}. Click the button below to do that now.
                             `,
                         fallback: "Application not managed by Subatomic",
                         footer: `For more information, please read the ${url(`${QMConfig.subatomic.docs.baseUrl}/quantum-mechanic/command-reference#create-bitbucket-project`,
@@ -74,9 +74,9 @@ Consider creating a new application called ${applicationName}. Click the button 
                         actions: [
                             buttonForCommand(
                                 {
-                                    text: "Create application",
+                                    text: "Link existing application",
                                 },
-                                new CreateApplication(), {
+                                new LinkExistingApplication(), {
                                     name: applicationName,
                                 }),
                         ],

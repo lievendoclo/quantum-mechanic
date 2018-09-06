@@ -8,7 +8,6 @@ import {AddSlackDetails} from "./gluon/commands/member/AddSlackDetails";
 import {OnboardMember} from "./gluon/commands/member/OnboardMember";
 import {ConfigureBasicPackage} from "./gluon/commands/packages/ConfigureBasicPackage";
 import {ConfigurePackage} from "./gluon/commands/packages/ConfigurePackage";
-import {CreateApplication} from "./gluon/commands/packages/CreateApplication";
 import {CreateApplicationProd} from "./gluon/commands/packages/CreateApplicationProd";
 import {LinkExistingApplication} from "./gluon/commands/packages/LinkExistingApplication";
 import {LinkExistingLibrary} from "./gluon/commands/packages/LinkExistingLibrary";
@@ -111,7 +110,6 @@ export const configuration: any = {
         CreateProject,
         NewBitbucketProject,
         NewProjectEnvironments,
-        CreateApplication,
         CreateMembershipRequestToTeam,
         MembershipRequestClosed,
         ListExistingBitbucketProject,
