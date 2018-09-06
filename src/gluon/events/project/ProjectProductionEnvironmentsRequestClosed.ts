@@ -12,6 +12,7 @@ import {GluonService} from "../../services/gluon/GluonService";
 import {CreateOpenshiftEnvironments} from "../../tasks/project/CreateOpenshiftEnvironments";
 import {TaskListMessage} from "../../tasks/TaskListMessage";
 import {TaskRunner} from "../../tasks/TaskRunner";
+import {AddJenkinsToProdEnvironment} from "../../tasks/team/AddJenkinsToProdEnvironment";
 import {CreateTeamDevOpsEnvironment} from "../../tasks/team/CreateTeamDevOpsEnvironment";
 import {OpenshiftProjectEnvironmentRequest} from "../../util/project/Project";
 import {ChannelMessageClient, handleQMError} from "../../util/shared/Error";
@@ -64,8 +65,10 @@ export class ProjectProductionEnvironmentsRequestClosed implements HandleEvent<a
 
                     const devopsEnvironmentDetails = getDevOpsEnvironmentDetailsProd(owningTeam.name);
 
-                    taskRunner.addTask(new CreateTeamDevOpsEnvironment({team: owningTeam}, devopsEnvironmentDetails, prodOpenshift));
-                    taskRunner.addTask(
+                    taskRunner.addTask(new CreateTeamDevOpsEnvironment({team: owningTeam}, devopsEnvironmentDetails, prodOpenshift),
+                    ).addTask(
+                        new AddJenkinsToProdEnvironment({team: owningTeam}, request, prodOpenshift),
+                    ).addTask(
                         new CreateOpenshiftEnvironments(request, devopsEnvironmentDetails, prodOpenshift),
                     );
                 }
