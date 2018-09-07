@@ -18,6 +18,7 @@ export abstract class OpenShiftApiElement {
             httpsAgent: new https.Agent({
                 rejectUnauthorized: false,
             }),
+            proxy: false,
         });
         instance.defaults.headers.common.Authorization = "bearer " + this.openShiftConfig.auth.token;
         return new AwaitAxios(instance);
@@ -33,6 +34,7 @@ export abstract class OpenShiftApiElement {
             httpsAgent: new https.Agent({
                 rejectUnauthorized: false,
             }),
+            proxy: false,
         });
         instance.defaults.headers.common.Authorization = "bearer " + this.openShiftConfig.auth.token;
         return new AwaitAxios(instance);
