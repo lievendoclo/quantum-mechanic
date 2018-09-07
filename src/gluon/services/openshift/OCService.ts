@@ -177,7 +177,7 @@ export class OCService {
 
     public async getSubatomicAppTemplates(namespace = "subatomic"): Promise<OpenshiftResource[]> {
         logger.debug(`Trying to get subatomic templates. namespace: ${namespace}`);
-        const queryResult = await this.openShiftApi.get.getAllFromNamespace("Template", namespace, "template.openshift.io/v1");
+        const queryResult = await this.openShiftApi.get.getAllFromNamespace("Template", namespace, "v1");
 
         if (isSuccessCode(queryResult.status)) {
             const templates = [];
@@ -186,7 +186,7 @@ export class OCService {
                     if (template.metadata.labels.usage === "subatomic-app") {
                         // These aren't set for some reason
                         template.kind = "Template";
-                        template.apiVersion = "template.openshift.io/v1";
+                        template.apiVersion = "v1";
                         templates.push(template);
                     }
                 }
