@@ -232,7 +232,7 @@ export class OCService {
                     }
                 }
             } else {
-                logger.error(`Resource Failed: ${response}`);
+                logger.error(`Resource Failed: ${inspect(response)}`);
             }
             throw new QMError("Failed to create requested resource");
         }
@@ -465,7 +465,7 @@ export class OCService {
             const fileName = Date.now() + ".json";
             fs.writeFileSync(`/tmp/${fileName}`, JSON.stringify(template));
             const processedTemplateResult = await OCCommon.commonCommand("process", `-f /tmp/${fileName}`);
-            const result = await this.openShiftApi.create.create(JSON.parse(processedTemplateResult.output), projectId, apply);
+            const result = await this.applyResourceFromDataInNamespace(JSON.parse(processedTemplateResult.output), projectId, apply);
             if (!isSuccessCode(result.status)) {
                 logger.error(`Template failed to create properly: ${inspect(result)}`);
                 throw new QMError("Failed to create all items in base project template.");
