@@ -113,6 +113,20 @@ export class ResourceUrl {
                 api: OpenshiftApiBaseRoute.API,
             },
         ],
+        clusternetwork: [
+            {
+                apiVersion: "v1",
+                url: "clusternetworks",
+                api: OpenshiftApiBaseRoute.OAPI,
+            },
+        ],
+        netnamespace: [
+            {
+                apiVersion: "v1",
+                url: "netnamespaces",
+                api: OpenshiftApiBaseRoute.OAPI,
+            },
+        ],
     };
 }
 

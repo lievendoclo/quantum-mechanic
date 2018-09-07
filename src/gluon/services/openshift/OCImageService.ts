@@ -26,7 +26,7 @@ export class OCImageService {
 
     public async getSubatomicImageStreamTags(namespace = "subatomic", cleanNamespace = true): Promise<OpenshiftResource[]> {
         logger.debug(`Trying to get subatomic image stream. namespace: ${namespace}`);
-        const queryResult = await this.openShiftApi.get.getAllFromNamespace("ImageStreamTag", namespace, "image.openshift.io/v1");
+        const queryResult = await this.openShiftApi.get.getAllFromNamespace("ImageStreamTag", namespace, "v1");
 
         if (isSuccessCode(queryResult.status)) {
             const isTags = [];
@@ -80,7 +80,7 @@ export class OCImageService {
                     type: "Source",
                 },
             };
-            imageStreamTag.apiVersion = "image.openshift.io/v1";
+            imageStreamTag.apiVersion = "v1";
         }
         return imageStreamTags;
     }

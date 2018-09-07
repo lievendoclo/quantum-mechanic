@@ -8,7 +8,7 @@ export class OpenShiftApiAdm extends OpenShiftApiElement {
     public async podNetworkJoinToProject(projectToJoin: string, projectToJoinTo: string): Promise<OpenshiftApiResult> {
         const clusterNetworkResource = {
             kind: "ClusterNetwork",
-            apiVersion: "network.openshift.io/v1",
+            apiVersion: "v1",
             metadata: {
                 name: "default",
             },
@@ -22,7 +22,7 @@ export class OpenShiftApiAdm extends OpenShiftApiElement {
 
         const netNamespaceResource = {
             kind: "NetNamespace",
-            apiVersion: "network.openshift.io/v1",
+            apiVersion: "v1",
             metadata: {
                 name: projectToJoin,
             },
