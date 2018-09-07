@@ -49,14 +49,14 @@ export class ResourceFactory {
         return baseResource;
     }
 
-    public static serviceAccountRoleBindingResource(namespace: string, role: string,
-                                                    serviceAccount: string): OpenshiftResource {
-        const baseResource = ResourceFactory.roleBindingResource(namespace, role,
-            `system:serviceaccount:${namespace}:${serviceAccount}`);
+    public static serviceAccountRoleBindingResource(sourceNamespace: string, role: string,
+                                                    serviceAccount: string, destinationNamespace: string): OpenshiftResource {
+        const baseResource = ResourceFactory.roleBindingResource(destinationNamespace, role,
+            `system:serviceaccount:${sourceNamespace}:${serviceAccount}`);
         baseResource.subjects.push(
             {
                 kind: "User",
-                namespace,
+                namespace: sourceNamespace,
                 name: serviceAccount,
             },
         );

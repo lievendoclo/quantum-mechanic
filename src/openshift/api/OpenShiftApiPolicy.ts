@@ -10,31 +10,33 @@ export class OpenShiftApiPolicy extends OpenShiftApiElement {
 
     public addRoleToUser(username: string, role: string, namespace: string): Promise<OpenshiftApiResult> {
         if (username.startsWith("system:serviceaccount")) {
-            username = username.split(":").pop();
-            return this.addRoleToServiceAccount(username, role, namespace);
+            const usernameSplit = username.split(":");
+            username = usernameSplit.pop();
+            const sourceNamespace = usernameSplit.pop();
+            return this.addRoleToServiceAccount(username, sourceNamespace, role, namespace);
         } else {
             return this.addRoleToUserAccount(username, role, namespace);
         }
     }
 
-    public addRoleToServiceAccount(serviceAccount: string,
-                                   role: string, namespace: string): Promise<OpenshiftApiResult> {
+    public addRoleToServiceAccount(serviceAccount: string, sourceNamespace: string,
+                                   role: string, destinationNamespace: string): Promise<OpenshiftApiResult> {
         const instance = this.getAxiosInstanceOApi();
-        return this.findExistingRole(instance, role, namespace).then(existingRole => {
+        return this.findExistingRole(instance, role, destinationNamespace).then(existingRole => {
             if (existingRole === null) {
-                const newRole = ResourceFactory.serviceAccountRoleBindingResource(namespace, role, serviceAccount);
+                const newRole = ResourceFactory.serviceAccountRoleBindingResource(destinationNamespace, role, serviceAccount, destinationNamespace);
                 logger.debug("Role not found. Creating new role binding");
 
-                return instance.post(ResourceUrl.getResourceKindUrl(ResourceFactory.baseResource("RoleBinding"), namespace), newRole);
+                return instance.post(ResourceUrl.getResourceKindUrl(ResourceFactory.baseResource("RoleBinding"), destinationNamespace), newRole);
             } else {
                 existingRole.subjects.push({
                     kind: "ServiceAccount",
-                    namespace,
+                    namespace: sourceNamespace,
                     name: serviceAccount,
                 });
-                existingRole.userNames.push(`system:serviceaccount:${namespace}:${serviceAccount}`);
+                existingRole.userNames.push(`system:serviceaccount:${sourceNamespace}:${serviceAccount}`);
                 logger.debug("Found role. Added service account to role binding list");
-                return instance.put(`${ResourceUrl.getResourceKindUrl(ResourceFactory.baseResource("RoleBinding"), namespace)}/${role}`, existingRole);
+                return instance.put(`${ResourceUrl.getResourceKindUrl(ResourceFactory.baseResource("RoleBinding"), destinationNamespace)}/${role}`, existingRole);
             }
         });
     }
