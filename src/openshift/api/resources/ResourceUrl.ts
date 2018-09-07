@@ -88,6 +88,20 @@ export class ResourceUrl {
                 api: OpenshiftApiBaseRoute.OAPI,
             },
         ],
+        endpoints: [
+            {
+                apiVersion: "v1",
+                url: "endpoints",
+                api: OpenshiftApiBaseRoute.API,
+            },
+        ],
+        template: [
+            {
+                apiVersion: "v1",
+                url: "templates",
+                api: OpenshiftApiBaseRoute.OAPI,
+            },
+        ],
         rolebinding: [
             {
                 apiVersion: "v1",
