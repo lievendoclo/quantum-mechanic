@@ -14,7 +14,7 @@ export function serviceAccountDefinition() {
 
 export function roleBindingDefinition() {
     return {
-        apiVersion: "rbac.authorization.k8s.io/v1beta1",
+        apiVersion: "v1",
         kind: "RoleBinding",
         metadata: {
             annotations: {
@@ -23,7 +23,7 @@ export function roleBindingDefinition() {
             name: "subatomic-jenkins-edit",
         },
         roleRef: {
-            apiGroup: "rbac.authorization.k8s.io",
+            apiGroup: "v1",
             kind: "ClusterRole",
             name: "admin",
         },
