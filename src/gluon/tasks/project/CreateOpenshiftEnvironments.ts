@@ -98,7 +98,7 @@ export class CreateOpenshiftEnvironments extends Task {
 
     private async createPodNetwork(tenantName: string, projectName: string) {
         const teamDevOpsProjectId = this.devopsEnvironmentDetails.openshiftProjectId;
-        for (const environment of QMConfig.subatomic.openshiftNonProd.defaultEnvironments) {
+        for (const environment of this.openshiftEnvironment.defaultEnvironments) {
             const projectEnvironment = getProjectId(tenantName, projectName, environment.id);
             const createPodNetworkResult = await this.ocService.createPodNetwork(projectEnvironment, teamDevOpsProjectId);
 
