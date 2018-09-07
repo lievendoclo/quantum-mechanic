@@ -464,6 +464,8 @@ export class OCService {
             logger.info(`Applying base project template to ${projectId}`);
             const fileName = Date.now() + ".json";
             fs.writeFileSync(`/tmp/${fileName}`, JSON.stringify(template));
+            // log client into non prod to process template - hacky! Need to fix.
+            await OCClient.login(QMConfig.subatomic.openshiftNonProd.masterUrl, QMConfig.subatomic.openshiftNonProd.auth.token);
             const processedTemplateResult = await OCCommon.commonCommand("process", `-f /tmp/${fileName}`);
             const result = await this.applyResourceFromDataInNamespace(JSON.parse(processedTemplateResult.output), projectId, apply);
             if (!isSuccessCode(result.status)) {
