@@ -13,6 +13,7 @@ import {LinkExistingApplication} from "./gluon/commands/packages/LinkExistingApp
 import {LinkExistingLibrary} from "./gluon/commands/packages/LinkExistingLibrary";
 import {AddConfigServer} from "./gluon/commands/project/AddConfigServer";
 import {AssociateTeam} from "./gluon/commands/project/AssociateTeam";
+import {CreateGenericProd} from "./gluon/commands/project/CreateGenericProd";
 import {CreateOpenShiftPvc} from "./gluon/commands/project/CreateOpenShiftPvc";
 import {CreateProject} from "./gluon/commands/project/CreateProject";
 import {CreateProjectProdEnvironments} from "./gluon/commands/project/CreateProjectProdEnvironments";
@@ -21,6 +22,7 @@ import {
     ListProjectDetails,
     ListTeamProjects,
 } from "./gluon/commands/project/ProjectDetails";
+import {ReRunProjectProdRequest} from "./gluon/commands/project/ReRunProjectProdRequest";
 import {UpdateProjectProdRequest} from "./gluon/commands/project/UpdateProjectProdRequest";
 import {AddMemberToTeam} from "./gluon/commands/team/AddMemberToTeam";
 import {CreateMembershipRequestToTeam} from "./gluon/commands/team/CreateMembershipRequestToTeam";
@@ -37,6 +39,7 @@ import {BitbucketProjectRequested} from "./gluon/events/bitbucket/BitbucketProje
 import {TeamMemberCreated} from "./gluon/events/member/TeamMemberCreated";
 import {ApplicationCreated} from "./gluon/events/packages/ApplicationCreated";
 import {ApplicationProdRequested} from "./gluon/events/packages/ApplicationProdRequested";
+import {GenericProdRequested} from "./gluon/events/project/GenericProdRequested";
 import {ProjectCreated} from "./gluon/events/project/ProjectCreated";
 import {ProjectEnvironmentsRequested} from "./gluon/events/project/ProjectEnvironmentsRequested";
 import {ProjectProductionEnvironmentsRequestClosed} from "./gluon/events/project/ProjectProductionEnvironmentsRequestClosed";
@@ -57,6 +60,7 @@ import {
     BitbucketProjectAddedEvent,
     BitbucketProjectRequestedEvent,
 } from "./gluon/ingesters/bitbucketIngester";
+import {GenericProdRequestedEvent} from "./gluon/ingesters/genericProdRequested";
 import {
     ProjectCreatedEvent,
     ProjectEnvironmentsRequestedEvent,
@@ -127,6 +131,8 @@ export const configuration: any = {
         CreateProjectProdEnvironments,
         CreateApplicationProd,
         UpdateProjectProdRequest,
+        CreateGenericProd,
+        ReRunProjectProdRequest,
     ],
     events: [
         TeamsLinkedToProject,
@@ -144,6 +150,7 @@ export const configuration: any = {
         ProjectProductionEnvironmentsRequested,
         ApplicationProdRequested,
         ProjectProductionEnvironmentsRequestClosed,
+        GenericProdRequested,
     ],
     ingesters: [
         SlackIdentity,
@@ -173,6 +180,7 @@ export const configuration: any = {
         TeamDevOpsDetails,
         GluonApplication,
         ApplicationProdRequestedEvent,
+        GenericProdRequestedEvent,
     ],
     token,
     http,

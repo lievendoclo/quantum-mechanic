@@ -1,15 +1,8 @@
 import {logger} from "@atomist/automation-client";
 import _ = require("lodash");
-import {OpenshiftProjectEnvironment} from "../../../config/OpenShiftConfig";
-import {QMConfig} from "../../../config/QMConfig";
 import {QMError} from "../../util/shared/Error";
-import {OCService} from "../openshift/OCService";
 
 export class PackageOpenshiftResourceService {
-
-    constructor(public ocService = new OCService()) {
-
-    }
 
     public async getAllApplicationRelatedResources(applicationName, resources) {
 
@@ -17,9 +10,9 @@ export class PackageOpenshiftResourceService {
 
         const pvcs = this.findPVCs(applicationDC, resources);
 
-        const secrets = this.findSecrets(applicationDC, resources);
-
-        const configMaps = this.findConfigMaps(applicationDC, resources);
+        // oc export all does not export secrets and config maps. Need to change this if we want these
+        // const secrets = this.findSecrets(applicationDC, resources);
+        // const configMaps = this.findConfigMaps(applicationDC, resources);
 
         const imageStreams = this.findImageStreams(applicationDC, resources);
 
@@ -31,26 +24,13 @@ export class PackageOpenshiftResourceService {
 
         resources.items.push(applicationDC);
         resources.items.push(...pvcs);
-        resources.items.push(...secrets);
-        resources.items.push(...configMaps);
+        // resources.items.push(...secrets);
+        // resources.items.push(...configMaps);
         resources.items.push(...imageStreams);
         resources.items.push(...services);
         resources.items.push(...routes);
 
         return resources;
-    }
-
-    public getPreProdEnvironment(): OpenshiftProjectEnvironment {
-        const nEnvironments = QMConfig.subatomic.openshiftNonProd.defaultEnvironments.length;
-        return QMConfig.subatomic.openshiftNonProd.defaultEnvironments[nEnvironments - 1];
-    }
-
-    public getDisplayMessage(allResources) {
-        let text = "Found the following resources:\n";
-        for (const resource of allResources.items) {
-            text += `\t*${resource.kind}:* ${resource.metadata.name}\n`;
-        }
-        return text;
     }
 
     private findApplicationDeploymentConfig(applicationName: string, openshiftResources) {
@@ -73,6 +53,8 @@ export class PackageOpenshiftResourceService {
             for (const pvcName of pvcNames) {
                 const pvc = this.findResourceByKindAndName(allResources, "PersistentVolumeClaim", pvcName);
                 if (pvc !== null) {
+                    delete pvc.spec.volumeName;
+                    delete pvc.metadata.annotations;
                     pvcs.push(pvc);
                 }
             }
@@ -141,23 +123,23 @@ export class PackageOpenshiftResourceService {
     }
 
     private getSecretNames(applicationDC) {
-        const pvcNames = [];
+        const secretNames = [];
         for (const volume of applicationDC.spec.template.spec.volumes) {
             if (!volume.secret === undefined) {
-                pvcNames.push(volume.secret.secretName);
+                secretNames.push(volume.secret.secretName);
             }
         }
-        return pvcNames;
+        return secretNames;
     }
 
     private getConfigMapNames(applicationDC) {
-        const pvcNames = [];
+        const secretNames = [];
         for (const volume of applicationDC.spec.template.spec.volumes) {
             if (!volume.configMap === undefined) {
-                pvcNames.push(volume.configMap.name);
+                secretNames.push(volume.configMap.name);
             }
         }
-        return pvcNames;
+        return secretNames;
     }
 
     private findImageStreams(applicationDC, allResources) {

@@ -9,20 +9,18 @@ import {
 } from "@atomist/automation-client";
 import {v4 as uuid} from "uuid";
 import {QMConfig} from "../../../config/QMConfig";
-import {ApplicationProdRequestMessages} from "../../messages/package/ApplicationProdRequestMessages";
+import {GenericProdRequestMessages} from "../../messages/project/GenericProdRequestMessages";
 import {GluonService} from "../../services/gluon/GluonService";
 import {OCService} from "../../services/openshift/OCService";
-import {PackageOpenshiftResourceService} from "../../services/packages/PackageOpenshiftResourceService";
+import {GenericOpenshiftResourceService} from "../../services/projects/GenericOpenshiftResourceService";
 import {
     getHighestPreProdEnvironment,
     getResourceDisplayMessage,
 } from "../../util/openshift/Helpers";
 import {getProjectId} from "../../util/project/Project";
 import {
-    GluonApplicationNameSetter,
     GluonProjectNameSetter,
     GluonTeamNameSetter,
-    setGluonApplicationName,
     setGluonProjectName,
     setGluonTeamName,
 } from "../../util/recursiveparam/GluonParameterSetters";
@@ -38,13 +36,12 @@ import {
     ResponderMessageClient,
 } from "../../util/shared/Error";
 
-@CommandHandler("Create application in prod", QMConfig.subatomic.commandPrefix + " request application prod")
-export class CreateApplicationProd extends RecursiveParameterRequestCommand
-    implements GluonTeamNameSetter, GluonProjectNameSetter, GluonApplicationNameSetter {
+@CommandHandler("Move openshift resources to prod", QMConfig.subatomic.commandPrefix + " request generic prod")
+export class CreateGenericProd extends RecursiveParameterRequestCommand
+    implements GluonTeamNameSetter, GluonProjectNameSetter {
 
     private static RecursiveKeys = {
         teamName: "TEAM_NAME",
-        applicationName: "APPLICATION_NAME",
         projectName: "PROJECT_NAME",
     };
 
@@ -55,19 +52,13 @@ export class CreateApplicationProd extends RecursiveParameterRequestCommand
     public teamChannel: string;
 
     @RecursiveParameter({
-        recursiveKey: CreateApplicationProd.RecursiveKeys.teamName,
+        recursiveKey: CreateGenericProd.RecursiveKeys.teamName,
         selectionMessage: "Please select a team associated with the project you wish to configure the package for",
     })
     public teamName: string;
 
     @RecursiveParameter({
-        recursiveKey: CreateApplicationProd.RecursiveKeys.applicationName,
-        selectionMessage: "Please select the package you wish to configure",
-    })
-    public applicationName: string;
-
-    @RecursiveParameter({
-        recursiveKey: CreateApplicationProd.RecursiveKeys.projectName,
+        recursiveKey: CreateGenericProd.RecursiveKeys.projectName,
         selectionMessage: "Please select the owning project of the package you wish to configure",
     })
     public projectName: string;
@@ -90,9 +81,9 @@ export class CreateApplicationProd extends RecursiveParameterRequestCommand
     })
     public openShiftResourcesJSON: string;
 
-    private applicationProdRequestMessages = new ApplicationProdRequestMessages();
+    private genericProdRequestMessages = new GenericProdRequestMessages();
 
-    constructor(public gluonService = new GluonService(), public ocService = new OCService(), public packageOpenshiftResourceService = new PackageOpenshiftResourceService()) {
+    constructor(public gluonService = new GluonService(), public ocService = new OCService(), public genericOpenshiftResourceService = new GenericOpenshiftResourceService()) {
         super();
     }
 
@@ -106,7 +97,7 @@ export class CreateApplicationProd extends RecursiveParameterRequestCommand
                 return await this.getRequestConfirmation(qmMessageClient);
             } else if (this.approval === ApprovalEnum.APPROVED) {
 
-                await this.createApplicationProdRequest();
+                await this.createGenericProdRequest();
 
                 return await qmMessageClient.send(this.getConfirmationResultMesssage(this.approval), {id: this.correlationId});
             } else if (this.approval === ApprovalEnum.REJECTED) {
@@ -119,9 +110,8 @@ export class CreateApplicationProd extends RecursiveParameterRequestCommand
     }
 
     protected configureParameterSetters() {
-        this.addRecursiveSetter(CreateApplicationProd.RecursiveKeys.teamName, setGluonTeamName);
-        this.addRecursiveSetter(CreateApplicationProd.RecursiveKeys.projectName, setGluonProjectName);
-        this.addRecursiveSetter(CreateApplicationProd.RecursiveKeys.applicationName, setGluonApplicationName);
+        this.addRecursiveSetter(CreateGenericProd.RecursiveKeys.teamName, setGluonTeamName);
+        this.addRecursiveSetter(CreateGenericProd.RecursiveKeys.projectName, setGluonProjectName);
     }
 
     private getConfirmationResultMesssage(result: ApprovalEnum) {
@@ -154,7 +144,7 @@ export class CreateApplicationProd extends RecursiveParameterRequestCommand
 
         await this.findAndListResources(qmMessageClient);
 
-        const message = this.applicationProdRequestMessages.confirmProdRequest(this);
+        const message = this.genericProdRequestMessages.confirmProdRequest(this);
 
         return await qmMessageClient.send(message, {id: this.correlationId});
     }
@@ -169,8 +159,7 @@ export class CreateApplicationProd extends RecursiveParameterRequestCommand
 
         const allResources = await this.ocService.exportAllResources(getProjectId(tenant.name, project.name, getHighestPreProdEnvironment().id));
 
-        const resources = await this.packageOpenshiftResourceService.getAllApplicationRelatedResources(
-            this.applicationName,
+        const resources = await this.genericOpenshiftResourceService.getAllPromotableResources(
             allResources,
         );
 
@@ -191,21 +180,25 @@ export class CreateApplicationProd extends RecursiveParameterRequestCommand
 
     }
 
-    private async createApplicationProdRequest() {
+    private async createGenericProdRequest() {
         const project = await this.gluonService.projects.gluonProjectFromProjectName(this.projectName);
-
-        const application = await this.gluonService.applications.gluonApplicationForNameAndProjectName(this.applicationName, project.name);
 
         const actionedBy = await this.gluonService.members.gluonMemberFromScreenName(this.screenName, false);
 
         const openShiftResources = JSON.parse(this.openShiftResourcesJSON);
 
         const request = {
-            applicationId: application.applicationId,
-            actionedBy: actionedBy.memberId,
+            project: {
+                projectId: project.projectId,
+            },
+            actionedBy: {
+                memberId: actionedBy.memberId,
+            },
             openShiftResources,
         };
 
-        await this.gluonService.prod.application.createApplicationProdRequest(request);
+        logger.info(`Prod request: ${JSON.stringify(request, null, 2)}`);
+
+        await this.gluonService.prod.generic.createGenericProdRequest(request);
     }
 }

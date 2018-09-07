@@ -7,7 +7,10 @@ import {
     logger,
     success,
 } from "@atomist/automation-client";
+import {buttonForCommand} from "@atomist/automation-client/spi/message/MessageClient";
+import {v4 as uuid} from "uuid";
 import {QMConfig} from "../../../config/QMConfig";
+import {ReRunProjectProdRequest} from "../../commands/project/ReRunProjectProdRequest";
 import {GluonService} from "../../services/gluon/GluonService";
 import {CreateOpenshiftEnvironments} from "../../tasks/project/CreateOpenshiftEnvironments";
 import {TaskListMessage} from "../../tasks/TaskListMessage";
@@ -67,9 +70,9 @@ export class ProjectProductionEnvironmentsRequestClosed implements HandleEvent<a
 
                     taskRunner.addTask(new CreateTeamDevOpsEnvironment({team: owningTeam}, devopsEnvironmentDetails, prodOpenshift),
                     ).addTask(
-                        new AddJenkinsToProdEnvironment({team: owningTeam}, request, prodOpenshift),
-                    ).addTask(
                         new CreateOpenshiftEnvironments(request, devopsEnvironmentDetails, prodOpenshift),
+                    ).addTask(
+                        new AddJenkinsToProdEnvironment({team: owningTeam}, request, prodOpenshift),
                     );
                 }
 
@@ -82,7 +85,10 @@ export class ProjectProductionEnvironmentsRequestClosed implements HandleEvent<a
             }
             return await success();
         } catch (error) {
-            return await handleQMError(qmMessageClient, error);
+            await handleQMError(qmMessageClient, error);
+            const project = await this.gluonService.projects.gluonProjectFromProjectName(projectProdRequest.project.name);
+            const correlationId: string = uuid();
+            return await ctx.messageClient.addressChannels(this.createRetryButton(projectProdRequest.projectProdRequestId, correlationId), project.owningTeam.slack.teamChannel, {id: correlationId});
         }
     }
 
@@ -101,5 +107,30 @@ export class ProjectProductionEnvironmentsRequestClosed implements HandleEvent<a
             messageClient.addDestination(team.slack.teamChannel);
         });
         return messageClient;
+    }
+
+    private createRetryButton(projectProdRequestId: string, correlationId: string) {
+        return {
+            text: "The prod request failed to run.",
+            attachments: [{
+                text: "Please check with your system admin and retry when the reason of failure has been determined.",
+                fallback: "Please check with your system admin and retry when the reason of failure has been determined.",
+                color: "#D94649",
+                actions: [
+                    buttonForCommand(
+                        {
+                            text: "Retry Request",
+                            style: "danger",
+                        },
+                        new ReRunProjectProdRequest(),
+                        {
+                            correlationId,
+                            projectProdRequestId,
+                        },
+                    ),
+                ],
+            },
+            ],
+        };
     }
 }

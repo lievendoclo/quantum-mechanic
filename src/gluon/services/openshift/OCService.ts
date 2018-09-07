@@ -21,6 +21,7 @@ import {getProjectDisplayName} from "../../util/project/Project";
 import {BaseProjectTemplateLoader} from "../../util/resources/BaseProjectTemplateLoader";
 import {QuotaLoader} from "../../util/resources/QuotaLoader";
 import {QMError, QMErrorType} from "../../util/shared/Error";
+import {retryFunction} from "../../util/shared/RetryFunction";
 import {QMTeam} from "../../util/team/Teams";
 import {OCImageService} from "./OCImageService";
 
@@ -315,14 +316,29 @@ export class OCService {
     public async getServiceAccountToken(serviceAccountName: string, namespace: string): Promise<string> {
         logger.debug(`Trying to get service account token in namespace. serviceAccountName: ${serviceAccountName}, namespace: ${namespace}`);
 
-        const serviceAccountResult = await this.openShiftApi.get.get("ServiceAccount", serviceAccountName, namespace);
+        let serviceAccountResult = {data: {secrets: []}, status: 200};
+        await retryFunction(4, 5000, async (attemptNumber: number) => {
+            logger.warn(`Trying to get service account token. Attempt number ${attemptNumber}.`);
 
-        if (!isSuccessCode(serviceAccountResult.status)) {
-            logger.error(`Failed to find service account ${serviceAccountName} in namespace ${namespace}. Error: ${inspect(serviceAccountResult)}`);
-            throw new QMError(`Failed to find service account ${serviceAccountName} in namespace ${namespace}. Please make sure it exists.`);
-        }
+            serviceAccountResult = await this.openShiftApi.get.get("ServiceAccount", serviceAccountName, namespace);
+
+            if (!isSuccessCode(serviceAccountResult.status)) {
+                logger.error(`Failed to find service account ${serviceAccountName} in namespace ${namespace}. Error: ${inspect(serviceAccountResult)}`);
+                throw new QMError(`Failed to find service account ${serviceAccountName} in namespace ${namespace}`);
+            }
+
+            if (_.isEmpty(serviceAccountResult.data.secrets)) {
+                if (attemptNumber < 4) {
+                    logger.warn(`Waiting to retry again in ${5000}ms...`);
+                }
+                return false;
+            }
+
+            return true;
+        });
 
         let tokenSecretName: string = "";
+        logger.info(JSON.stringify(serviceAccountResult.data));
         for (const secret of serviceAccountResult.data.secrets) {
             if (secret.name.startsWith(`${serviceAccountName}-token`)) {
                 tokenSecretName = secret.name;

@@ -40,6 +40,8 @@ export class ProjectProductionEnvironmentsRequested implements HandleEvent<any> 
 
         const associatedTeams = await this.gluonService.teams.getTeamsAssociatedToProject(projectProdRequest.project.projectId);
 
+        logger.info("Associated Teams: " + JSON.stringify(associatedTeams));
+
         const qmMessageClient = this.createMessageClient(ctx, associatedTeams);
 
         try {
