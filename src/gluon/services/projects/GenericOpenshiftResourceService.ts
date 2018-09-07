@@ -47,7 +47,7 @@ export class GenericOpenshiftResourceService {
 
     private removeUnwantedResources(allResources) {
         for (let i = allResources.items.length - 1; i >= 0; i--) {
-            const resource = allResources.items;
+            const resource = allResources.items[i];
             if (resource.kind === "Pod" || resource.kind === "ReplicationController") {
                 allResources.items.splice(i, 1);
             }
