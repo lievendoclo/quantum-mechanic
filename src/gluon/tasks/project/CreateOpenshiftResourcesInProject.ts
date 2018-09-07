@@ -1,4 +1,4 @@
-import {HandlerContext, logger} from "@atomist/automation-client";
+import {HandlerContext} from "@atomist/automation-client";
 import {OpenShiftConfig} from "../../../config/OpenShiftConfig";
 import {OCService} from "../../services/openshift/OCService";
 import {getProjectId} from "../../util/project/Project";
@@ -41,7 +41,7 @@ export class CreateOpenshiftResourcesInProject extends Task {
         for (const environment of this.openshiftEnvironment.defaultEnvironments) {
             const prodProjectId = getProjectId(this.tenantName, this.projectName, environment.id);
 
-            await this.ocService.applyResourceFromDataInNamespace(this.openshiftResources, prodProjectId);
+            await this.ocService.applyResourceFromDataInNamespace(this.openshiftResources, prodProjectId, true);
             await this.taskListMessage.succeedTask(this.dynamicTaskNameStore[`${environment.id}Environment`]);
         }
 
