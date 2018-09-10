@@ -78,7 +78,7 @@ export class AddJenkinsToProdEnvironment extends Task {
     private async addEditRolesToJenkinsServiceAccount(teamDevOpsProd: string, destinationNamespace: string) {
 
         await this.ocService.addRoleToUserInNamespace(
-            `system:serviceaccount:${teamDevOpsProd}:jenkins`,
+            `system:serviceaccount:${teamDevOpsProd}:subatomic-jenkins`,
             "edit",
             destinationNamespace);
     }
