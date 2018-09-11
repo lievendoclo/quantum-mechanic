@@ -30,6 +30,7 @@ import {CreateTeam} from "./gluon/commands/team/CreateTeam";
 import {NewDevOpsEnvironment} from "./gluon/commands/team/DevOpsEnvironment";
 import {JoinTeam} from "./gluon/commands/team/JoinTeam";
 import {LinkExistingTeamSlackChannel} from "./gluon/commands/team/LinkExistingTeamSlackChannel";
+import {ListTeamMembers} from "./gluon/commands/team/ListTeamMembers";
 import {NewOrUseTeamSlackChannel} from "./gluon/commands/team/NewOrExistingTeamSlackChannel";
 import {NewTeamSlackChannel} from "./gluon/commands/team/NewSlackChannel";
 import {TagAllLatestImages} from "./gluon/commands/team/TagAllLatestImages";
@@ -124,6 +125,7 @@ export const configuration: any = {
         AddConfigServer,
         ListTeamProjects,
         ListProjectDetails,
+        ListTeamMembers,
         ConfigurePackage,
         ConfigureBasicPackage,
         TagAllLatestImages,
