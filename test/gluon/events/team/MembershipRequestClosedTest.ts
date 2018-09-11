@@ -76,7 +76,8 @@ describe("Close a membership request", () => {
         };
 
         await subject.handle(fakeContext);
-        assert(fakeContext.messageClient.textMsg[0].text === `Welcome to the team *@${userScreenName}*!`);
+        assert(fakeContext.messageClient.textMsg[0].text === `User @${userScreenName} has requested to be added as a team member.`);
+        assert(fakeContext.messageClient.textMsg[1].text === `Welcome to the team *@${userScreenName}*!`);
     });
 
     it("should reject team member", async () => {
@@ -145,6 +146,7 @@ describe("Close a membership request", () => {
         };
 
         await subject.handle(fakeContext);
-        assert.equal(fakeContext.messageClient.textMsg[0], "Your membership request to team 'test_Team' has been rejected by @Approval.User");
+        assert(fakeContext.messageClient.textMsg[0].text === `User @${userScreenName} has requested to be added as a team member.`);
+        assert.equal(fakeContext.messageClient.textMsg[1], "Your membership request to team 'test_Team' has been rejected by @Approval.User");
     });
 });

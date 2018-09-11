@@ -12,6 +12,7 @@ import {
     buttonForCommand,
 } from "@atomist/automation-client/spi/message/MessageClient";
 import {SlackMessage} from "@atomist/slack-messages";
+import {v4 as uuid} from "uuid";
 import {QMConfig} from "../../../config/QMConfig";
 import {MembershipRequestClosed} from "./MembershipRequestClosed";
 
@@ -47,6 +48,7 @@ export class MembershipRequestCreated implements HandleEvent<any> {
         await this.tryAddressMember(ctx, `A membership request to team '${membershipRequestCreatedEvent.team.name}' has been sent for approval`, membershipRequestCreatedEvent.requestedBy);
 
         if (membershipRequestCreatedEvent.team.slackIdentity !== null) {
+            const correlationId: string = uuid();
             const msg: SlackMessage = {
                 text: `User @${membershipRequestCreatedEvent.requestedBy.slackIdentity.screenName} has requested to be added as a team member.`,
                 attachments: [{
@@ -65,6 +67,7 @@ export class MembershipRequestCreated implements HandleEvent<any> {
                                 userScreenName: membershipRequestCreatedEvent.requestedBy.slackIdentity.screenName,
                                 userSlackId: membershipRequestCreatedEvent.requestedBy.slackIdentity.userId,
                                 approvalStatus: "APPROVED",
+                                correlationId,
                             }),
                         buttonForCommand(
                             {text: "Reject"},
@@ -76,12 +79,13 @@ export class MembershipRequestCreated implements HandleEvent<any> {
                                 userScreenName: membershipRequestCreatedEvent.requestedBy.slackIdentity.screenName,
                                 userSlackId: membershipRequestCreatedEvent.requestedBy.slackIdentity.userId,
                                 approvalStatus: "REJECTED",
+                                correlationId,
                             }),
                     ],
                 }],
             };
             logger.info(membershipRequestCreatedEvent.team.slackIdentity.teamChannel);
-            return await ctx.messageClient.addressChannels(msg, membershipRequestCreatedEvent.team.slackIdentity.teamChannel);
+            return await ctx.messageClient.addressChannels(msg, membershipRequestCreatedEvent.team.slackIdentity.teamChannel, {id: correlationId});
         }
 
         return await this.tryAddressMember(ctx, "Please note, the team applied to has no associated slack channel. Approval needs to occur through other avenues.", membershipRequestCreatedEvent.requestedBy);
