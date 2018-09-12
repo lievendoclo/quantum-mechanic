@@ -9,6 +9,7 @@ import {OnboardMember} from "../../commands/member/OnboardMember";
 import {AddMemberToTeam} from "../../commands/team/AddMemberToTeam";
 import {AddMemberToTeamMessages} from "../../messages/team/AddMemberToTeamMessages";
 import {QMError} from "../../util/shared/Error";
+import {loadChannelIdByChannelName} from "../../util/team/Teams";
 import {GluonService} from "../gluon/GluonService";
 
 export class AddMemberToTeamService {
@@ -56,27 +57,26 @@ They have been sent a request to onboard, once they've successfully onboarded yo
 
     public async inviteUserToSlackChannel(ctx: HandlerContext,
                                           newMemberFirstName: string,
-                                          actioningMemberSlackUserId: string,
-                                          teamSlackChannelName: string,
-                                          channelId: string,
+                                          gluonTeamName: string,
+                                          channelName: string,
                                           screenName: string,
-                                          teamId: string,
-                                          teamChannel: string,
                                           slackName: string) {
         try {
-            logger.info(`Added team member! Inviting to channel [${channelId}] -> member [${screenName}]`);
+            logger.info(`Added team member! Inviting to channel [${channelName}] -> member [${screenName}]`);
+            const channelId = await loadChannelIdByChannelName(ctx, channelName);
+            logger.info("Channel ID: " + channelId);
             await inviteUserToSlackChannel(ctx,
-                teamId,
+                ctx.workspaceId,
                 channelId,
                 screenName);
 
-            const message = this.addMemberToTeamMessages.welcomeMemberToTeam(newMemberFirstName, teamSlackChannelName, actioningMemberSlackUserId);
+            const message = this.addMemberToTeamMessages.welcomeMemberToTeam(newMemberFirstName, gluonTeamName);
 
-            return await ctx.messageClient.addressChannels(message, teamChannel);
+            return await ctx.messageClient.addressChannels(message, channelName);
         } catch (error) {
             logger.warn(error);
             return await ctx.messageClient.addressChannels(`User ${slackName} successfully added to your gluon team. Private channels do not currently support automatic user invitation.` +
-                " Please invite the user to this slack channel manually.", teamChannel);
+                " Please invite the user to this slack channel manually.", channelName);
         }
     }
 

@@ -1,0 +1,7 @@
+query ChatChannel($name: String){
+  ChatChannel(name: $name) {
+    id
+    name
+    channelId
+  }
+}

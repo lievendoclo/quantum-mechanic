@@ -4,12 +4,12 @@ import {QMConfig} from "../../../config/QMConfig";
 import {ListTeamProjects} from "../../commands/project/ProjectDetails";
 
 export class AddMemberToTeamMessages {
-    public welcomeMemberToTeam(newMemberFirstName: string, teamSlackChannelName: string, actioningMemberSlackUserId: string): SlackMessage {
+    public welcomeMemberToTeam(newMemberFirstName: string, teamSlackChannelName: string): SlackMessage {
         return {
             text: `Welcome to the team *${newMemberFirstName}*!`,
             attachments: [{
                 text: `
-Welcome *${newMemberFirstName}*, you have been added to the *${teamSlackChannelName}* team by <@${actioningMemberSlackUserId}>.
+Welcome *${newMemberFirstName}*, you have been added to the *${teamSlackChannelName}* team.
 Click the button below to become familiar with the projects this team is involved in.
                                                                               `,
                 fallback: `Welcome to the team ${newMemberFirstName}`,

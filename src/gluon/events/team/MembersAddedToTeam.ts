@@ -13,6 +13,7 @@ import {BitbucketConfigurationService} from "../../services/bitbucket/BitbucketC
 import {BitbucketService} from "../../services/bitbucket/BitbucketService";
 import {GluonService} from "../../services/gluon/GluonService";
 import {OCService} from "../../services/openshift/OCService";
+import {AddMemberToTeamService} from "../../services/team/AddMemberToTeamService";
 import {getProjectDisplayName} from "../../util/project/Project";
 import {
     ChannelMessageClient,
@@ -53,6 +54,7 @@ subscription MembersAddedToTeamEvent {
 export class MembersAddedToTeam implements HandleEvent<any> {
 
     constructor(private gluonService = new GluonService(),
+                private addMemberToTeamService = new AddMemberToTeamService(),
                 private bitbucketService = new BitbucketService(),
                 private ocService = new OCService()) {
     }
@@ -63,6 +65,8 @@ export class MembersAddedToTeam implements HandleEvent<any> {
         const membersAddedToTeamEvent = event.data.MembersAddedToTeamEvent[0];
 
         try {
+            await this.inviteMembersToChannel(ctx, membersAddedToTeamEvent);
+
             const team = membersAddedToTeamEvent.team;
 
             const projects = await this.getListOfTeamProjects(team.name);
@@ -94,6 +98,30 @@ export class MembersAddedToTeam implements HandleEvent<any> {
         teamOwnersUsernames = _.union(teamOwnersUsernames, membersAddedToTeamEvent.owners.map(owner => owner.domainUsername));
         teamMembersUsernames = _.union(teamMembersUsernames, membersAddedToTeamEvent.members.map(member => member.domainUsername));
         return new BitbucketConfigurationService(teamOwnersUsernames, teamMembersUsernames, this.bitbucketService);
+    }
+
+    private async inviteMembersToChannel(ctx: HandlerContext, addMembersToTeamEvent) {
+
+        for (const member of addMembersToTeamEvent.members) {
+            await this.addMemberToTeamService.inviteUserToSlackChannel(
+                ctx,
+                member.firstName,
+                addMembersToTeamEvent.team.name,
+                addMembersToTeamEvent.team.slackIdentity.teamChannel,
+                member.slackIdentity.userId,
+                member.slackIdentity.screenName);
+        }
+
+        for (const owner of addMembersToTeamEvent.owners) {
+            await this.addMemberToTeamService.inviteUserToSlackChannel(
+                ctx,
+                owner.firstName,
+                addMembersToTeamEvent.team.name,
+                addMembersToTeamEvent.team.slackIdentity.teamChannel,
+                owner.slackIdentity.userId,
+                owner.slackIdentity.screenName);
+        }
+
     }
 
     private async addPermissionsForUserToTeams(bitbucketConfiguration: BitbucketConfigurationService, teamName: string, projects, membersAddedToTeamEvent) {

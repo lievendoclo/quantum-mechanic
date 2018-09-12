@@ -7,6 +7,7 @@ import {
     MappedParameter,
     MappedParameters,
     Parameter,
+    success,
     Tags,
 } from "@atomist/automation-client";
 import * as _ from "lodash";
@@ -68,16 +69,7 @@ export class AddMemberToTeam implements HandleCommand<HandlerResult> {
 
             if (!_.isEmpty(teamSlackChannel)) {
                 await this.addMemberToTeamService.addUserToGluonTeam(newMember.memberId, actioningMember.memberId, teamSlackChannel._links.self.href);
-                return await this.addMemberToTeamService.inviteUserToSlackChannel(
-                    ctx,
-                    newMember.firstName,
-                    actioningMember.slack.userId,
-                    teamSlackChannel.name,
-                    this.channelId,
-                    newMember.slack.userId,
-                    this.teamId,
-                    this.teamChannel,
-                    this.slackName);
+                return success();
             } else {
                 return ctx.messageClient.respond(this.addMemberToTeamMessages.alertTeamDoesNotExist(this.teamChannel));
             }

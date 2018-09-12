@@ -146,12 +146,9 @@ describe("AddMemberToTeamService inviteUserToSlackChannel", () => {
 
         await service.inviteUserToSlackChannel(fakeContext,
             "Jude",
-            "action1",
             "channel1",
             "channe1id",
             "Howard",
-            "team1",
-            "channel2id",
             "jude",
         );
 
@@ -175,12 +172,9 @@ describe("AddMemberToTeamService inviteUserToSlackChannel", () => {
 
         await service.inviteUserToSlackChannel(fakeContext,
             "Jude",
-            "action1",
             "channel1",
             "channe1id",
             "Howard",
-            "team1",
-            "channel2id",
             "jude",
         );
 

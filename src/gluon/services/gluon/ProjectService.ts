@@ -72,7 +72,7 @@ Consider creating a new project called ${projectName}. Click the button below to
             returnValue = result.data._embedded.projectResources;
         } else if (promptToCreateIfNoProjects) {
             const slackMessage: SlackMessage = {
-                text: "Unfortunately there are no projects linked to any of your teams with that name.",
+                text: "Unfortunately there are no projects linked to this team.",
                 attachments: [{
                     text: "Would you like to create a new project?",
                     fallback: "Would you like to create a new project?",

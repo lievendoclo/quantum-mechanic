@@ -10,7 +10,6 @@ import {
     Tags,
 } from "@atomist/automation-client";
 import {addressSlackUsers} from "@atomist/automation-client/spi/message/MessageClient";
-import {inviteUserToSlackChannel} from "@atomist/lifecycle-automation/handlers/command/slack/AssociateRepo";
 import {SlackMessage} from "@atomist/slack-messages";
 import {QMConfig} from "../../../config/QMConfig";
 import {isSuccessCode} from "../../../http/Http";
@@ -127,31 +126,15 @@ export class MembershipRequestClosed implements HandleCommand<HandlerResult> {
     private async handleMembershipRequestResult(ctx: HandlerContext) {
         if (this.approvalStatus === "APPROVED") {
             await this.editRequestMessage(ctx, "APPROVED", "#45B254");
-            return await this.handleApprovedMembershipRequest(ctx, this.slackChannelId, this.userScreenName, this.slackTeam, this.approverUserName, this.teamChannel);
         } else {
             await this.editRequestMessage(ctx, "REJECTED", "#D94649");
-            return await this.handleRejectedMembershipRequest(ctx, this.teamName, this.approverUserName, this.userScreenName, this.teamChannel);
+            return await this.handleRejectedMembershipRequest(ctx, this.teamName, this.approverUserName, this.userScreenName);
         }
     }
 
-    private async handleApprovedMembershipRequest(ctx: HandlerContext, slackChannelId: string, approvedUserScreenName: string, slackTeam: string, approvingUserSlackId: string, slackTeamChannel: string) {
-        logger.info(`Added team member! Inviting to channel [${slackChannelId}] -> member @${approvedUserScreenName}`);
-        await inviteUserToSlackChannel(ctx,
-            slackTeam,
-            slackChannelId,
-            approvingUserSlackId);
-
-        const msg: SlackMessage = {
-            text: `Welcome to the team *@${approvedUserScreenName}*!`,
-        };
-        return await ctx.messageClient.addressChannels(msg, slackTeamChannel);
-    }
-
-    private async handleRejectedMembershipRequest(ctx: HandlerContext, teamName: string, rejectingUserScreenName: string, rejectedUserScreenName: string, teamChannel: string) {
-        await ctx.messageClient.send(`Your membership request to team '${teamName}' has been rejected by @${rejectingUserScreenName}`,
+    private async handleRejectedMembershipRequest(ctx: HandlerContext, teamName: string, rejectingUserScreenName: string, rejectedUserScreenName: string) {
+        return await ctx.messageClient.send(`Your membership request to team '${teamName}' has been rejected by @${rejectingUserScreenName}`,
             addressSlackUsers(QMConfig.teamId, rejectedUserScreenName));
-
-        return await ctx.messageClient.addressChannels("Membership request rejected", teamChannel);
     }
 
     private async handleError(ctx: HandlerContext, error) {

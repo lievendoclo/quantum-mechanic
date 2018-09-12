@@ -26,6 +26,6 @@ export class NewOrUseTeamSlackChannel implements HandleCommand {
     public teamSlackChannelMessages = new TeamSlackChannelMessages();
 
     public async handle(ctx: HandlerContext): Promise<HandlerResult> {
-        return await ctx.messageClient.respond(this.teamSlackChannelMessages.createNewOrUseExistingSlackChannel(this.teamChannel, this.teamName, ctx.teamId));
+        return await ctx.messageClient.respond(this.teamSlackChannelMessages.createNewOrUseExistingSlackChannel(this.teamChannel, this.teamName, ctx.workspaceId));
     }
 }
