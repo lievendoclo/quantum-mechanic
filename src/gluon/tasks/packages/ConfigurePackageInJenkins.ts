@@ -48,10 +48,13 @@ export class ConfigurePackageInJenkins extends Task {
 
     protected async executeTask(ctx: HandlerContext): Promise<boolean> {
         await this.ocService.login();
+
+        logger.info(JSON.stringify(this.bitbucketRepository, null, 2));
+
         await this.addJenkinsFile(
             this.jenkinsFile,
             this.bitbucketProject.key,
-            this.bitbucketRepository.name,
+            this.bitbucketRepository.slug,
         );
 
         await this.taskListMessage.succeedTask(this.TASK_ADD_JENKINS_FILE);
@@ -85,7 +88,7 @@ export class ConfigurePackageInJenkins extends Task {
         return true;
     }
 
-    private async addJenkinsFile(jenkinsfileName, bitbucketProjectKey, bitbucketRepoName): Promise<HandlerResult> {
+    private async addJenkinsFile(jenkinsfileName, bitbucketProjectKey, bitbucketRepositorySlug): Promise<HandlerResult> {
 
         if (jenkinsfileName !== this.JENKINSFILE_EXISTS) {
             const username = QMConfig.subatomic.bitbucket.auth.username;
@@ -97,7 +100,7 @@ export class ConfigurePackageInJenkins extends Task {
                 new BitBucketServerRepoRef(
                     QMConfig.subatomic.bitbucket.baseUrl,
                     bitbucketProjectKey,
-                    bitbucketRepoName));
+                    bitbucketRepositorySlug));
             try {
                 await project.findFile("Jenkinsfile");
             } catch (error) {
@@ -178,7 +181,7 @@ export class ConfigurePackageInJenkins extends Task {
 
         return await ctx.messageClient.addressChannels({
             text: `Your ${packageTypeString} *${applicationName}*, in project *${projectName}*, has been provisioned successfully ` +
-            "and is ready to build/deploy",
+                "and is ready to build/deploy",
             attachments: [{
                 fallback: `Your ${packageTypeString} has been provisioned successfully`,
                 footer: `For more information, please read the ${this.docs() + "#jenkins-build"}`,

@@ -8,7 +8,7 @@ export function menuForBitbucketRepositories(ctx: HandlerContext, bitbucketRepos
     return createMenu(ctx,
         bitbucketRepositories.map(bitbucketRepository => {
             return {
-                value: bitbucketRepository.name,
+                value: bitbucketRepository.slug,
                 text: bitbucketRepository.name,
             };
         }),

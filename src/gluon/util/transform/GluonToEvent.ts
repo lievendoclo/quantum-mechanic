@@ -23,6 +23,7 @@ export class GluonToEvent {
             name: gluonApplication.bitbucketRepository.name,
             repoUrl: gluonApplication.bitbucketRepository.repoUrl,
             remoteUrl: gluonApplication.bitbucketRepository.remoteUrl,
+            slug: gluonApplication.bitbucketRepository.slug,
         };
     }
 
