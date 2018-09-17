@@ -52,4 +52,12 @@ export class AwaitAxios {
         }
     }
 
+    public async patch(url: string, data?: any, config?: AxiosRequestConfig): Promise<AxiosResponse> {
+        try {
+            return await this.axiosInstance.patch(url, data, config);
+        } catch (error) {
+            return error.response;
+        }
+    }
+
 }

@@ -1,4 +1,10 @@
-import {HandlerContext, HandlerResult} from "@atomist/automation-client";
+import {
+    HandlerContext,
+    HandlerResult,
+    logger,
+} from "@atomist/automation-client";
+import {QMConfig} from "../../../config/QMConfig";
+import {OpenshiftResource} from "../../../openshift/api/resources/OpenshiftResource";
 import {OCService} from "../../services/openshift/OCService";
 import {QMError} from "../shared/Error";
 import {createMenu} from "../shared/GenericMenu";
@@ -16,6 +22,10 @@ export async function setOpenshiftTemplate(
 
     if (commandHandler.teamName === undefined) {
         throw new QMError(`setOpenshiftTemplate commandHandler requires the teamName parameter to be defined`);
+    }
+
+    if (!commandHandler.ocService.loggedIn) {
+        await commandHandler.ocService.login(QMConfig.subatomic.openshiftNonProd, true);
     }
 
     const namespace = getDevOpsEnvironmentDetails(commandHandler.teamName).openshiftProjectId;
@@ -47,7 +57,43 @@ export async function setImageName(
         throw new QMError(`setImageName commandHandler requires ocService parameter to be defined`);
     }
 
+    if (!commandHandler.ocService.loggedIn) {
+        await commandHandler.ocService.login(QMConfig.subatomic.openshiftNonProd, true);
+    }
+
     const images = await commandHandler.ocService.getSubatomicImageStreamTags();
+
+    return await presentImageMenu(ctx, commandHandler, selectionMessage, images);
+}
+
+export async function setImageNameFromDevOps(
+    ctx: HandlerContext,
+    commandHandler: ImageNameSetter,
+    selectionMessage: string = "Please select an image") {
+    if (commandHandler.ocService === undefined) {
+        throw new QMError(`setImageName commandHandler requires ocService parameter to be defined`);
+    }
+
+    if (commandHandler.teamName === undefined) {
+        throw new QMError(`setImageNameFromDevOps commandHandler requires the teamName parameter to be defined`);
+    }
+
+    if (!commandHandler.ocService.loggedIn) {
+        await commandHandler.ocService.login(QMConfig.subatomic.openshiftNonProd, true);
+    }
+
+    const devOpsEnvironment = getDevOpsEnvironmentDetails(commandHandler.teamName);
+
+    const images = await commandHandler.ocService.getAllImageStreamTags(devOpsEnvironment.openshiftProjectId);
+
+    return await presentImageMenu(ctx, commandHandler, selectionMessage, images);
+}
+
+async function presentImageMenu(ctx: HandlerContext,
+                                commandHandler: ImageNameSetter,
+                                selectionMessage: string,
+                                images: OpenshiftResource[]) {
+    logger.info(JSON.stringify(images, null, 2));
     return await createMenu(
         ctx,
         images.map(image => {
@@ -65,5 +111,6 @@ export async function setImageName(
 export interface ImageNameSetter {
     ocService: OCService;
     imageName: string;
+    teamName?: string;
     handle: (ctx: HandlerContext) => Promise<HandlerResult>;
 }

@@ -1,4 +1,5 @@
 import {HandleCommand, HandlerContext} from "@atomist/automation-client";
+import * as _ from "lodash";
 import {createMenu} from "../shared/GenericMenu";
 
 export enum ApplicationType {
@@ -22,4 +23,8 @@ export function menuForApplications(ctx: HandlerContext, applications: any[],
         "Select Application/Library",
         applicationNameVariable,
     );
+}
+
+export function getBuildConfigName(projectName: string, packageName: string): string {
+    return `${_.kebabCase(projectName).toLowerCase()}-${_.kebabCase(packageName).toLowerCase()}`;
 }

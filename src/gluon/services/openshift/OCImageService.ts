@@ -24,9 +24,28 @@ export class OCImageService {
 
     private openShiftApiInstance: OpenShiftApi;
 
-    public async getSubatomicImageStreamTags(namespace = "subatomic", cleanNamespace = true): Promise<OpenshiftResource[]> {
+    public async getAllImageStreamTags(namespace = "subatomic", cleanNamespace = true): Promise<OpenshiftResource[]> {
         logger.debug(`Trying to get subatomic image stream. namespace: ${namespace}`);
         const queryResult = await this.openShiftApi.get.getAllFromNamespace("ImageStreamTag", namespace, "v1");
+
+        if (isSuccessCode(queryResult.status)) {
+            const isTags = [];
+            for (const imageStreamTag of queryResult.data.items) {
+                if (cleanNamespace) {
+                    delete imageStreamTag.metadata.namespace;
+                }
+                isTags.push(imageStreamTag);
+            }
+            return isTags;
+        } else {
+            logger.error(`Failed to find Image Stream Tags in the specified namespace: ${inspect(queryResult)}`);
+            throw new QMError("Failed to find Image Stream Tags in the specified namespace");
+        }
+    }
+
+    public async getSubatomicImageStreamTags(cleanNamespace = true): Promise<OpenshiftResource[]> {
+        logger.debug(`Trying to get subatomic image stream from subatomic namespace`);
+        const queryResult = await this.openShiftApi.get.getAllFromNamespace("ImageStreamTag", "subatomic", "v1");
 
         if (isSuccessCode(queryResult.status)) {
             const isTags = [];
@@ -41,46 +60,52 @@ export class OCImageService {
                     }
                 }
             }
-            logger.info(JSON.stringify(isTags, undefined, 2));
             return isTags;
         } else {
-            logger.error(`Failed to find Subatomic App Templates in Subatomic namespace: ${inspect(queryResult)}`);
-            throw new QMError("Failed to find Subatomic App Templates in the Subatomic namespace");
+            logger.error(`Failed to find Subatomic Image Stream Tags in the specified namespace: ${inspect(queryResult)}`);
+            throw new QMError("Failed to find Subatomic Image Stream Tags in the specified namespace");
         }
     }
 
-    public modifyImageStreamTagsToImportIntoNamespace(imageStreamTagList: OpenshiftResource[], namespace: string): OpenshiftResource[] {
-        const imageStreamTags = _.cloneDeep(imageStreamTagList);
-        for (const imageStreamTag of imageStreamTags) {
-            const dockerImageReference: string[] = imageStreamTag.image.dockerImageReference.split("/");
-            const originalNamespace = dockerImageReference[1];
-            const imageName = dockerImageReference[2];
-            imageStreamTag.lookupPolicy = {
-                local: false,
-            };
-            imageStreamTag.referencePolicy = {
+    public modifyImageStreamTagToImportIntoNamespace(imageStreamTagOriginal: OpenshiftResource, namespace: string) {
+        const imageStreamTag = _.cloneDeep(imageStreamTagOriginal);
+        const dockerImageReference: string[] = imageStreamTag.image.dockerImageReference.split("/");
+        const originalNamespace = dockerImageReference[1];
+        const imageName = dockerImageReference[2];
+        imageStreamTag.lookupPolicy = {
+            local: false,
+        };
+        imageStreamTag.referencePolicy = {
+            type: "Source",
+        };
+        imageStreamTag.metadata = {
+            namespace,
+            name: imageStreamTag.metadata.name,
+            creationTimestamp: null,
+        };
+        imageStreamTag.tag = {
+            name: "",
+            annotations: null,
+            from: {
+                kind: "ImageStreamImage",
+                namespace: originalNamespace,
+                name: imageName,
+            },
+            generation: null,
+            importPolicy: {},
+            referencePolicy: {
                 type: "Source",
-            };
-            imageStreamTag.metadata = {
-                namespace,
-                name: imageStreamTag.metadata.name,
-                creationTimestamp: null,
-            };
-            imageStreamTag.tag = {
-                name: "",
-                annotations: null,
-                from: {
-                    kind: "ImageStreamImage",
-                    namespace: originalNamespace,
-                    name: imageName,
-                },
-                generation: null,
-                importPolicy: {},
-                referencePolicy: {
-                    type: "Source",
-                },
-            };
-            imageStreamTag.apiVersion = "v1";
+            },
+        };
+        imageStreamTag.apiVersion = "v1";
+
+        return imageStreamTag;
+    }
+
+    public modifyImageStreamTagsToImportIntoNamespace(imageStreamTagList: OpenshiftResource[], namespace: string): OpenshiftResource[] {
+        const imageStreamTags = [];
+        for (const imageStreamTag of imageStreamTagList) {
+            imageStreamTags.push(this.modifyImageStreamTagToImportIntoNamespace(imageStreamTag, namespace));
         }
         return imageStreamTags;
     }

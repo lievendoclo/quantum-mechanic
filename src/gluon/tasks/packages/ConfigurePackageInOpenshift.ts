@@ -9,9 +9,13 @@ import {QMConfig} from "../../../config/QMConfig";
 import {OpenshiftResource} from "../../../openshift/api/resources/OpenshiftResource";
 import {GluonService} from "../../services/gluon/GluonService";
 import {OCService} from "../../services/openshift/OCService";
-import {ApplicationType} from "../../util/packages/Applications";
+import {
+    ApplicationType,
+    getBuildConfigName,
+} from "../../util/packages/Applications";
 import {getProjectDevOpsId, getProjectId} from "../../util/project/Project";
 import {QMError} from "../../util/shared/Error";
+import {getDevOpsEnvironmentDetails} from "../../util/team/Teams";
 import {Task} from "../Task";
 import {TaskListMessage} from "../TaskListMessage";
 
@@ -44,12 +48,12 @@ export class ConfigurePackageInOpenshift extends Task {
 
     private async doConfiguration() {
 
-        const teamDevOpsProjectId = `${_.kebabCase(this.packageDetails.owningTeamName).toLowerCase()}-devops`;
+        const teamDevOpsProjectId = getDevOpsEnvironmentDetails(this.packageDetails.owningTeamName).openshiftProjectId;
         logger.debug(`Using owning team DevOps project: ${teamDevOpsProjectId}`);
 
         if (this.packageDetails.packageType === ApplicationType.DEPLOYABLE.toString()) {
             await this.ocService.login();
-            const appBuildName = `${_.kebabCase(this.packageDetails.projectName).toLowerCase()}-${_.kebabCase(this.packageDetails.packageName).toLowerCase()}`;
+            const appBuildName = getBuildConfigName(this.packageDetails.projectName, this.packageDetails.packageName);
             await this.createApplicationImageStream(appBuildName, teamDevOpsProjectId);
 
             await this.taskListMessage.succeedTask(this.TASK_CREATE_IMAGE_STREAM);

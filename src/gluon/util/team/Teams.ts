@@ -47,9 +47,9 @@ export function getDevOpsEnvironmentDetailsProd(teamName): DevOpsEnvironmentDeta
     return getDevOpsEnvironmentDetails(teamName, "-prod");
 }
 
-export function getDevOpsEnvironmentDetails(teamName, subfix: string = ""): DevOpsEnvironmentDetails {
+export function getDevOpsEnvironmentDetails(teamName, postfix: string = ""): DevOpsEnvironmentDetails {
     return {
-        openshiftProjectId: `${_.kebabCase(teamName).toLowerCase()}-devops${subfix}`,
+        openshiftProjectId: `${_.kebabCase(teamName).toLowerCase()}-devops${postfix}`,
         name: `${teamName} DevOps`,
         description: `DevOps environment for ${teamName} [managed by Subatomic]`,
     };

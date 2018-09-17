@@ -11,6 +11,7 @@ import {ConfigurePackage} from "./gluon/commands/packages/ConfigurePackage";
 import {CreateApplicationProd} from "./gluon/commands/packages/CreateApplicationProd";
 import {LinkExistingApplication} from "./gluon/commands/packages/LinkExistingApplication";
 import {LinkExistingLibrary} from "./gluon/commands/packages/LinkExistingLibrary";
+import {PatchBuildConfigBaseImage} from "./gluon/commands/packages/PatchBuildConfigBaseImage";
 import {AddConfigServer} from "./gluon/commands/project/AddConfigServer";
 import {AssociateTeam} from "./gluon/commands/project/AssociateTeam";
 import {CreateGenericProd} from "./gluon/commands/project/CreateGenericProd";
@@ -135,6 +136,7 @@ export const configuration: any = {
         UpdateProjectProdRequest,
         CreateGenericProd,
         ReRunProjectProdRequest,
+        PatchBuildConfigBaseImage,
     ],
     events: [
         TeamsLinkedToProject,
