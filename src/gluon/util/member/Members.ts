@@ -11,7 +11,7 @@ export function getScreenName(screenName: string) {
     if (screenName.startsWith("<@")) {
         result = _.replace(screenName, /(<@)|>/g, "");
     }
-    return result;
+    return result.trim();
 }
 
 export async function loadScreenNameByUserId(ctx: HandlerContext, userId: string): Promise<string> {
