@@ -55,6 +55,13 @@ export function getDevOpsEnvironmentDetails(teamName, postfix: string = ""): Dev
     };
 }
 
+export function getTeamSlackChannel(team: { slack?: { teamChannel: string } }) {
+    if (team.slack !== undefined) {
+        return team.slack.teamChannel;
+    }
+    return undefined;
+}
+
 export interface DevOpsEnvironmentDetails {
     openshiftProjectId: string;
     name: string;

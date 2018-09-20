@@ -9,7 +9,10 @@ import {OnboardMember} from "../../commands/member/OnboardMember";
 import {AddMemberToTeam} from "../../commands/team/AddMemberToTeam";
 import {AddMemberToTeamMessages} from "../../messages/team/AddMemberToTeamMessages";
 import {QMError} from "../../util/shared/Error";
-import {loadChannelIdByChannelName} from "../../util/team/Teams";
+import {
+    getTeamSlackChannel,
+    loadChannelIdByChannelName,
+} from "../../util/team/Teams";
 import {GluonService} from "../gluon/GluonService";
 
 export class AddMemberToTeamService {
@@ -101,7 +104,7 @@ They have been sent a request to onboard, once they've successfully onboarded yo
 
     private async partOfTeam(newMember, teamChannel: string) {
         if (!_.isEmpty(_.find(newMember.teams,
-            (team: any) => team.slack.teamChannel === teamChannel))) {
+            (team: any) => getTeamSlackChannel(team) === teamChannel))) {
             throw new QMError(`${newMember.slack.screenName} is already a member of this team.`);
         }
         return newMember;
