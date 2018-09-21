@@ -13,6 +13,7 @@ import {
 import {buttonForCommand} from "@atomist/automation-client/spi/message/MessageClient";
 import {SlackMessage, url} from "@atomist/slack-messages";
 import {QMConfig} from "../../../config/QMConfig";
+import {OnboardMember} from "../../commands/member/OnboardMember";
 import {AddMemberToTeam} from "../../commands/team/AddMemberToTeam";
 import {NewDevOpsEnvironment} from "../../commands/team/DevOpsEnvironment";
 import {GluonService} from "../../services/gluon/GluonService";
@@ -83,6 +84,59 @@ export class BotJoinedChannel implements HandleEvent<any> {
                 const channelNameString = `the ${botJoinedChannel.channel.name}`;
 
                 return await this.sendBotTeamWelcomeMessage(ctx, channelNameString, botJoinedChannel.channel.channelId);
+            } else {
+                const userName = botJoinedChannel.user.screenName;
+
+                logger.info("Checking whether the user onboarded");
+                let existingUser;
+                try {
+                    existingUser = await this.gluonService.members.gluonMemberFromScreenName(userName);
+
+                    logger.info("Checking whether the user is a part of the team");
+                    for (const team of existingUser.teams) {
+                        if (team.slack.teamChannel === botJoinedChannel.channel.name) {
+                            logger.info("User is a part of this team.");
+                            return await success();
+                        }
+                    }
+
+                    const slackMessage: SlackMessage = {
+                        text: `Welcome to *${botJoinedChannel.channel.name}* team channel @${userName}!`,
+                        attachments: [{
+                            fallback: `Welcome to *${botJoinedChannel.channel.name}* team channel!`,
+                            text: "Unfortunately you are not registered as a member/owner of this team. If you would like to join this team please get a team owner (sub list team members`) to add you.",
+                            actions: [
+                                buttonForCommand(
+                                    {
+                                        text: `Add ${userName}`,
+                                        style: "primary",
+                                    },
+                                    new AddMemberToTeam(),
+                                    {
+                                        slackName: botJoinedChannel.user.userId
+                                        ,
+                                    }),
+                            ],
+                        }],
+                    };
+                    return ctx.messageClient.addressChannels(slackMessage, botJoinedChannel.channel.channelId);
+                } catch (error) {
+                    const msg: SlackMessage = {
+                        text: `Welcome to *${botJoinedChannel.channel.name}* team channel @${userName}!`,
+                        attachments: [{
+                            fallback: `Welcome to *${botJoinedChannel.channel.name}* team channel!`,
+                            text: "Unfortunately you do not seem to have been onboarded to Subatomic. To onboard yourself press the button below.",
+                            actions: [
+                                buttonForCommand(
+                                    {
+                                        text: "Onboard me",
+                                    },
+                                    new OnboardMember()),
+                            ],
+                        }],
+                    };
+                    return ctx.messageClient.addressChannels(msg, botJoinedChannel.channel.channelId);
+                }
             }
             return await success();
         } catch (error) {
@@ -92,9 +146,9 @@ export class BotJoinedChannel implements HandleEvent<any> {
 
     private async sendBotTeamWelcomeMessage(ctx: HandlerContext, channelNameString: string, channelId: string) {
         const msg: SlackMessage = {
-            text: `Welcome to ${channelNameString} team channel!`,
+            text: `Welcome to *${channelNameString}* team channel!`,
             attachments: [{
-                fallback: `Welcome to the ${channelNameString} team channel!`,
+                fallback: `Welcome to the *${channelNameString}* team channel!`,
                 footer: `For more information, please read the ${this.docs()}`,
                 text: `
 If you haven't already, you might want to:
