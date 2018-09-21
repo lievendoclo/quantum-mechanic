@@ -25,21 +25,6 @@ Click the button below to become familiar with the projects this team is involve
         };
     }
 
-    public alertTeamDoesNotExist(teamChannel: string): SlackMessage {
-        return {
-            text: "This is not a team channel or not a team channel you belong to",
-            attachments: [{
-                text: `
-This channel (*${teamChannel}*) is not a team channel for a team that you belong to.
-You can only invite a new member to your team from a team channel that you belong to. Please retry this in one of those team channels.
-                                                              `,
-                fallback: "This is not a team channel or not a team channel you belong to",
-                color: "#D94649",
-                mrkdwn_in: ["text"],
-            }],
-        };
-    }
-
     private docs(extension): string {
         return `${url(`${QMConfig.subatomic.docs.baseUrl}/quantum-mechanic/command-reference#${extension}`,
             "documentation")}`;

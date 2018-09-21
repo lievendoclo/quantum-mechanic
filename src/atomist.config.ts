@@ -26,6 +26,7 @@ import {
 import {ReRunProjectProdRequest} from "./gluon/commands/project/ReRunProjectProdRequest";
 import {UpdateProjectProdRequest} from "./gluon/commands/project/UpdateProjectProdRequest";
 import {AddMemberToTeam} from "./gluon/commands/team/AddMemberToTeam";
+import {AddOwnerToTeam} from "./gluon/commands/team/AddOwnerToTeam";
 import {CreateMembershipRequestToTeam} from "./gluon/commands/team/CreateMembershipRequestToTeam";
 import {CreateTeam} from "./gluon/commands/team/CreateTeam";
 import {NewDevOpsEnvironment} from "./gluon/commands/team/DevOpsEnvironment";
@@ -111,6 +112,7 @@ export const configuration: any = {
         AddSlackDetails,
         JoinTeam,
         AddMemberToTeam,
+        AddOwnerToTeam,
         AssociateTeam,
         CreateTeam,
         CreateProject,

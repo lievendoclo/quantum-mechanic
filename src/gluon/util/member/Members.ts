@@ -35,3 +35,8 @@ export async function loadScreenNameByUserId(ctx: HandlerContext, userId: string
 export interface QMMember {
     domainUsername: string;
 }
+
+export enum MemberRole {
+    owner = "Owner",
+    member = "Member",
+}

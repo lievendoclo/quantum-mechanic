@@ -23,9 +23,9 @@ import {
 } from "../../util/recursiveparam/RecursiveParameterRequestCommand";
 import {handleQMError, ResponderMessageClient} from "../../util/shared/Error";
 
-@CommandHandler("Add a member to a team", QMConfig.subatomic.commandPrefix + " add team member")
+@CommandHandler("Add a member as an owner to a team", QMConfig.subatomic.commandPrefix + " add team owner")
 @Tags("subatomic", "team", "member")
-export class AddMemberToTeam extends RecursiveParameterRequestCommand implements GluonTeamNameSetter {
+export class AddOwnerToTeam extends RecursiveParameterRequestCommand implements GluonTeamNameSetter {
 
     private static RecursiveKeys = {
         teamName: "TEAM_NAME",
@@ -44,13 +44,13 @@ export class AddMemberToTeam extends RecursiveParameterRequestCommand implements
     public teamChannel: string;
 
     @Parameter({
-        description: "slack name (@User.Name) of the member to make a member",
+        description: "slack name (@User.Name) of the member to make an owner",
     })
     public slackName: string;
 
     @RecursiveParameter({
-        recursiveKey: AddMemberToTeam.RecursiveKeys.teamName,
-        selectionMessage: "Please select a team you would like to add a member to",
+        recursiveKey: AddOwnerToTeam.RecursiveKeys.teamName,
+        selectionMessage: "Please select a team you would like to add a owner to",
     })
     public teamName: string;
 
@@ -59,7 +59,7 @@ export class AddMemberToTeam extends RecursiveParameterRequestCommand implements
     }
 
     protected configureParameterSetters() {
-        this.addRecursiveSetter(AddMemberToTeam.RecursiveKeys.teamName, setGluonTeamName);
+        this.addRecursiveSetter(AddOwnerToTeam.RecursiveKeys.teamName, setGluonTeamName);
     }
 
     protected async runCommand(ctx: HandlerContext): Promise<HandlerResult> {
@@ -69,7 +69,7 @@ export class AddMemberToTeam extends RecursiveParameterRequestCommand implements
 
             const taskRunner: TaskRunner = new TaskRunner(taskListMessage);
 
-            taskRunner.addTask(new AddMemberToTeamTask(this.slackName, this.screenName, this.teamName, MemberRole.member));
+            taskRunner.addTask(new AddMemberToTeamTask(this.slackName, this.screenName, this.teamName, MemberRole.owner));
 
             await taskRunner.execute(ctx);
         } catch (error) {
