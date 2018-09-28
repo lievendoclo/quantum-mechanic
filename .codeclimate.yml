@@ -31,7 +31,7 @@ checks:
   return-statements:
     enabled: false
   similar-code:
-    enabled: true
+    enabled: false
     config:
       threshold: #language-specific defaults. overrides affect all languages.
   identical-code:
