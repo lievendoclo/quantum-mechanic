@@ -13,6 +13,7 @@ import {QMConfig} from "../../../config/QMConfig";
 import {isSuccessCode} from "../../../http/Http";
 import {OnboardMemberMessages} from "../../messages/member/OnboardMemberMessages";
 import {GluonService} from "../../services/gluon/GluonService";
+import {Extensible} from "../../util/plugins/Extensible";
 import {
     handleQMError,
     QMError,
@@ -57,6 +58,7 @@ export class OnboardMember implements HandleCommand<HandlerResult> {
     constructor(private gluonService = new GluonService()) {
     }
 
+    @Extensible("sub onboard me")
     public async handle(ctx: HandlerContext): Promise<HandlerResult> {
         try {
             logger.info("Creating");
