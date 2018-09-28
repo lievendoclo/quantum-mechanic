@@ -29,7 +29,7 @@ To create a team channel you must first create a team. Click the button below to
         };
     }
 
-    public createNewOrUseExistingSlackChannel(teamChannel: string, teamName: string, teamId: string): SlackMessage {
+    public createNewOrUseExistingSlackChannel(teamChannel: string, teamName: string): SlackMessage {
         const text: string = `\
 Would you like to create a new team channel called *${teamChannel}* or \
 if you have an existing channel you'd like to use for team wide messages, \
@@ -45,7 +45,6 @@ rather use that instead?\
                         {text: `Create channel ${teamChannel}`},
                         new NewTeamSlackChannel(),
                         {
-                            teamId,
                             teamName,
                             teamChannel,
                         }),
@@ -53,7 +52,6 @@ rather use that instead?\
                         {text: "Use an existing channel"},
                         new LinkExistingTeamSlackChannel(),
                         {
-                            teamId,
                             teamName,
                         }),
                 ],
