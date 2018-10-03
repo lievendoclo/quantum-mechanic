@@ -291,7 +291,7 @@ export class OCService {
         logger.debug(`Trying to process jenkins template for devops project template. devopsNamespace: ${devopsNamespace}`);
         const parameters = [
             `NAMESPACE=${devopsNamespace}`,
-            "JENKINS_IMAGE_STREAM_TAG=jenkins-subatomic:2.0",
+            "JENKINS_IMAGE_STREAM_TAG=jenkins-subatomic:2.1",
             "BITBUCKET_NAME=Subatomic Bitbucket",
             `BITBUCKET_URL=${QMConfig.subatomic.bitbucket.baseUrl}`,
             `BITBUCKET_CREDENTIALS_ID=${devopsNamespace}-bitbucket`,
