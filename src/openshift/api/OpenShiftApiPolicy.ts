@@ -24,7 +24,7 @@ export class OpenShiftApiPolicy extends OpenShiftApiElement {
         const instance = this.getAxiosInstanceOApi();
         return this.findExistingRole(instance, role, destinationNamespace).then(existingRole => {
             if (existingRole === null) {
-                const newRole = ResourceFactory.serviceAccountRoleBindingResource(destinationNamespace, role, serviceAccount, destinationNamespace);
+                const newRole = ResourceFactory.serviceAccountRoleBindingResource(sourceNamespace, role, serviceAccount, destinationNamespace);
                 logger.debug("Role not found. Creating new role binding");
 
                 return instance.post(ResourceUrl.getResourceKindUrl(ResourceFactory.baseResource("RoleBinding"), destinationNamespace), newRole);
