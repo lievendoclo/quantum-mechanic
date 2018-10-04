@@ -465,7 +465,7 @@ export class OCService {
         await team.members.map(async member => {
             const memberUsername = /[^\\]*$/.exec(member.domainUsername)[0];
             await logger.info(`Adding role to project [${projectId}] and member [${member.domainUsername}]: ${memberUsername}`);
-            return await this.openShiftApi.policy.addRoleToUser(memberUsername, "view", projectId);
+            return await this.openShiftApi.policy.addRoleToUser(memberUsername, "edit", projectId);
         });
     }
 

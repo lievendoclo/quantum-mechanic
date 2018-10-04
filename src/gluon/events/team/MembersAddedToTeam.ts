@@ -14,7 +14,7 @@ import {BitbucketService} from "../../services/bitbucket/BitbucketService";
 import {GluonService} from "../../services/gluon/GluonService";
 import {OCService} from "../../services/openshift/OCService";
 import {AddMemberToTeamService} from "../../services/team/AddMemberToTeamService";
-import {getProjectDisplayName} from "../../util/project/Project";
+import {getProjectId} from "../../util/project/Project";
 import {
     ChannelMessageClient,
     handleQMError,
@@ -136,7 +136,7 @@ export class MembersAddedToTeam implements HandleEvent<any> {
                 // Add to openshift environments
                 for (const environment of QMConfig.subatomic.openshiftNonProd.defaultEnvironments) {
                     const tenant = await this.gluonService.tenants.gluonTenantFromTenantId(project.owningTenant);
-                    const projectId = getProjectDisplayName(tenant.name, project.name, environment.id);
+                    const projectId = getProjectId(tenant.name, project.name, environment.id);
                     await this.ocService.addTeamMembershipPermissionsToProject(projectId, membersAddedToTeamEvent);
                 }
             }
