@@ -219,12 +219,8 @@ export class OCService {
         );
     }
 
-    public async getSubatomicImageStreamTags() {
-        return this.ocImageService.getSubatomicImageStreamTags();
-    }
-
-    public async getAllImageStreamTags(namespace: string) {
-        return this.ocImageService.getAllImageStreamTags(namespace);
+    public async getSubatomicImageStreamTags(namespace: string = "subatomic") {
+        return this.ocImageService.getSubatomicImageStreamTags(namespace);
     }
 
     public async applyResourceFromDataInNamespace(resourceDefinition: OpenshiftResource, projectNamespace: string, applyNotReplace: boolean = false): Promise<OpenshiftApiResult> {
@@ -259,9 +255,6 @@ export class OCService {
     }
 
     public async tagImageToNamespace(sourceNamespace: string, imageStreamTagName: string, destinationProjectNamespace: string, destinationImageStreamTagName: string = imageStreamTagName): Promise<OpenshiftApiResult> {
-        const allImages = await this.openShiftApi.get.getAllFromNamespace("ImageStreamTag", sourceNamespace);
-
-        logger.info(`All images: ${inspect(allImages)}`);
 
         const imageStreamTagResult = await this.openShiftApi.get.get("ImageStreamTag", imageStreamTagName, sourceNamespace);
 
@@ -269,15 +262,24 @@ export class OCService {
             throw new QMError(`Unable to find ImageStreamTag ${imageStreamTagName} in namespace ${sourceNamespace}`);
         }
 
+        const imageStreamLabels = imageStreamTagResult.data.metadata.labels;
+
         const imageStreamTag = await this.ocImageService.modifyImageStreamTagToImportIntoNamespace(imageStreamTagResult.data, destinationProjectNamespace);
 
         imageStreamTag.metadata.name = destinationImageStreamTagName;
 
-        return await this.applyResourceFromDataInNamespace(imageStreamTag, destinationProjectNamespace, true);
+        await this.applyResourceFromDataInNamespace(imageStreamTag, destinationProjectNamespace, true);
+
+        const labelPatch = this.createLabelPatch(destinationImageStreamTagName.split(":")[0], "ImageStream", "v1", imageStreamLabels);
+        return await this.patchResourceInNamespace(labelPatch, destinationProjectNamespace, false);
     }
 
     public async tagAllSubatomicImageStreamsToDevOpsEnvironment(devopsProjectId) {
         const imageStreamTagsFromSubatomicNamespace = await this.ocImageService.getSubatomicImageStreamTags();
+
+        const labelPatches = imageStreamTagsFromSubatomicNamespace.map(imageStreamTag => {
+            return this.createLabelPatch(imageStreamTag.metadata.name.split(":")[0], "ImageStream", "v1", imageStreamTag.metadata.labels);
+        });
 
         const imageStreamTags = await this.ocImageService.modifyImageStreamTagsToImportIntoNamespace(imageStreamTagsFromSubatomicNamespace, devopsProjectId);
 
@@ -285,6 +287,10 @@ export class OCService {
         resourceList.items.push(...imageStreamTags);
 
         await this.applyResourceFromDataInNamespace(resourceList, devopsProjectId, false);
+
+        for (const labelPatch of labelPatches) {
+            await this.patchResourceInNamespace(labelPatch, devopsProjectId, false);
+        }
     }
 
     public async processJenkinsTemplateForDevOpsProject(devopsNamespace: string): Promise<OCCommandResult> {
@@ -526,9 +532,9 @@ export class OCService {
         return JSON.parse(listOfResourcesResult.output);
     }
 
-    public async patchResourceInNamespace(resourcePatch: OpenshiftResource, namespace: string) {
+    public async patchResourceInNamespace(resourcePatch: OpenshiftResource, namespace: string, deleteMetaData: boolean = true) {
 
-        const response = await this.openShiftApi.patch.patch(resourcePatch, namespace);
+        const response = await this.openShiftApi.patch.patch(resourcePatch, namespace, deleteMetaData);
 
         if (!isSuccessCode(response.status)) {
             logger.error(`Failed to patch requested resource.\nResource: ${JSON.stringify(resourcePatch)}`);
@@ -545,5 +551,14 @@ export class OCService {
         }
 
         return response;
+    }
+
+    private createLabelPatch(resourceName: string, resourceKind: string, apiVersion: string, labels: { [key: string]: string }) {
+        const labelPatch = ResourceFactory.baseResource(resourceKind, apiVersion);
+        labelPatch.metadata = {
+            name: resourceName,
+            labels,
+        };
+        return labelPatch;
     }
 }

@@ -84,7 +84,7 @@ export async function setImageNameFromDevOps(
 
     const devOpsEnvironment = getDevOpsEnvironmentDetails(commandHandler.teamName);
 
-    const images = await commandHandler.ocService.getAllImageStreamTags(devOpsEnvironment.openshiftProjectId);
+    const images = await commandHandler.ocService.getSubatomicImageStreamTags(devOpsEnvironment.openshiftProjectId);
 
     return await presentImageMenu(ctx, commandHandler, selectionMessage, images);
 }
