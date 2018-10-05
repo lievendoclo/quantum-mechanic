@@ -174,12 +174,12 @@ export class OCService {
         return createResult.data;
     }
 
-    public async getSubatomicTemplate(templateName: string): Promise<OCCommandResult> {
+    public async getSubatomicTemplate(templateName: string, namespace: string = "subatomic"): Promise<OCCommandResult> {
         logger.debug(`Trying to get subatomic template. templateName: ${templateName}`);
         return await OCCommon.commonCommand("get", "templates",
             [templateName],
             [
-                new SimpleOption("-namespace", "subatomic"),
+                new SimpleOption("-namespace", namespace),
                 new SimpleOption("-output", "json"),
             ],
         );

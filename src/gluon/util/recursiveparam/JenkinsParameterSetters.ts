@@ -2,7 +2,6 @@ import {
     HandlerContext,
     HandlerResult,
     logger,
-    success,
 } from "@atomist/automation-client";
 import {BitBucketServerRepoRef} from "@atomist/automation-client/operations/common/BitBucketServerRepoRef";
 import {GitCommandGitProject} from "@atomist/automation-client/project/git/GitCommandGitProject";
@@ -49,7 +48,7 @@ export async function setJenkinsfileName(
     try {
         await gitProject.findFile("Jenkinsfile");
         commandHandler.jenkinsfileName = JENKINSFILE_EXISTS_FLAG;
-        return success();
+        return await commandHandler.handle(ctx);
     } catch (error) {
         return await createMenuForJenkinsFileSelection(ctx, commandHandler, selectionMessage);
     }

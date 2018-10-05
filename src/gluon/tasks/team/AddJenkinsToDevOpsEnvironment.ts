@@ -159,6 +159,19 @@ export class AddJenkinsToDevOpsEnvironment extends Task {
 
         await this.createGlobalCredentialsFor("Nexus", jenkinsHost, token, projectId, nexusCredentials);
 
+        const dockerRegistryCredentials = {
+            "": "0",
+            "credentials": {
+                scope: "GLOBAL",
+                id: "docker-registry-ip",
+                secret: `${QMConfig.subatomic.openshiftNonProd.dockerRepoUrl}`,
+                description: "IP For internal docker registry",
+                $class: "org.jenkinsci.plugins.plaincredentials.impl.StringCredentialsImpl",
+            },
+        };
+
+        await this.createGlobalCredentialsFor("Docker", jenkinsHost, token, projectId, dockerRegistryCredentials);
+
         const mavenCredentials = {
             "": "0",
             "credentials": {

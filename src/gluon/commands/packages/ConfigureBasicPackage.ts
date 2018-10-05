@@ -105,7 +105,7 @@ export class ConfigureBasicPackage extends RecursiveParameterRequestCommand
         configurePackage.teamChannel = this.teamChannel;
         configurePackage.openshiftTemplate = definition.openshiftTemplate || "Default";
         configurePackage.jenkinsfileName = definition.jenkinsfile;
-        configurePackage.baseS2IImage = definition.buildConfig.imageStream;
+        configurePackage.imageName = definition.buildConfig.imageStream;
         if (definition.buildConfig.envVariables != null) {
             configurePackage.buildEnvironmentVariables = definition.buildConfig.envVariables;
         }

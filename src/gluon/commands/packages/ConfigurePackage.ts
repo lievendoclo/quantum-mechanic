@@ -4,7 +4,6 @@ import {
     HandlerResult,
     MappedParameter,
     MappedParameters,
-    Parameter,
     success,
 } from "@atomist/automation-client";
 import {QMConfig} from "../../../config/QMConfig";
@@ -28,7 +27,9 @@ import {
     setJenkinsfileName,
 } from "../../util/recursiveparam/JenkinsParameterSetters";
 import {
+    ImageNameSetter,
     OpenshiftTemplateSetter,
+    setImageNameFromDevOps,
     setOpenshiftTemplate,
 } from "../../util/recursiveparam/OpenshiftParameterSetters";
 import {
@@ -40,7 +41,7 @@ import {GluonToEvent} from "../../util/transform/GluonToEvent";
 
 @CommandHandler("Configure an existing application/library", QMConfig.subatomic.commandPrefix + " configure custom package")
 export class ConfigurePackage extends RecursiveParameterRequestCommand
-    implements GluonTeamNameSetter, GluonProjectNameSetter, GluonApplicationNameSetter, JenkinsfileNameSetter, OpenshiftTemplateSetter {
+    implements GluonTeamNameSetter, GluonProjectNameSetter, GluonApplicationNameSetter, JenkinsfileNameSetter, OpenshiftTemplateSetter, ImageNameSetter {
 
     private static RecursiveKeys = {
         teamName: "TEAM_NAME",
@@ -48,6 +49,7 @@ export class ConfigurePackage extends RecursiveParameterRequestCommand
         applicationName: "APPLICATION_NAME",
         openshiftTemplate: "OPENSHIFT_TEMPLATE",
         jenkinsfileName: "JENKINSFILE_NAME",
+        baseS2IImage: "BASE_S2I_IMAGE",
     };
 
     @MappedParameter(MappedParameters.SlackUserName)
@@ -75,6 +77,12 @@ export class ConfigurePackage extends RecursiveParameterRequestCommand
     public teamName: string;
 
     @RecursiveParameter({
+        recursiveKey: ConfigurePackage.RecursiveKeys.baseS2IImage,
+        description: "Please select the base image for the s2i build",
+    })
+    public imageName: string;
+
+    @RecursiveParameter({
         recursiveKey: ConfigurePackage.RecursiveKeys.openshiftTemplate,
         selectionMessage: "Please select the correct openshift template for your package",
     })
@@ -85,11 +93,6 @@ export class ConfigurePackage extends RecursiveParameterRequestCommand
         selectionMessage: "Please select the correct jenkinsfile for your package",
     })
     public jenkinsfileName: string;
-
-    @Parameter({
-        description: "Base image for s2i build",
-    })
-    public baseS2IImage: string;
 
     public buildEnvironmentVariables: { [key: string]: string } = {};
 
@@ -113,6 +116,7 @@ export class ConfigurePackage extends RecursiveParameterRequestCommand
         this.addRecursiveSetter(ConfigurePackage.RecursiveKeys.teamName, setGluonTeamName);
         this.addRecursiveSetter(ConfigurePackage.RecursiveKeys.projectName, setGluonProjectName);
         this.addRecursiveSetter(ConfigurePackage.RecursiveKeys.applicationName, setGluonApplicationName);
+        this.addRecursiveSetter(ConfigurePackage.RecursiveKeys.baseS2IImage, setImageNameFromDevOps);
         this.addRecursiveSetter(ConfigurePackage.RecursiveKeys.openshiftTemplate, setOpenshiftTemplate);
         this.addRecursiveSetter(ConfigurePackage.RecursiveKeys.jenkinsfileName, setJenkinsfileName);
     }
@@ -130,7 +134,7 @@ export class ConfigurePackage extends RecursiveParameterRequestCommand
                     {
                         buildEnvironmentVariables: this.buildEnvironmentVariables,
                         openshiftTemplate: this.openshiftTemplate,
-                        baseS2IImage: this.baseS2IImage,
+                        baseS2IImage: this.imageName,
                     },
                     {
                         teamName: this.teamName,

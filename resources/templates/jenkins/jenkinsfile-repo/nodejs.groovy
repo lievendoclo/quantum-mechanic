@@ -6,6 +6,8 @@
  * Type          | ID                | Description
  * Secret text   | devops-project    | The OpenShift project Id of the DevOps project that this Jenkins instance is running in
  * Secret text   | dev-project       | The OpenShift project Id of the project's development environment
+ * Secret text   | sit-project       | The OpenShift project Id of the project's sit environment
+ * Secret text   | uat-project       | The OpenShift project Id of the project's uat environment
  *
  */
 
@@ -60,6 +62,8 @@ def getSCMInformation() {
 node('nodejs') {
     def teamDevOpsProject
     def projectDevProject
+    def projectSitProject
+    def projectUatProject
 
     withCredentials([
             string(credentialsId: 'devops-project', variable: 'DEVOPS_PROJECT_ID'),
