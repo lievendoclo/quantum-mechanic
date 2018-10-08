@@ -4,6 +4,7 @@ import {QMConfig} from "../../../../src/config/QMConfig";
 import {NewDevOpsEnvironment} from "../../../../src/gluon/commands/team/DevOpsEnvironment";
 import {GluonService} from "../../../../src/gluon/services/gluon/GluonService";
 import {AwaitAxios} from "../../../../src/http/AwaitAxios";
+import {TestGraphClient} from "../../TestGraphClient";
 import {TestMessageClient} from "../../TestMessageClient";
 
 const MockAdapter = require("axios-mock-adapter");
@@ -83,9 +84,12 @@ describe("Create a new or use an existing Openshift DevOps environment", () => {
             correlationId: "1231343234234",
             workspaceId: "2341234123",
             messageClient: new TestMessageClient(),
+            graphClient: new TestGraphClient(),
         };
 
+        fakeContext.graphClient.executeQueryResults.push({result: true, returnValue: {ChatTeam: [{id: "1234"}]}});
+
         await subject.handle(fakeContext);
-        assert(fakeContext.messageClient.textMsg[0].text === `Requesting DevOps environment for *${teamName}* team.`);
+        assert(fakeContext.messageClient.textMsg[0] === `Requesting DevOps environment for *${teamName}* team.`);
     });
 });

@@ -75,6 +75,8 @@ describe("Close a membership request", () => {
 
         };
 
+        fakeContext.graphClient.executeQueryResults.push({result: true, returnValue: {ChatTeam: [{id: "1234"}]}});
+
         await subject.handle(fakeContext);
         assert(fakeContext.messageClient.textMsg[0].text === `User @${userScreenName} has requested to be added as a team member.`);
     });
@@ -141,8 +143,10 @@ describe("Close a membership request", () => {
             workspaceId: "2341234123",
             messageClient: new TestMessageClient(),
             graphClient: new TestGraphClient(),
-
         };
+
+        fakeContext.graphClient.executeQueryResults.push({result: true, returnValue: {ChatTeam: [{id: "1234"}]}});
+        fakeContext.graphClient.executeQueryResults.push({result: true, returnValue: {ChatTeam: [{id: "1234"}]}});
 
         await subject.handle(fakeContext);
         assert(fakeContext.messageClient.textMsg[0].text === `User @${userScreenName} has requested to be added as a team member.`);

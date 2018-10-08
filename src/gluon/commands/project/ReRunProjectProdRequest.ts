@@ -10,6 +10,7 @@ import {
     Tags,
 } from "@atomist/automation-client";
 import {addressEvent} from "@atomist/automation-client/spi/message/MessageClient";
+import {addressSlackChannelsFromContext} from "@atomist/automation-client/spi/message/MessageClient";
 import {GluonService} from "../../services/gluon/GluonService";
 import {handleQMError, ResponderMessageClient} from "../../util/shared/Error";
 
@@ -42,9 +43,10 @@ export class ReRunProjectProdRequest implements HandleCommand<HandlerResult> {
         logger.info("ReRunning Project Prod Request");
 
         try {
-            await ctx.messageClient.addressChannels({
+            const destination =  await addressSlackChannelsFromContext(ctx, this.teamChannel);
+            await ctx.messageClient.send({
                 text: `Ru-running Project Prod Request`,
-            }, this.teamChannel, {id: this.correlationId});
+            }, destination, {id: this.correlationId});
 
             const projectProdRequestEvent = {
                 projectProdRequestId: this.projectProdRequestId,

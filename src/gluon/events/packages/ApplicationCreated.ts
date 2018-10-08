@@ -8,6 +8,7 @@ import {
     success,
 } from "@atomist/automation-client";
 import {buttonForCommand} from "@atomist/automation-client/spi/message/MessageClient";
+import {addressSlackChannelsFromContext} from "@atomist/automation-client/spi/message/MessageClient";
 import {url} from "@atomist/slack-messages";
 import {QMConfig} from "../../../config/QMConfig";
 import {ConfigureBasicPackage} from "../../commands/packages/ConfigureBasicPackage";
@@ -82,7 +83,8 @@ export class ApplicationCreated implements HandleEvent<any> {
     private async sendConfigurationMessage(ctx: HandlerContext, applicationCreatedEvent) {
         const applicationType = applicationCreatedEvent.application.applicationType.toLowerCase();
         const attachmentText = `The ${applicationType} can now be configured. This determines what type of ${applicationType} it is and how it should be deployed/built within your environments.`;
-        return await ctx.messageClient.addressChannels({
+        const destination =  await addressSlackChannelsFromContext(ctx, applicationCreatedEvent.owningTeam.slackIdentity.teamChannel);
+        return await ctx.messageClient.send({
             text: `The *${applicationCreatedEvent.application.name}* ${applicationType} in the project *${applicationCreatedEvent.project.name}* has been created successfully.`,
             attachments: [{
                 text: attachmentText,
@@ -101,7 +103,7 @@ export class ApplicationCreated implements HandleEvent<any> {
                         }),
                 ],
             }],
-        }, applicationCreatedEvent.owningTeam.slackIdentity.teamChannel);
+        }, destination);
     }
 
     private docs(extension): string {

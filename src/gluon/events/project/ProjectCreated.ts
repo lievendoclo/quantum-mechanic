@@ -7,12 +7,10 @@ import {
     logger,
 } from "@atomist/automation-client";
 import {buttonForCommand} from "@atomist/automation-client/spi/message/MessageClient";
+import {addressSlackChannelsFromContext} from "@atomist/automation-client/spi/message/MessageClient";
 import {url} from "@atomist/slack-messages";
 import {QMConfig} from "../../../config/QMConfig";
-import {
-    ListExistingBitbucketProject,
-    NewBitbucketProject,
-} from "../../commands/bitbucket/BitbucketProject";
+import {ListExistingBitbucketProject} from "../../commands/bitbucket/BitbucketProject";
 import {AssociateTeam} from "../../commands/project/AssociateTeam";
 
 @EventHandler("Receive ProjectCreated events", `
@@ -55,7 +53,8 @@ export class ProjectCreated implements HandleEvent<any> {
         const associateTeamCommand = new AssociateTeam();
         associateTeamCommand.projectName = projectCreatedEvent.project.name;
 
-        return await ctx.messageClient.addressChannels({
+        const destination =  await addressSlackChannelsFromContext(ctx, projectCreatedEvent.team.slackIdentity.teamChannel);
+        return await ctx.messageClient.send({
             text: `The *${projectCreatedEvent.project.name}* project has been created successfully.`,
             attachments: [{
                 text: `
@@ -87,7 +86,7 @@ If you would like to associate more teams to the *${projectCreatedEvent.project.
                         associateTeamCommand),
                 ],
             }],
-        }, projectCreatedEvent.team.slackIdentity.teamChannel);
+        }, destination);
     }
 
     private docs(extension): string {

@@ -1,8 +1,10 @@
+import {SlackDestination} from "@atomist/automation-client";
 import * as assert from "power-assert";
 import {QMConfig} from "../../../../src/config/QMConfig";
 import {OnboardMember} from "../../../../src/gluon/commands/member/OnboardMember";
 import {GluonService} from "../../../../src/gluon/services/gluon/GluonService";
 import {AwaitAxios} from "../../../../src/http/AwaitAxios";
+import {TestGraphClient} from "../../TestGraphClient";
 import {TestMessageClient} from "../../TestMessageClient";
 
 const MockAdapter = require("axios-mock-adapter");
@@ -37,7 +39,10 @@ describe("Onboard new member test", () => {
             correlationId: "1231343234234",
             workspaceId: "2341234123",
             messageClient: new TestMessageClient(),
+            graphClient: new TestGraphClient(),
         };
+
+        fakeContext.graphClient.executeQueryResults.push({result: true, returnValue: {ChatTeam: [{id: "1234"}]}});
 
         await subject.handle(fakeContext);
         assert(fakeContext.messageClient.textMsg[0].text.trim() === "Welcome to the Subatomic environment *Test*!\nNext steps are to either join an existing team or create a new one.");

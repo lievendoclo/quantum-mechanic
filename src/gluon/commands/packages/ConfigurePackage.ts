@@ -6,6 +6,7 @@ import {
     MappedParameters,
     success,
 } from "@atomist/automation-client";
+import {addressSlackChannelsFromContext} from "@atomist/automation-client/spi/message/MessageClient";
 import {QMConfig} from "../../../config/QMConfig";
 import {GluonService} from "../../services/gluon/GluonService";
 import {OCService} from "../../services/openshift/OCService";
@@ -103,9 +104,10 @@ export class ConfigurePackage extends RecursiveParameterRequestCommand
 
     protected async runCommand(ctx: HandlerContext): Promise<HandlerResult> {
         try {
-            await ctx.messageClient.addressChannels({
+            const destination =  await addressSlackChannelsFromContext(ctx, this.teamChannel);
+            await ctx.messageClient.send({
                 text: "Preparing to configure your package...",
-            }, this.teamChannel);
+            }, destination);
             return await this.configurePackage(ctx);
         } catch (error) {
             return await handleQMError(new ResponderMessageClient(ctx), error);

@@ -1,5 +1,7 @@
 import {
-    Destination, MessageClient, MessageOptions,
+    Destination,
+    MessageClient,
+    MessageOptions,
     SlackMessageClient,
 } from "@atomist/automation-client/spi/message/MessageClient";
 

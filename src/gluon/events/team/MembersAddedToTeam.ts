@@ -6,6 +6,7 @@ import {
     HandlerResult,
     logger,
 } from "@atomist/automation-client";
+import {addressSlackChannelsFromContext} from "@atomist/automation-client/spi/message/MessageClient";
 import * as _ from "lodash";
 import {QMConfig} from "../../../config/QMConfig";
 import {OCCommandResult} from "../../../openshift/base/OCCommandResult";
@@ -75,7 +76,8 @@ export class MembersAddedToTeam implements HandleEvent<any> {
 
             await this.addPermissionsForUserToTeams(bitbucketConfiguration, team.name, projects, membersAddedToTeamEvent);
 
-            return await ctx.messageClient.addressChannels("New user permissions successfully added to associated projects.", team.slackIdentity.teamChannel);
+            const destination =  await addressSlackChannelsFromContext(ctx, team.slackIdentity.teamChannel);
+            return await ctx.messageClient.send("New user permissions successfully added to associated projects.", destination);
         } catch (error) {
             return await this.handleError(ctx, error, membersAddedToTeamEvent.team.slackIdentity.teamChannel);
         }

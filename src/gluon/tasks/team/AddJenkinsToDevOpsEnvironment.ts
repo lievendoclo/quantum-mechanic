@@ -1,4 +1,5 @@
 import {HandlerContext, logger} from "@atomist/automation-client";
+import {addressSlackChannelsFromContext} from "@atomist/automation-client/spi/message/MessageClient";
 import * as _ from "lodash";
 import {QMConfig} from "../../../config/QMConfig";
 import {DevOpsMessages} from "../../messages/team/DevOpsMessages";
@@ -67,9 +68,10 @@ export class AddJenkinsToDevOpsEnvironment extends Task {
 
         await this.taskListMessage.succeedTask(this.TASK_HEADER);
 
-        await ctx.messageClient.addressChannels(
+        const destination =  await addressSlackChannelsFromContext(ctx, this.devOpsRequestedEvent.team.slackIdentity.teamChannel);
+        await ctx.messageClient.send(
             this.devopsMessages.jenkinsSuccessfullyProvisioned(jenkinsHost, this.devOpsRequestedEvent.team.name),
-            this.devOpsRequestedEvent.team.slackIdentity.teamChannel,
+            destination,
         );
 
         return true;

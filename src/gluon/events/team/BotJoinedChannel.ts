@@ -10,7 +10,10 @@ import {
     success,
     Tags,
 } from "@atomist/automation-client";
-import {buttonForCommand} from "@atomist/automation-client/spi/message/MessageClient";
+import {
+    addressSlackChannelsFromContext,
+    buttonForCommand,
+} from "@atomist/automation-client/spi/message/MessageClient";
 import {SlackMessage, url} from "@atomist/slack-messages";
 import {QMConfig} from "../../../config/QMConfig";
 import {OnboardMember} from "../../commands/member/OnboardMember";
@@ -88,6 +91,7 @@ export class BotJoinedChannel implements HandleEvent<any> {
                 const userName = botJoinedChannel.user.screenName;
 
                 logger.info("Checking whether the user onboarded");
+                const destination =  await addressSlackChannelsFromContext(ctx, botJoinedChannel.channel.channelId);
                 let existingUser;
                 try {
                     existingUser = await this.gluonService.members.gluonMemberFromScreenName(userName);
@@ -99,7 +103,6 @@ export class BotJoinedChannel implements HandleEvent<any> {
                             return await success();
                         }
                     }
-
                     const slackMessage: SlackMessage = {
                         text: `Welcome to *${botJoinedChannel.channel.name}* team channel @${userName}!`,
                         attachments: [{
@@ -119,7 +122,7 @@ export class BotJoinedChannel implements HandleEvent<any> {
                             ],
                         }],
                     };
-                    return ctx.messageClient.addressChannels(slackMessage, botJoinedChannel.channel.channelId);
+                    return ctx.messageClient.send(slackMessage, destination);
                 } catch (error) {
                     const msg: SlackMessage = {
                         text: `Welcome to *${botJoinedChannel.channel.name}* team channel @${userName}!`,
@@ -135,7 +138,7 @@ export class BotJoinedChannel implements HandleEvent<any> {
                             ],
                         }],
                     };
-                    return ctx.messageClient.addressChannels(msg, botJoinedChannel.channel.channelId);
+                    return ctx.messageClient.send(msg, destination);
                 }
             }
             return await success();
@@ -168,7 +171,8 @@ If you haven't already, you might want to:
                 ],
             }],
         };
-        return ctx.messageClient.addressChannels(msg, channelId);
+        const destination =  await addressSlackChannelsFromContext(ctx, channelId);
+        return await ctx.messageClient.send(msg, destination);
     }
 
     private async getTeams(channelName: string) {

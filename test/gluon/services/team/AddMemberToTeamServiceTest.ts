@@ -95,6 +95,7 @@ describe("AddMemberToTeamService inviteUserToSlackChannel", () => {
         };
 
         // Force invite to fail
+        fakeContext.graphClient.executeQueryResults.push({result: true, returnValue: {ChatTeam: [{id: "1234"}]}});
         fakeContext.graphClient.executeMutationResults.push({result: false});
 
         await service.inviteUserToSlackChannel(fakeContext,
@@ -122,6 +123,8 @@ describe("AddMemberToTeamService inviteUserToSlackChannel", () => {
             messageClient: new TestMessageClient(),
             graphClient: new TestGraphClient(),
         };
+
+        fakeContext.graphClient.executeQueryResults.push({result: true, returnValue: {ChatTeam: [{id: "1234"}]}});
 
         await service.inviteUserToSlackChannel(fakeContext,
             "Jude",
