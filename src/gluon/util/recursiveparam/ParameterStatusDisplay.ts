@@ -29,6 +29,7 @@ export class ParameterStatusDisplay {
                     text: textDisplay,
                     color: "#45B254",
                     fallback: "",
+                    mrkdwn_in: ["text"],
                 },
             );
         }
