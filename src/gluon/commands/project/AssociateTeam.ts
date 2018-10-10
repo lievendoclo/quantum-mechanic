@@ -15,6 +15,7 @@ import {
     RecursiveParameter,
     RecursiveParameterRequestCommand,
 } from "../../util/recursiveparam/RecursiveParameterRequestCommand";
+import {RecursiveSetterResult} from "../../util/recursiveparam/RecursiveSetterResult";
 import {
     handleQMError,
     QMError,

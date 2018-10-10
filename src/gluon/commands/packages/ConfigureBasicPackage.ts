@@ -23,6 +23,7 @@ import {
     RecursiveParameter,
     RecursiveParameterRequestCommand,
 } from "../../util/recursiveparam/RecursiveParameterRequestCommand";
+import {RecursiveSetterResult} from "../../util/recursiveparam/RecursiveSetterResult";
 import {handleQMError, ResponderMessageClient} from "../../util/shared/Error";
 import {createMenuAttachment} from "../../util/shared/GenericMenu";
 import {ConfigurePackage} from "./ConfigurePackage";

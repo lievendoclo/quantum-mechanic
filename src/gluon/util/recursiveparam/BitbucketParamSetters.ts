@@ -9,6 +9,7 @@ import {BitbucketService} from "../../services/bitbucket/BitbucketService";
 import {GluonService} from "../../services/gluon/GluonService";
 import {menuAttachmentForBitbucketRepositories} from "../bitbucket/Bitbucket";
 import {QMError} from "../shared/Error";
+import {RecursiveSetterResult} from "./RecursiveSetterResult";
 
 export async function setBitbucketRepository(ctx: HandlerContext, commandHandler: BitbucketRepoSetter, selectionMessage: string): Promise<RecursiveSetterResult> {
     const project = await commandHandler.gluonService.projects.gluonProjectFromProjectName(commandHandler.projectName);

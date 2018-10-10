@@ -10,6 +10,7 @@ import {QMConfig} from "../../../config/QMConfig";
 import {GluonService} from "../../services/gluon/GluonService";
 import {QMError} from "../shared/Error";
 import {createMenuAttachment} from "../shared/GenericMenu";
+import {RecursiveSetterResult} from "./RecursiveSetterResult";
 
 export const JENKINSFILE_EXISTS_FLAG = "JENKINS_FILE_EXISTS";
 const JENKINSFILE_EXTENSION = ".groovy";

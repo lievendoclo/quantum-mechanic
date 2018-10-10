@@ -13,6 +13,7 @@ import _ = require("lodash");
 import uuid = require("uuid");
 import {handleQMError, QMError, ResponderMessageClient} from "../shared/Error";
 import {ParameterStatusDisplay} from "./ParameterStatusDisplay";
+import {RecursiveSetterResult} from "./RecursiveSetterResult";
 
 export abstract class RecursiveParameterRequestCommand implements HandleCommand<HandlerResult> {
 

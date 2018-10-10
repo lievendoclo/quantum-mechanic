@@ -9,6 +9,7 @@ import {OCService} from "../../services/openshift/OCService";
 import {QMError} from "../shared/Error";
 import {createMenuAttachment} from "../shared/GenericMenu";
 import {getDevOpsEnvironmentDetails} from "../team/Teams";
+import {RecursiveSetterResult} from "./RecursiveSetterResult";
 
 export async function setOpenshiftTemplate(
     ctx: HandlerContext,

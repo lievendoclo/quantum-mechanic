@@ -9,6 +9,7 @@ import {menuAttachmentForProjects} from "../project/Project";
 import {QMError} from "../shared/Error";
 import {menuAttachmentForTenants} from "../shared/Tenants";
 import {menuAttachmentForTeams} from "../team/Teams";
+import {RecursiveSetterResult} from "./RecursiveSetterResult";
 
 export async function setGluonTeamName(
     ctx: HandlerContext,

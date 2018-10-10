@@ -90,6 +90,6 @@ describe("Create a new or use an existing Openshift DevOps environment", () => {
         fakeContext.graphClient.executeQueryResults.push({result: true, returnValue: {ChatTeam: [{id: "1234"}]}});
 
         await subject.handle(fakeContext);
-        assert(fakeContext.messageClient.textMsg[0] === `Requesting DevOps environment for *${teamName}* team.`);
+        assert(fakeContext.messageClient.textMsg[1] === `Requesting DevOps environment for *${teamName}* team.`);
     });
 });
