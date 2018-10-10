@@ -1,11 +1,11 @@
 import {HandleCommand, HandlerContext} from "@atomist/automation-client";
-import {createMenu} from "../shared/GenericMenu";
+import {createMenuAttachment} from "../shared/GenericMenu";
 
-export function menuForBitbucketRepositories(ctx: HandlerContext, bitbucketRepositories: any[],
-                                             command: HandleCommand, message: string = "Please select a Bitbucket repository",
-                                             bitbucketProjectNameVariable: string = "bitbucketRepositoryName",
-                                             thumbUrl = ""): Promise<any> {
-    return createMenu(ctx,
+export function menuAttachmentForBitbucketRepositories(ctx: HandlerContext, bitbucketRepositories: any[],
+                                                       command: HandleCommand, message: string = "Please select a Bitbucket repository",
+                                                       bitbucketProjectNameVariable: string = "bitbucketRepositoryName",
+                                                       thumbUrl = "") {
+    return createMenuAttachment(
         bitbucketRepositories.map(bitbucketRepository => {
             return {
                 value: bitbucketRepository.slug,
@@ -13,6 +13,7 @@ export function menuForBitbucketRepositories(ctx: HandlerContext, bitbucketRepos
             };
         }),
         command,
+        message,
         message,
         "Select Bitbucket Repo",
         bitbucketProjectNameVariable,

@@ -10,7 +10,7 @@ import * as _ from "lodash";
 import {QMConfig} from "../../../config/QMConfig";
 import {isSuccessCode} from "../../../http/Http";
 import {GluonService} from "../../services/gluon/GluonService";
-import {menuForProjects} from "../../util/project/Project";
+import {menuAttachmentForProjects} from "../../util/project/Project";
 import {
     RecursiveParameter,
     RecursiveParameterRequestCommand,
@@ -20,7 +20,7 @@ import {
     QMError,
     ResponderMessageClient,
 } from "../../util/shared/Error";
-import {menuForTeams} from "../../util/team/Teams";
+import {menuAttachmentForTeams} from "../../util/team/Teams";
 
 @CommandHandler("Add additional team/s to a project", QMConfig.subatomic.commandPrefix + " associate team")
 export class AssociateTeam extends RecursiveParameterRequestCommand {
@@ -104,20 +104,26 @@ export class AssociateTeam extends RecursiveParameterRequestCommand {
 
 }
 
-async function setGluonTeamFromUnassociatedTeams(ctx: HandlerContext, commandHandler: AssociateTeam) {
+async function setGluonTeamFromUnassociatedTeams(ctx: HandlerContext, commandHandler: AssociateTeam): Promise<RecursiveSetterResult> {
     const teams = await commandHandler.gluonService.teams.gluonTeamsWhoSlackScreenNameBelongsTo(commandHandler.screenName);
     const availTeams = await availableTeamsToAssociate(commandHandler.gluonService, teams, commandHandler.projectName);
 
     if (_.isEmpty(availTeams)) {
-        return await ctx.messageClient.respond("Unfortunately there are no available teams to associate to.");
+        return {
+            setterSuccess: false,
+            messagePrompt: {text: "Unfortunately there are no available teams to associate to."},
+        };
     }
 
-    return await menuForTeams(
-        ctx,
-        availTeams,
-        commandHandler,
-        `Please select a team you would like to associate to *${commandHandler.projectName}*.`,
-    );
+    return {
+        setterSuccess: false,
+        messagePrompt: menuAttachmentForTeams(
+            ctx,
+            availTeams,
+            commandHandler,
+            `Please select a team you would like to associate to *${commandHandler.projectName}*.`,
+        ),
+    };
 }
 
 async function availableTeamsToAssociate(gluonService: GluonService, teams: any[], projectName: string): Promise<any[]> {
@@ -150,17 +156,20 @@ async function availableTeamsToAssociate(gluonService: GluonService, teams: any[
 export async function setGluonProjectNameFromList(
     ctx: HandlerContext,
     commandHandler: AssociateTeam,
-    selectionMessage: string = "Please select a project") {
+    selectionMessage: string = "Please select a project"): Promise<RecursiveSetterResult> {
 
     if (commandHandler.gluonService === undefined) {
         throw new QMError(`setGluonProjectName commandHandler requires gluonService parameter to be defined`);
     }
 
     const projects = await commandHandler.gluonService.projects.gluonProjectList();
-    return await menuForProjects(
-        ctx,
-        projects,
-        commandHandler,
-        selectionMessage,
-    );
+    return {
+        setterSuccess: false,
+        messagePrompt: menuAttachmentForProjects(
+            ctx,
+            projects,
+            commandHandler,
+            selectionMessage,
+        ),
+    };
 }

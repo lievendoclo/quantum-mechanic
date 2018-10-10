@@ -4,16 +4,16 @@ import {
     logger,
 } from "@atomist/automation-client";
 import {GluonService} from "../../services/gluon/GluonService";
-import {menuForApplications} from "../packages/Applications";
-import {menuForProjects} from "../project/Project";
+import {menuAttachmentForApplications} from "../packages/Applications";
+import {menuAttachmentForProjects} from "../project/Project";
 import {QMError} from "../shared/Error";
-import {menuForTenants} from "../shared/Tenants";
-import {menuForTeams} from "../team/Teams";
+import {menuAttachmentForTenants} from "../shared/Tenants";
+import {menuAttachmentForTeams} from "../team/Teams";
 
 export async function setGluonTeamName(
     ctx: HandlerContext,
     commandHandler: GluonTeamNameSetter,
-    selectionMessage: string = "Please select a team") {
+    selectionMessage: string = "Please select a team"): Promise<RecursiveSetterResult> {
     if (commandHandler.gluonService === undefined) {
         throw new QMError(`setGluonTeamName commandHandler requires gluonService parameter to be defined`);
     }
@@ -26,7 +26,7 @@ export async function setGluonTeamName(
         try {
             const team = await commandHandler.gluonService.teams.gluonTeamForSlackTeamChannel(commandHandler.teamChannel);
             commandHandler.teamName = team.name;
-            return await commandHandler.handle(ctx);
+            return {setterSuccess: true};
         } catch (slackChannelError) {
             logger.info(`Could not find team associated with channel: ${commandHandler.teamChannel}. Trying to find teams member is a part of.`);
         }
@@ -35,11 +35,14 @@ export async function setGluonTeamName(
     }
 
     const teams = await commandHandler.gluonService.teams.gluonTeamsWhoSlackScreenNameBelongsTo(commandHandler.screenName);
-    return await menuForTeams(
-        ctx,
-        teams,
-        commandHandler,
-        selectionMessage);
+    return {
+        setterSuccess: false,
+        messagePrompt: menuAttachmentForTeams(
+            ctx,
+            teams,
+            commandHandler,
+            selectionMessage),
+    };
 }
 
 export interface GluonTeamNameSetter {
@@ -53,7 +56,7 @@ export interface GluonTeamNameSetter {
 export async function setGluonProjectName(
     ctx: HandlerContext,
     commandHandler: GluonProjectNameSetter,
-    selectionMessage: string = "Please select a project") {
+    selectionMessage: string = "Please select a project"): Promise<RecursiveSetterResult> {
 
     if (commandHandler.gluonService === undefined) {
         throw new QMError(`setGluonProjectName commandHandler requires gluonService parameter to be defined`);
@@ -64,12 +67,15 @@ export async function setGluonProjectName(
     }
 
     const projects = await commandHandler.gluonService.projects.gluonProjectsWhichBelongToGluonTeam(commandHandler.teamName);
-    return await menuForProjects(
-        ctx,
-        projects,
-        commandHandler,
-        selectionMessage,
-    );
+    return {
+        setterSuccess: false,
+        messagePrompt: menuAttachmentForProjects(
+            ctx,
+            projects,
+            commandHandler,
+            selectionMessage,
+        ),
+    };
 }
 
 export interface GluonProjectNameSetter {
@@ -82,18 +88,21 @@ export interface GluonProjectNameSetter {
 export async function setGluonTenantName(
     ctx: HandlerContext,
     commandHandler: GluonTenantNameSetter,
-    selectionMessage: string = "Please select a tenant") {
+    selectionMessage: string = "Please select a tenant"): Promise<RecursiveSetterResult> {
 
     if (commandHandler.gluonService === undefined) {
         throw new QMError(`setGluonTenantName commandHandler requires gluonService parameter to be defined`);
     }
 
     const tenants = await commandHandler.gluonService.tenants.gluonTenantList();
-    return await menuForTenants(ctx,
-        tenants,
-        commandHandler,
-        selectionMessage,
-    );
+    return {
+        setterSuccess: false,
+        messagePrompt: menuAttachmentForTenants(
+            tenants,
+            commandHandler,
+            selectionMessage,
+        ),
+    };
 }
 
 export interface GluonTenantNameSetter {
@@ -105,7 +114,7 @@ export interface GluonTenantNameSetter {
 export async function setGluonApplicationName(
     ctx: HandlerContext,
     commandHandler: GluonApplicationNameSetter,
-    selectionMessage: string = "Please select an application") {
+    selectionMessage: string = "Please select an application"): Promise<RecursiveSetterResult> {
     if (commandHandler.gluonService === undefined) {
         throw new QMError(`setGluonApplicationName commandHandler requires gluonService parameter to be defined`);
     }
@@ -115,11 +124,14 @@ export async function setGluonApplicationName(
     }
 
     const applications = await commandHandler.gluonService.applications.gluonApplicationsLinkedToGluonProject(commandHandler.projectName);
-    return await menuForApplications(
-        ctx,
-        applications,
-        commandHandler,
-        selectionMessage);
+    return {
+        setterSuccess: false,
+        messagePrompt: menuAttachmentForApplications(
+            ctx,
+            applications,
+            commandHandler,
+            selectionMessage),
+    };
 }
 
 export interface GluonApplicationNameSetter {

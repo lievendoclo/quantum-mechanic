@@ -1,10 +1,10 @@
-import {HandleCommand, HandlerContext} from "@atomist/automation-client";
-import {createMenu} from "./GenericMenu";
+import {HandleCommand} from "@atomist/automation-client";
+import {createMenuAttachment} from "./GenericMenu";
 
-export function menuForTenants(ctx: HandlerContext, tenants: any[],
-                               command: HandleCommand, message: string = "Please select a tenant",
-                               tenantNameVariable: string = "tenantName"): Promise<any> {
-    return createMenu(ctx,
+export function menuAttachmentForTenants(tenants: any[],
+                                         command: HandleCommand, message: string = "Please select a tenant",
+                                         tenantNameVariable: string = "tenantName") {
+    return createMenuAttachment(
         tenants.map(tenant => {
             return {
                 value: tenant.name,
@@ -12,6 +12,7 @@ export function menuForTenants(ctx: HandlerContext, tenants: any[],
             };
         }),
         command,
+        message,
         message,
         "Select Tenant",
         tenantNameVariable,

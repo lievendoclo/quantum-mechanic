@@ -1,6 +1,6 @@
 import {HandleCommand, HandlerContext} from "@atomist/automation-client";
 import * as _ from "lodash";
-import {createMenu} from "../shared/GenericMenu";
+import {createMenuAttachment} from "../shared/GenericMenu";
 import {QMTenant} from "../shared/Tenants";
 import {QMTeam} from "../team/Teams";
 
@@ -20,10 +20,10 @@ export function getProjectDisplayName(tenant: string, project: string, environme
     return `${tenant} ${project} ${environment.toUpperCase()}`;
 }
 
-export function menuForProjects(ctx: HandlerContext, projects: any[],
-                                command: HandleCommand, message: string = "Please select a project",
-                                projectNameVariable: string = "projectName"): Promise<any> {
-    return createMenu(ctx,
+export function menuAttachmentForProjects(ctx: HandlerContext, projects: any[],
+                                          command: HandleCommand, message: string = "Please select a project",
+                                          projectNameVariable: string = "projectName") {
+    return createMenuAttachment(
         projects.map(project => {
             return {
                 value: project.name,
@@ -31,6 +31,7 @@ export function menuForProjects(ctx: HandlerContext, projects: any[],
             };
         }),
         command,
+        message,
         message,
         "Select Project",
         projectNameVariable,

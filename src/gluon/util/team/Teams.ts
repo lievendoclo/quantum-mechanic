@@ -6,12 +6,12 @@ import {
 import * as _ from "lodash";
 import * as graphql from "../../../typings/types";
 import {QMMember} from "../member/Members";
-import {createMenu} from "../shared/GenericMenu";
+import {createMenuAttachment} from "../shared/GenericMenu";
 
-export function menuForTeams(ctx: HandlerContext, teams: any[],
-                             command: HandleCommand, message: string = "Please select a team",
-                             projectNameVariable: string = "teamName"): Promise<any> {
-    return createMenu(ctx,
+export function menuAttachmentForTeams(ctx: HandlerContext, teams: any[],
+                                       command: HandleCommand, message: string = "Please select a team",
+                                       projectNameVariable: string = "teamName") {
+    return createMenuAttachment(
         teams.map(team => {
             return {
                 value: team.name,
@@ -19,6 +19,7 @@ export function menuForTeams(ctx: HandlerContext, teams: any[],
             };
         }),
         command,
+        message,
         message,
         "Select Team",
         projectNameVariable,

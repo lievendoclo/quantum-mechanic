@@ -16,6 +16,7 @@ import {KickOffJenkinsBuild} from "../../commands/jenkins/JenkinsBuild";
 import {JenkinsService} from "../../services/jenkins/JenkinsService";
 import {OCService} from "../../services/openshift/OCService";
 import {ApplicationType} from "../../util/packages/Applications";
+import {ParameterDisplayType} from "../../util/recursiveparam/RecursiveParameterRequestCommand";
 import {QMError} from "../../util/shared/Error";
 import {getDevOpsEnvironmentDetails} from "../../util/team/Teams";
 import {Task} from "../Task";
@@ -198,6 +199,7 @@ You can kick off the build pipeline for your ${packageTypeString} by clicking th
                         {
                             projectName,
                             applicationName,
+                            displayResultMenu: ParameterDisplayType.hide,
                         }),
                 ],
             }],

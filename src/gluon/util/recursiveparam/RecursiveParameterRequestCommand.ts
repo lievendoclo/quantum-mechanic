@@ -3,15 +3,30 @@ import {
     HandlerContext,
     HandlerResult,
     logger,
+    Parameter,
 } from "@atomist/automation-client";
 import {
     BaseParameter,
     declareParameter,
 } from "@atomist/automation-client/internal/metadata/decoratorSupport";
 import _ = require("lodash");
+import uuid = require("uuid");
 import {handleQMError, QMError, ResponderMessageClient} from "../shared/Error";
+import {ParameterStatusDisplay} from "./ParameterStatusDisplay";
 
 export abstract class RecursiveParameterRequestCommand implements HandleCommand<HandlerResult> {
+
+    @Parameter({
+        required: false,
+        displayable: false,
+    })
+    public messagePresentationCorrelationId: string;
+
+    @Parameter({
+        required: false,
+        displayable: false,
+    })
+    public displayResultMenu: ParameterDisplayType;
 
     private recursiveParameterOrder: string[] = [];
 
@@ -19,9 +34,20 @@ export abstract class RecursiveParameterRequestCommand implements HandleCommand<
 
     private recursiveParameterMap: { [key: string]: RecursiveParameterMapping };
 
-    public async handle(ctx: HandlerContext): Promise<HandlerResult> {
+    private parameterStatusDisplay: ParameterStatusDisplay;
 
+    public async handle(ctx: HandlerContext): Promise<HandlerResult> {
+        if (_.isEmpty(this.messagePresentationCorrelationId)) {
+            this.messagePresentationCorrelationId = uuid.v4();
+        }
+
+        if (_.isEmpty(this.displayResultMenu)) {
+            this.displayResultMenu = ParameterDisplayType.show;
+        }
+
+        this.recursiveParameterOrder = [];
         this.configureParameterSetters();
+        this.updateParameterStatusDisplayMessage();
         if (!this.recursiveParametersAreSet()) {
             try {
                 return await this.requestNextUnsetParameter(ctx);
@@ -29,6 +55,10 @@ export abstract class RecursiveParameterRequestCommand implements HandleCommand<
                 return await this.handleRequestNextParameterError(ctx, error);
             }
         }
+
+        const displayMessage = this.parameterStatusDisplay.getDisplayMessage(this.getIntent(), this.displayResultMenu);
+
+        await ctx.messageClient.respond(displayMessage, {id: this.messagePresentationCorrelationId});
 
         return await this.runCommand(ctx);
     }
@@ -74,9 +104,18 @@ export abstract class RecursiveParameterRequestCommand implements HandleCommand<
         const dynamicClassInstance: any = this;
         for (const recursiveKey of this.recursiveParameterOrder) {
             const propertyKey = this.recursiveParameterMap[recursiveKey].propertyName;
-            if (_.isEmpty(dynamicClassInstance[propertyKey])) {
+            const propertyValue = dynamicClassInstance[propertyKey];
+            if (_.isEmpty(propertyValue)) {
                 logger.info(`Setting parameter ${propertyKey}.`);
-                return await this.recursiveParameterMap[recursiveKey].parameterSetter(ctx, this, this.recursiveParameterMap[recursiveKey].selectionMessage);
+                const result = await this.recursiveParameterMap[recursiveKey].parameterSetter(ctx, this, this.recursiveParameterMap[recursiveKey].selectionMessage);
+                if (result.setterSuccess) {
+                    return await this.handle(ctx);
+                } else {
+                    const displayMessage = this.parameterStatusDisplay.getDisplayMessage(this.getIntent(), this.displayResultMenu);
+                    result.messagePrompt.color = "#00a5ff";
+                    displayMessage.attachments.push(result.messagePrompt);
+                    return await ctx.messageClient.respond(displayMessage, {id: this.messagePresentationCorrelationId});
+                }
             }
         }
     }
@@ -87,6 +126,7 @@ export abstract class RecursiveParameterRequestCommand implements HandleCommand<
         for (const recursiveKey of this.recursiveParameterList) {
 
             const propertyKey = this.recursiveParameterMap[recursiveKey].propertyName;
+            const propertyValue = dynamicClassInstance[propertyKey];
 
             if (this.recursiveParameterMap[recursiveKey].parameterSetter === undefined) {
                 logger.error(`Setter for recursive parameter ${propertyKey} is not set.`);
@@ -96,13 +136,37 @@ export abstract class RecursiveParameterRequestCommand implements HandleCommand<
             logger.debug(`Recursive Param with recursive key ${recursiveKey} details:\nProperty: ${propertyKey}\nForceSet: ${this.recursiveParameterMap[recursiveKey].forceSet}\nValue: ${dynamicClassInstance[propertyKey]}`);
 
             if (this.recursiveParameterMap[recursiveKey].forceSet &&
-                _.isEmpty(dynamicClassInstance[propertyKey])) {
+                _.isEmpty(propertyValue)) {
                 logger.info(`Recursive parameter ${propertyKey} not set.`);
                 parametersAreSet = false;
                 break;
             }
         }
         return parametersAreSet;
+    }
+
+    private updateParameterStatusDisplayMessage() {
+        this.parameterStatusDisplay = new ParameterStatusDisplay();
+        const dynamicClassInstance: any = this;
+        for (const recursiveKey of this.recursiveParameterOrder) {
+
+            const propertyKey = this.recursiveParameterMap[recursiveKey].propertyName;
+            const propertyValue = dynamicClassInstance[propertyKey];
+
+            if (!(_.isEmpty(propertyValue))) {
+                this.parameterStatusDisplay.setParam(propertyKey, propertyValue);
+            }
+        }
+    }
+
+    private getIntent(): string {
+        const dynamicClassInstance: any = this;
+        const intentValue = dynamicClassInstance.__intent;
+        if (!_.isEmpty(intentValue)) {
+            return intentValue;
+        }
+
+        return "Unknown Command";
     }
 
     private async handleRequestNextParameterError(ctx: HandlerContext, error) {
@@ -134,7 +198,12 @@ export interface RecursiveParameterDetails extends BaseParameter {
 
 interface RecursiveParameterMapping {
     propertyName: string;
-    parameterSetter: (ctx: HandlerContext, commandHandler: HandleCommand, selectionMessage: string) => Promise<any>;
+    parameterSetter: (ctx: HandlerContext, commandHandler: HandleCommand, selectionMessage: string) => Promise<RecursiveSetterResult>;
     selectionMessage: string;
     forceSet: boolean;
+}
+
+export enum ParameterDisplayType {
+    show = "show",
+    hide = "hide",
 }

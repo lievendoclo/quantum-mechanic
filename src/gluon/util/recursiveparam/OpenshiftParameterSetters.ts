@@ -7,14 +7,14 @@ import {QMConfig} from "../../../config/QMConfig";
 import {OpenshiftResource} from "../../../openshift/api/resources/OpenshiftResource";
 import {OCService} from "../../services/openshift/OCService";
 import {QMError} from "../shared/Error";
-import {createMenu} from "../shared/GenericMenu";
+import {createMenuAttachment} from "../shared/GenericMenu";
 import {getDevOpsEnvironmentDetails} from "../team/Teams";
 
 export async function setOpenshiftTemplate(
     ctx: HandlerContext,
     commandHandler: OpenshiftTemplateSetter,
     selectionMessage: string = "Please select an Openshift template",
-) {
+): Promise<RecursiveSetterResult> {
 
     if (commandHandler.ocService === undefined) {
         throw new QMError(`setOpenshiftTemplate commandHandler requires the ocService parameter to be defined`);
@@ -30,16 +30,20 @@ export async function setOpenshiftTemplate(
 
     const namespace = getDevOpsEnvironmentDetails(commandHandler.teamName).openshiftProjectId;
     const templates = await commandHandler.ocService.getSubatomicAppTemplates(namespace);
-    return await createMenu(ctx, templates.map(template => {
-            return {
-                value: template.metadata.name,
-                text: template.metadata.name,
-            };
-        }),
-        commandHandler,
-        selectionMessage,
-        "Select a template",
-        "openshiftTemplate");
+    return {
+        setterSuccess: false,
+        messagePrompt: createMenuAttachment(templates.map(template => {
+                return {
+                    value: template.metadata.name,
+                    text: template.metadata.name,
+                };
+            }),
+            commandHandler,
+            selectionMessage,
+            selectionMessage,
+            "Select a template",
+            "openshiftTemplate"),
+    };
 }
 
 export interface OpenshiftTemplateSetter {
@@ -63,13 +67,16 @@ export async function setImageName(
 
     const images = await commandHandler.ocService.getSubatomicImageStreamTags();
 
-    return await presentImageMenu(ctx, commandHandler, selectionMessage, images);
+    return {
+        setterSuccess: false,
+        messagePrompt: presentImageMenu(ctx, commandHandler, selectionMessage, images),
+    };
 }
 
 export async function setImageNameFromDevOps(
     ctx: HandlerContext,
     commandHandler: ImageNameSetter,
-    selectionMessage: string = "Please select an image") {
+    selectionMessage: string = "Please select an image"): Promise<RecursiveSetterResult> {
     if (commandHandler.ocService === undefined) {
         throw new QMError(`setImageName commandHandler requires ocService parameter to be defined`);
     }
@@ -86,16 +93,18 @@ export async function setImageNameFromDevOps(
 
     const images = await commandHandler.ocService.getSubatomicImageStreamTags(devOpsEnvironment.openshiftProjectId);
 
-    return await presentImageMenu(ctx, commandHandler, selectionMessage, images);
+    return {
+        setterSuccess: false,
+        messagePrompt: presentImageMenu(ctx, commandHandler, selectionMessage, images),
+    };
 }
 
-async function presentImageMenu(ctx: HandlerContext,
-                                commandHandler: ImageNameSetter,
-                                selectionMessage: string,
-                                images: OpenshiftResource[]) {
+function presentImageMenu(ctx: HandlerContext,
+                          commandHandler: ImageNameSetter,
+                          selectionMessage: string,
+                          images: OpenshiftResource[]) {
     logger.info(JSON.stringify(images, null, 2));
-    return await createMenu(
-        ctx,
+    return createMenuAttachment(
         images.map(image => {
             return {
                 value: image.metadata.name,
@@ -103,6 +112,7 @@ async function presentImageMenu(ctx: HandlerContext,
             };
         }),
         commandHandler,
+        selectionMessage,
         selectionMessage,
         "Select Image",
         "imageName");

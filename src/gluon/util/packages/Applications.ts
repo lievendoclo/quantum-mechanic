@@ -1,6 +1,6 @@
 import {HandleCommand, HandlerContext} from "@atomist/automation-client";
 import * as _ from "lodash";
-import {createMenu} from "../shared/GenericMenu";
+import {createMenuAttachment} from "../shared/GenericMenu";
 
 export enum ApplicationType {
 
@@ -8,10 +8,10 @@ export enum ApplicationType {
     LIBRARY = "LIBRARY",
 }
 
-export function menuForApplications(ctx: HandlerContext, applications: any[],
-                                    command: HandleCommand, message: string = "Please select an application/library",
-                                    applicationNameVariable: string = "applicationName"): Promise<any> {
-    return createMenu(ctx,
+export function menuAttachmentForApplications(ctx: HandlerContext, applications: any[],
+                                              command: HandleCommand, message: string = "Please select an application/library",
+                                              applicationNameVariable: string = "applicationName") {
+    return createMenuAttachment(
         applications.map(application => {
             return {
                 value: application.name,
@@ -19,6 +19,7 @@ export function menuForApplications(ctx: HandlerContext, applications: any[],
             };
         }),
         command,
+        message,
         message,
         "Select Application/Library",
         applicationNameVariable,

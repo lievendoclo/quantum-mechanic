@@ -9,7 +9,7 @@ import {GitProject} from "@atomist/automation-client/project/git/GitProject";
 import {QMConfig} from "../../../config/QMConfig";
 import {GluonService} from "../../services/gluon/GluonService";
 import {QMError} from "../shared/Error";
-import {createMenu} from "../shared/GenericMenu";
+import {createMenuAttachment} from "../shared/GenericMenu";
 
 export const JENKINSFILE_EXISTS_FLAG = "JENKINS_FILE_EXISTS";
 const JENKINSFILE_EXTENSION = ".groovy";
@@ -19,7 +19,7 @@ export async function setJenkinsfileName(
     ctx: HandlerContext,
     commandHandler: JenkinsfileNameSetter,
     selectionMessage: string = "Please select an application",
-): Promise<HandlerResult> {
+): Promise<RecursiveSetterResult> {
 
     if (commandHandler.gluonService === undefined) {
         throw new QMError(`setJenkinsfileName commandHandler requires the gluonService parameter to be defined`);
@@ -48,13 +48,13 @@ export async function setJenkinsfileName(
     try {
         await gitProject.findFile("Jenkinsfile");
         commandHandler.jenkinsfileName = JENKINSFILE_EXISTS_FLAG;
-        return await commandHandler.handle(ctx);
+        return {setterSuccess: true};
     } catch (error) {
-        return await createMenuForJenkinsFileSelection(ctx, commandHandler, selectionMessage);
+        return createMenuForJenkinsFileSelection(ctx, commandHandler, selectionMessage);
     }
 }
 
-async function createMenuForJenkinsFileSelection(ctx: HandlerContext, commandHandler, selectionDescriptionMessage: string): Promise<HandlerResult> {
+function createMenuForJenkinsFileSelection(ctx: HandlerContext, commandHandler, selectionDescriptionMessage: string): RecursiveSetterResult {
     logger.info("Jenkinsfile does not exist. Requesting jenkinsfile selection.");
     const fs = require("fs");
     const jenkinsfileOptions: string [] = [];
@@ -65,16 +65,20 @@ async function createMenuForJenkinsFileSelection(ctx: HandlerContext, commandHan
             jenkinsfileOptions.push(getNameFromJenkinsfilePath(file));
         }
     });
-    return await createMenu(ctx, jenkinsfileOptions.map(jenkinsfile => {
-            return {
-                value: jenkinsfile,
-                text: jenkinsfile,
-            };
-        }),
-        commandHandler,
-        selectionDescriptionMessage,
-        "Select a jenkinsfile",
-        "jenkinsfileName");
+    return {
+        setterSuccess: false,
+        messagePrompt: createMenuAttachment(jenkinsfileOptions.map(jenkinsfile => {
+                return {
+                    value: jenkinsfile,
+                    text: jenkinsfile,
+                };
+            }),
+            commandHandler,
+            selectionDescriptionMessage,
+            selectionDescriptionMessage,
+            "Select a jenkinsfile",
+            "jenkinsfileName"),
+    };
 }
 
 function getNameFromJenkinsfilePath(jenkinsfilePath: string): string {
