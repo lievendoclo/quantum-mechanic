@@ -61,7 +61,7 @@ export class OnboardMember implements HandleCommand<HandlerResult> {
     @Extensible("sub onboard me")
     public async handle(ctx: HandlerContext): Promise<HandlerResult> {
         try {
-            logger.info("Creating");
+            logger.info("Requesting new Gluon user");
             await this.createGluonTeamMember(
                 {
                     firstName: this.firstName,
