@@ -1,4 +1,4 @@
 type DevOpsEnvironmentProvisionedEvent @rootType {
-    team: GluonTeam # TODO: args
+    team(name: [string]): GluonTeam
     devopsEnvironment: DevOpsEnvironmentDetails
 }
