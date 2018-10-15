@@ -1,0 +1,5 @@
+type MembershipRequestCreatedEvent @rootType {
+    membershopRequestId: string
+    team: GluonTeam
+    requestedBy: ActionedBy
+}

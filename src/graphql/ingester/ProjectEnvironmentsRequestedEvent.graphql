@@ -1,0 +1,6 @@
+type ProjectEnvironmentsRequestedEvent @rootType {
+    project: Project
+    teams: [GluonTeam]
+    owningTenant: [GluonTenant]
+    requestedBy: ActionedBy
+}

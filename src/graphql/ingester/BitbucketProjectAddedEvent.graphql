@@ -1,0 +1,6 @@
+type BitbucketProjectAddedEvent @rootType {
+    project: Project
+    bitbucketProject: BitbucketProject
+    teams: [GluonTeam]
+    createdBy: ActionedBy
+}

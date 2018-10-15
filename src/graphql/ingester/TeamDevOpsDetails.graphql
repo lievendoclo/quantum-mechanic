@@ -1,0 +1,5 @@
+type TeamDevOpsDetails @rootType {
+    teamId: string
+    devOpsEnvironment: DevOpsEnvironmentDetails
+    buildCapabilities: [string]
+}

@@ -1,0 +1,83 @@
+type SharedQuantumMechanic @rootType {
+    dummy: string
+}
+
+type GluonTenantId {
+    tenantId: string
+}
+
+type SlackIdentity {
+    screenName: string
+    userId: string
+    teamChannel: string
+}
+
+type BitbucketProject {
+    id: string
+    key: string
+    name: string
+    description: string
+    url: string
+}
+
+type DevOpsEnvironmentDetails {
+    openshiftProjectId: string
+    name: string
+    description: string
+}
+
+type BitbucketRepository {
+    bitbucketId: string
+    name: string
+    repoUrl: string
+    remoteUrl: string
+}
+
+type Owner {
+    firstName: string
+    domainUsername: string
+    slackIdentity: string
+}
+
+type Member {
+    firstName: string
+    domainUsername: string
+    slackIdentity: SlackIdentity
+}
+
+type ActionedBy {
+    firstName: string
+    lastName: string
+    email: string
+    domainUsername: string
+    slackIdentity: SlackIdentity
+}
+
+type GluonTenant {
+    tenantId: string
+    name: string
+    description: string
+}
+
+type GluonTeam {
+    teamId: string
+    name: string
+    description: string
+    slackIdentity: SlackIdentity
+    owners: [Owner]
+    members: [Member]
+}
+
+type Project {
+    projectId: string
+    name: string
+    description: string
+    tenant: GluonTenantId
+}
+
+type GluonApplication {
+    applicationId: string
+    name: string
+    description: string
+    applicationType: string
+}

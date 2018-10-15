@@ -1,0 +1,4 @@
+type TeamCreatedEvent @rootType {
+    team: GluonTeam
+    createdBy: ActionedBy
+}

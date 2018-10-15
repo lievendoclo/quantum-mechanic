@@ -1,0 +1,5 @@
+type MembersAddedToTeamEvent @rootType {
+    team: GluonTeam
+    owners: [Member]
+    members: [Member]
+}

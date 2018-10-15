@@ -1,0 +1,12 @@
+type ApplicationProdRequestedEvent @rootType {
+    applicationProdRequest: ApplicationProdRequest
+    application: GluonApplication
+    project: Project
+    owningTeam: GluonTeam
+    teams: [GluonTeam]
+    requestedBy: ActionedBy
+}
+
+type ApplicationProdRequest {
+    applicationProdRequestId: string
+}

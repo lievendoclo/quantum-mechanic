@@ -1,0 +1,6 @@
+type ProjectCreatedEvent @rootType {
+    project: Project
+    team: GluonTeam
+    tenant: GluonTenant
+    createdBy: ActionedBy
+}

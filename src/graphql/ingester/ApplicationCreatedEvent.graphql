@@ -1,0 +1,10 @@
+type ApplicationCreatedEvent @rootType {
+    application: GluonApplication
+    project: Project
+    bitbucketProject: BitbucketProject
+    bitbucketRepository: BitbucketRepository
+    owningTeam: GluonTeam
+    teams: [GluonTeam]
+    requestedBy: ActionedBy
+    requestConfiguration: boolean
+}
