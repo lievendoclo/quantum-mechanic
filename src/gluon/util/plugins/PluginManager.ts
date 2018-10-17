@@ -2,6 +2,7 @@ import _ = require("lodash");
 import {QMConfig} from "../../../config/QMConfig";
 import {PluginResourceStore} from "./PluginResourceStore";
 
+// TODO: We need error handling on badly formed plugins.
 export class PluginManager {
 
     private static availablePlugins: { [key: string]: string[] };
