@@ -49,6 +49,10 @@ def deploy(project, app, tag) {
     }
 }
 
+def executeInVEnv(String script) {
+    sh "source /venv_home/venv/bin/activate && " + script
+}
+
 def label = "python36-${UUID.randomUUID().toString()}"
 
 def teamDevOpsProject
@@ -65,7 +69,7 @@ withCredentials([
 echo "Starting to try find pod template: " + dockerRegistryIp + '/' + teamDevOpsProject + '/jenkins-slave-python36-subatomic:2.0'
 
 podTemplate(cloud: "openshift", label: label, serviceAccount:"jenkins", containers: [
-    containerTemplate(name: 'jnlp', image: dockerRegistryIp + '/' + teamDevOpsProject + '/jenkins-slave-python36-subatomic:2.0', ttyEnabled: true, args: '${computer.jnlpmac} ${computer.name}')
+    containerTemplate(name: 'jnlp', image: dockerRegistryIp + '/' + teamDevOpsProject + '/jenkins-slave-python36-subatomic:2.0', ttyEnabled: false, alwaysPullImage: true, args: '${computer.jnlpmac} ${computer.name}')
   ])
 {
   	echo "Trying to get node " + label
@@ -92,8 +96,14 @@ podTemplate(cloud: "openshift", label: label, serviceAccount:"jenkins", containe
         stage('Run python stage') {
             container('jnlp') {
                 stage('Run Python Checks and Tests') {
+                    final scmVars = checkout(scm)
+
+                    def shortGitCommit = scmVars.GIT_COMMIT[0..6]
+                    def verCode = UUID.randomUUID().toString()[0..8]
+                    tag = "${verCode}-${shortGitCommit}"
                     // Run any tests or build commands here
-                    // sh 'python runTests.py'
+                    // executeInVEnv 'python -m pip install pytest && python -m pip install -r requirements.txt'
+                    // executeInVEnv 'python -m pytest testing/'
                 }
             }
         }
