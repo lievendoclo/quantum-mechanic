@@ -90,6 +90,8 @@ export class ConfigurePackageInOpenshift extends Task {
                 name: appBuildName,
             },
             spec: {
+                failedBuildsHistoryLimit: 3,
+                successfulBuildsHistoryLimit: 2,
                 resources: {
                     limits: {
                         cpu: "0",
