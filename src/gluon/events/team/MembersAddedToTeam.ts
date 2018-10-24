@@ -24,7 +24,7 @@ import {
 } from "../../util/shared/Error";
 import {getDevOpsEnvironmentDetails} from "../../util/team/Teams";
 
-@EventHandler("Receive MembershipRequestCreated events", `
+@EventHandler("Receive MembersAddedToTeamEvent events", `
 subscription MembersAddedToTeamEvent {
   MembersAddedToTeamEvent {
     team {

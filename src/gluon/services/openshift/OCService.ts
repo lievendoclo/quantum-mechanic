@@ -474,6 +474,12 @@ export class OCService {
         });
     }
 
+    public async removeTeamMembershipPermissionsFromProject(projectId: string, domainUserName: string) {
+        const memberUsername = /[^\\]*$/.exec(domainUserName)[0];
+        logger.info(`Removing role from project [${projectId}] and member [${domainUserName}]: ${memberUsername}`);
+        return await this.openShiftApi.policy.removeRoleFromUser(memberUsername, "edit", projectId);
+    }
+
     public async createPodNetwork(projectToJoin: string, projectToJoinTo: string): Promise<OpenshiftApiResult> {
         logger.debug(`Trying to create pod network. projectToJoin: ${projectToJoin}; projectToJoinTo: ${projectToJoinTo}`);
 

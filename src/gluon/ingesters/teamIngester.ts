@@ -160,3 +160,36 @@ export const MembersAddedToTeamEvent: Ingester = {
         },
     ],
 };
+
+export const MemberRemovedFromTeamEvent: Ingester = {
+    root_type: "MemberRemovedFromTeamEvent",
+    types: [
+        {
+            kind: "OBJECT",
+            name: "MemberRemovedFromTeamEvent",
+            fields: [
+                {
+                    name: "team",
+                    type: {
+                        kind: "OBJECT",
+                        name: "GluonTeam",
+                    },
+                },
+                {
+                    name: "memberRemoved",
+                    type: {
+                        kind: "OBJECT",
+                        name: "Member",
+                    },
+                },
+                {
+                    name: "memberRequester",
+                    type: {
+                        kind: "OBJECT",
+                        name: "Owner",
+                    },
+                },
+            ],
+        },
+    ],
+};

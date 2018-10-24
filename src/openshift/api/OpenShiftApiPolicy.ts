@@ -60,6 +60,33 @@ export class OpenShiftApiPolicy extends OpenShiftApiElement {
         });
     }
 
+    public removeRoleFromUser(username: string, role: string, namespace: string): Promise<OpenshiftApiResult> {
+        if (username.startsWith("system:serviceaccount")) {
+            // Do not remove if service account - see Remove a team owner from a team #445 (https://github.com/absa-subatomic/quantum-mechanic/issues/445)
+        } else {
+            return this.removeRoleFromUserAccount(username, role, namespace);
+        }
+    }
+
+    public removeRoleFromUserAccount(username: string, role: string, namespace: string): Promise<OpenshiftApiResult> {
+
+        const instance = this.getAxiosInstanceOApi();
+
+        return this.findExistingRole(instance, role, namespace).then(roleToEdit => {
+            if (roleToEdit === null) {
+                logger.info("Role not found. Nothing to do");
+            } else {
+                // Filter by all that are NOT the user to be removed
+                roleToEdit.subjects = roleToEdit.subjects.filter(subject => subject.name !== username);
+                roleToEdit.userName = roleToEdit.userNames.filter(userName => userName !== username);
+                roleToEdit.userNames = roleToEdit.userNames.filter(userNames => userNames !== username);
+
+                const url  = `${ResourceUrl.getResourceKindUrl(ResourceFactory.baseResource("RoleBinding"), namespace)}/${role}`;
+                return instance.put(url, roleToEdit);
+            }
+        });
+    }
+
     private findExistingRole(axios: AwaitAxios, role: string, namespace: string): Promise<OpenshiftResource> {
         return axios.get(`namespaces/${namespace}/rolebindings`).then(response => {
             logger.debug(JSON.stringify(response.status));

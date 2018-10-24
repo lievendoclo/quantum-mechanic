@@ -59,6 +59,12 @@ export class BitbucketService {
             {});
     }
 
+    public async removeProjectPermission(projectKey: string, user: string): Promise<any> {
+        logger.debug(`Trying to remove Bitbucket project permissions. projectKey: ${projectKey}; user: ${user}`);
+        return await bitbucketAxios().delete(`${QMConfig.subatomic.bitbucket.restUrl}/api/1.0/projects/${projectKey}/permissions/users?name=${user}`,
+            {});
+    }
+
     public async addBranchPermissions(projectKey: string, permissionsConfig: any): Promise<any> {
         logger.debug(`Trying to add Bitbucket branch permissions for project. projectKey: ${projectKey} `);
         return await bitbucketAxios().post(`${QMConfig.subatomic.bitbucket.restUrl}/branch-permissions/2.0/projects/${projectKey}/restrictions`,

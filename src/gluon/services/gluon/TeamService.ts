@@ -119,9 +119,13 @@ export class TeamService {
     }
 
     public async addMemberToTeam(teamId: string, memberDetails: any): Promise<any> {
-        logger.debug(`Trying to add member member to team. teamId: ${teamId}`);
-        return await this.axiosInstance.put(`${QMConfig.subatomic.gluon.baseUrl}/teams/${teamId}`,
-            memberDetails);
+        logger.debug(`Trying to add member to team. teamId: ${teamId}`);
+        return await this.axiosInstance.put(`${QMConfig.subatomic.gluon.baseUrl}/teams/${teamId}`, memberDetails);
+    }
+
+    public async removeMemberFromTeam(teamId: string, memberId: string, requestedById): Promise<any> {
+        logger.debug(`Trying to remove member_id:${memberId} from team_id ${teamId} by requestorId ${requestedById}`);
+        return await this.axiosInstance.delete(`${QMConfig.subatomic.gluon.baseUrl}/teams/${teamId}/members/${memberId}?requestedById=${requestedById}`);
     }
 
     public async createMembershipRequest(teamId: string, membershipRequestDetails: any): Promise<any> {

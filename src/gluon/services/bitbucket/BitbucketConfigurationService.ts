@@ -3,6 +3,7 @@ import {AxiosPromise} from "axios-https-proxy-fix";
 import * as _ from "lodash";
 import {QMConfig} from "../../../config/QMConfig";
 import {usernameFromDomainUsername} from "../../util/member/Members";
+import {QMError} from "../../util/shared/Error";
 import {BitbucketService} from "./BitbucketService";
 
 export class BitbucketConfigurationService {
@@ -45,6 +46,15 @@ export class BitbucketConfigurationService {
                     });
             }),
         ]);
+    }
+
+    public  async removeUserFromBitbucketProject(bitbucketProjectKey: string) {
+        logger.info(`Trying to remove user from BitBucket project: ${bitbucketProjectKey}`);
+        try {
+            return this.teamMembers.map(teamMember => this.bitbucketService.removeProjectPermission(bitbucketProjectKey, teamMember));
+        } catch (error) {
+            throw new QMError(error, `Failed to remove BitBucket permissions for user`);
+        }
     }
 
     private addAdminProjectPermission(projectKey: string, user: string): AxiosPromise {
