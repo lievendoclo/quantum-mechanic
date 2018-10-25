@@ -3,6 +3,8 @@ import {
     ListExistingBitbucketProject,
     NewBitbucketProject,
 } from "./gluon/commands/bitbucket/BitbucketProject";
+import {BitbucketProjectAccessCommand} from "./gluon/commands/bitbucket/BitbucketProjectAccessCommand";
+import {BitbucketProjectRecommendedPracticesCommand} from "./gluon/commands/bitbucket/BitbucketProjectRecommendedPracticesCommand";
 import {KickOffJenkinsBuild} from "./gluon/commands/jenkins/JenkinsBuild";
 import {AddSlackDetails} from "./gluon/commands/member/AddSlackDetails";
 import {OnboardMember} from "./gluon/commands/member/OnboardMember";
@@ -112,6 +114,8 @@ export const configuration: any = {
         AddOwnerToTeam,
         AddSlackDetails,
         AssociateTeam,
+        BitbucketProjectAccessCommand,
+        BitbucketProjectRecommendedPracticesCommand,
         ConfigureBasicPackage,
         ConfigurePackage,
         CreateApplicationProd,

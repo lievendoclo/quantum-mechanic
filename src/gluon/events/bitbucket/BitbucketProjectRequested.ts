@@ -7,17 +7,17 @@ import {
     logger,
     success,
 } from "@atomist/automation-client";
-import {url} from "@atomist/slack-messages";
-import * as _ from "lodash";
-import {QMConfig} from "../../../config/QMConfig";
 import {isSuccessCode} from "../../../http/Http";
-import {BitbucketConfigurationService} from "../../services/bitbucket/BitbucketConfigurationService";
 import {BitbucketService} from "../../services/bitbucket/BitbucketService";
 import {GluonService} from "../../services/gluon/GluonService";
+import {ConfigureBitbucketProjectRecommendedPractices} from "../../tasks/bitbucket/ConfigureBitbucketProjectRecommendedPractices";
+import {TaskListMessage} from "../../tasks/TaskListMessage";
+import {TaskRunner} from "../../tasks/TaskRunner";
+import {QMProject} from "../../util/project/Project";
 import {
+    ChannelMessageClient,
     handleQMError,
     QMError,
-    UserMessageClient,
 } from "../../util/shared/Error";
 
 @EventHandler("Receive BitbucketProjectRequestedEvent events", `
@@ -77,34 +77,38 @@ export class BitbucketProjectRequested implements HandleEvent<any> {
         logger.info(`Ingested BitbucketProjectRequested event: ${JSON.stringify(event.data)}`);
 
         const bitbucketProjectRequestedEvent = event.data.BitbucketProjectRequestedEvent[0];
+
+        const messageClient = new ChannelMessageClient(ctx);
+
+        bitbucketProjectRequestedEvent.teams
+            .filter(team => team.slackIdentity !== undefined)
+            .forEach(team => messageClient.addDestination(team.slackIdentity.teamChannel));
+
         try {
-            const key: string = bitbucketProjectRequestedEvent.bitbucketProjectRequest.key;
-            const name: string = bitbucketProjectRequestedEvent.bitbucketProjectRequest.name;
-            const description: string = bitbucketProjectRequestedEvent.bitbucketProjectRequest.description;
 
-            let teamOwners: string[] = [];
-            let teamMembers: string[] = [];
-            bitbucketProjectRequestedEvent.teams.map(team => {
-                teamOwners = _.union(teamOwners, team.owners.map(owner => owner.domainUsername));
-                teamMembers = _.union(teamMembers, team.members.map(member => member.domainUsername));
-            });
+            const project = bitbucketProjectRequestedEvent.project;
 
-            const bitbucketConfiguration = new BitbucketConfigurationService(
-                teamOwners,
-                teamMembers,
-                this.bitbucketService,
-            );
+            const qmProject: QMProject = {
+                name: project.name,
+                bitbucketProject: bitbucketProjectRequestedEvent.bitbucketProjectRequest,
+            };
 
-            await this.createBitbucketProject(key, name, description);
+            await this.createBitbucketProject(qmProject.bitbucketProject.key, qmProject.bitbucketProject.name, qmProject.bitbucketProject.description);
 
-            await bitbucketConfiguration.configureBitbucketProject(key);
+            const taskListMessage: TaskListMessage = new TaskListMessage(":rocket: Configuring Bitbucket Project...", messageClient);
+            const taskRunner: TaskRunner = new TaskRunner(taskListMessage);
 
-            await this.addBitbucketProjectAccessKeys(key, bitbucketProjectRequestedEvent.project.name);
+            for (const team of bitbucketProjectRequestedEvent.teams) {
+                taskRunner.addTask(
+                    new ConfigureBitbucketProjectRecommendedPractices(team, qmProject, this.bitbucketService),
+                );
+            }
+
+            await taskRunner.execute(ctx);
 
             return await this.confirmBitbucketProjectCreatedWithGluon(bitbucketProjectRequestedEvent.project.projectId, bitbucketProjectRequestedEvent.project.name);
-
         } catch (error) {
-            return await this.handleError(ctx, bitbucketProjectRequestedEvent.requestedBy.slackIdentity.screenName, error);
+            return await handleQMError(messageClient, error);
         }
     }
 
@@ -147,15 +151,6 @@ export class BitbucketProjectRequested implements HandleEvent<any> {
         return bitbucketProjectRequestResult.data;
     }
 
-    private async addBitbucketProjectAccessKeys(bitbucketProjectKey: string, projectName: string) {
-        try {
-            await this.bitbucketService.addBitbucketProjectAccessKeys(bitbucketProjectKey);
-        } catch (error) {
-            logger.error(`Failed to configure Bitbucket Project ${projectName} with error: ${JSON.stringify(error)}`);
-            throw new QMError(`There was an error adding SSH keys for ${projectName} Bitbucket project`);
-        }
-    }
-
     private async confirmBitbucketProjectCreatedWithGluon(projectId: string, projectName: string) {
         logger.info(`Confirming Bitbucket project: [${this.bitbucketProjectId}-${this.bitbucketProjectUrl}]`);
         const confirmBitbucketProjectCreatedResult = await this.gluonService.projects.confirmBitbucketProjectCreated(projectId,
@@ -170,16 +165,5 @@ export class BitbucketProjectRequested implements HandleEvent<any> {
             throw new QMError(`There was an error confirming the ${projectName} Bitbucket project details`);
         }
         return success();
-    }
-
-    private async handleError(ctx: HandlerContext, screenName: string, error) {
-        const messageClient = new UserMessageClient(ctx);
-        messageClient.addDestination(screenName);
-        return await handleQMError(messageClient, error);
-    }
-
-    private docs(): string {
-        return `${url(`${QMConfig.subatomic.docs.baseUrl}/quantum-mechanic/command-reference`,
-            "documentation")}`;
     }
 }

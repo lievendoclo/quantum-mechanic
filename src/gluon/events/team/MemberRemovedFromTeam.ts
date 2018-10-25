@@ -18,7 +18,6 @@ import {
     ChannelMessageClient,
     handleQMError,
     OCResultError,
-    QMError,
 } from "../../util/shared/Error";
 import {getDevOpsEnvironmentDetails} from "../../util/team/Teams";
 
@@ -70,7 +69,7 @@ export class MemberRemovedFromTeam implements HandleEvent<any> {
 
             const team = memberRemovedFromTeam.team;
             const projects = await this.gluonService.projects.gluonProjectsWhichBelongToGluonTeam(team.name, false);
-            const bitbucketConfiguration = new BitbucketConfigurationService([], [], this.bitbucketService);
+            const bitbucketConfiguration = new BitbucketConfigurationService(this.bitbucketService);
             await this.removePermissionsForUserFromTeams(bitbucketConfiguration, team.name, projects, memberRemovedFromTeam);
 
             return await ctx.messageClient.addressChannels("User permissions successfully removed from associated projects. Please manually remove the user from the relevant Slack channels.", team.slackIdentity.teamChannel);
@@ -89,7 +88,7 @@ export class MemberRemovedFromTeam implements HandleEvent<any> {
                 logger.info(`Removing permissions for project: ${project}`);
 
                 // Remove from BitBucket
-                await bitbucketConfiguration.removeUserFromBitbucketProject(project.bitbucketProject.key);
+                await bitbucketConfiguration.removeUserFromBitbucketProject(project.bitbucketProject.key, [memberRemovedFromTeam.memberRemoved.domainUsername]);
 
                 // Remove from OpenShift environments
                 for (const environment of QMConfig.subatomic.openshiftNonProd.defaultEnvironments) {

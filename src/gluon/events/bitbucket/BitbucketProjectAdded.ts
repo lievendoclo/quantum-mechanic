@@ -7,13 +7,17 @@ import {
     logger,
 } from "@atomist/automation-client";
 import {buttonForCommand} from "@atomist/automation-client/spi/message/MessageClient";
-import {addressSlackChannelsFromContext} from "@atomist/automation-client/spi/message/MessageClient";
 import {url} from "@atomist/slack-messages";
 import {QMConfig} from "../../../config/QMConfig";
+import {BitbucketProjectRecommendedPracticesCommand} from "../../commands/bitbucket/BitbucketProjectRecommendedPracticesCommand";
 import {AssociateTeam} from "../../commands/project/AssociateTeam";
 import {NewProjectEnvironments} from "../../commands/project/NewProjectEnvironments";
 import {BitbucketService} from "../../services/bitbucket/BitbucketService";
-import {handleQMError, QMError, UserMessageClient} from "../../util/shared/Error";
+import {ConfigureBitbucketProjectAccess} from "../../tasks/bitbucket/ConfigureBitbucketProjectAccess";
+import {TaskListMessage} from "../../tasks/TaskListMessage";
+import {TaskRunner} from "../../tasks/TaskRunner";
+import {QMProject} from "../../util/project/Project";
+import {ChannelMessageClient, handleQMError} from "../../util/shared/Error";
 
 @EventHandler("Receive BitbucketProjectAddedEvent events", `
 subscription BitbucketProjectAddedEvent {
@@ -29,6 +33,20 @@ subscription BitbucketProjectAddedEvent {
       name
       slackIdentity {
         teamChannel
+      }
+      owners {
+        firstName
+        domainUsername
+        slackIdentity {
+          screenName
+        }
+      }
+      members {
+        firstName
+        domainUsername
+        slackIdentity {
+          screenName
+        }
       }
     }
     bitbucketProject {
@@ -55,36 +73,50 @@ export class BitbucketProjectAdded implements HandleEvent<any> {
     public async handle(event: EventFired<any>, ctx: HandlerContext): Promise<HandlerResult> {
         logger.info(`Ingested BitbucketProjectAddedEvent event: ${JSON.stringify(event.data)}`);
 
-        const addedEvent = event.data.BitbucketProjectAddedEvent[0];
+        const bitbucketProjectAddedEvent = event.data.BitbucketProjectAddedEvent[0];
+
+        const messageClient = new ChannelMessageClient(ctx);
+
+        bitbucketProjectAddedEvent.teams
+            .filter(team => team.slackIdentity !== undefined)
+            .forEach(team => messageClient.addDestination(team.slackIdentity.teamChannel));
 
         try {
-            await this.addBitbucketProjectAccessKeys(addedEvent.bitbucketProject.key, addedEvent.project.name);
 
-            return await this.sendBitbucketAddedSuccessfullyMessage(ctx, addedEvent);
+            const project = bitbucketProjectAddedEvent.project;
+
+            const qmProject: QMProject = {
+                name: project.name,
+                bitbucketProject: bitbucketProjectAddedEvent.bitbucketProject,
+            };
+
+            const taskListMessage: TaskListMessage = new TaskListMessage(":rocket: Configuring Bitbucket Project Access...", messageClient);
+            const taskRunner: TaskRunner = new TaskRunner(taskListMessage);
+
+            for (const team of bitbucketProjectAddedEvent.teams) {
+                taskRunner.addTask(
+                    new ConfigureBitbucketProjectAccess(team, qmProject, this.bitbucketService),
+                );
+            }
+
+            await taskRunner.execute(ctx);
+
+            return await messageClient.send(this.getBitbucketAddedSuccessfullyMessage(bitbucketProjectAddedEvent));
+
         } catch (error) {
-            return await this.handleError(ctx, addedEvent.createdBy.slackIdentity.screenName, error);
+            return await handleQMError(messageClient, error);
         }
     }
 
-    private async addBitbucketProjectAccessKeys(bitbucketProjectKey: string, projectName: string) {
-        try {
-            await this.bitbucketService.addBitbucketProjectAccessKeys(bitbucketProjectKey);
-        } catch (error) {
-            logger.error(`Failed to configure Bitbucket Project ${projectName} with error: ${JSON.stringify(error)}`);
-            throw new QMError(`There was an error adding SSH keys for ${projectName} Bitbucket project`);
-        }
-    }
-
-    private async sendBitbucketAddedSuccessfullyMessage(ctx: HandlerContext, addedEvent) {
+    private getBitbucketAddedSuccessfullyMessage(bitbucketAddedEvent) {
 
         const associateTeamCommand: AssociateTeam = new AssociateTeam();
-        associateTeamCommand.projectName = addedEvent.project.name;
+        associateTeamCommand.projectName = bitbucketAddedEvent.project.name;
 
-        const destination =  await addressSlackChannelsFromContext(ctx, addedEvent.teams.map(team => team.slackIdentity.teamChannel));
-        return await ctx.messageClient.send({
+        return {
             text: `
-The *${addedEvent.bitbucketProject.name}* Bitbucket project has been configured successfully and linked to the *${addedEvent.project.name}* Subatomic project.
-Click here to view the project in Bitbucket: ${addedEvent.bitbucketProject.url}`,
+The *${bitbucketAddedEvent.bitbucketProject.name}* Bitbucket project has been configured successfully and linked to the *${bitbucketAddedEvent.project.name}* Subatomic project.
+Click here to view the project in Bitbucket: ${bitbucketAddedEvent.bitbucketProject.url}`,
             attachments: [
                 {
                     text: `
@@ -100,14 +132,34 @@ These environments are realised as OpenShift projects and need to be created or 
                             {text: "Create OpenShift environments"},
                             new NewProjectEnvironments(),
                             {
-                                projectName: addedEvent.project.name,
+                                projectName: bitbucketAddedEvent.project.name,
+                            }),
+                    ],
+                },
+                {
+                    text: `
+You can apply recommended practice settings to your bitbucket project. \
+This includes setting team owners as default reviewers, adding pre-merge hooks, and protecting master from direct commits. \
+These can be manually changed if you wish to change the settings after applying them.\
+If you would like to configure the Bitbucket Project associated to the *${bitbucketAddedEvent.project.name}* project, please click the button below.`,
+                    fallback: "Associate multiple teams to this project",
+                    footer: `For more information, please read the ${this.docs("associate-team")}`,
+                    color: "#00a5ff",
+                    actions: [
+                        buttonForCommand(
+                            {
+                                text: "Apply recommended practices",
+                            },
+                            new BitbucketProjectRecommendedPracticesCommand(),
+                            {
+                                projectName: bitbucketAddedEvent.project.name,
                             }),
                     ],
                 },
                 {
                     text: `
 Projects can be associated with multiple teams. \
-If you would like to associate more teams to the *${addedEvent.project.name}* project, please use the \`@atomist sub associate team\` command`,
+If you would like to associate more teams to the *${bitbucketAddedEvent.project.name}* project, please click the button below`,
                     fallback: "Associate multiple teams to this project",
                     footer: `For more information, please read the ${this.docs("associate-team")}`,
                     color: "#00a5ff",
@@ -119,17 +171,11 @@ If you would like to associate more teams to the *${addedEvent.project.name}* pr
                             associateTeamCommand),
                     ],
                 }],
-        }, destination);
+        };
     }
 
     private docs(extension): string {
         return `${url(`${QMConfig.subatomic.docs.baseUrl}/quantum-mechanic/command-reference#${extension}`,
             "documentation")}`;
-    }
-
-    private async handleError(ctx: HandlerContext, screenName: string, error) {
-        const messageClient = new UserMessageClient(ctx);
-        messageClient.addDestination(screenName);
-        return await handleQMError(messageClient, error);
     }
 }
