@@ -16,7 +16,7 @@
     "@atomist/cli": "^1.0.0-M.3",
     "@atomist/automation-client": "^1.0.0-M.2",
     "@atomist/lifecycle-automation": "^0.10.6",
-    "@atomist/slack-messages": "^0.12.1",
+    "@atomist/slack-messages": "^1.0.0",
     "app-root-path": "^2.1.0",
     "axios-https-proxy-fix": "^0.17.1",
     "graphql": "^0.13.2",
