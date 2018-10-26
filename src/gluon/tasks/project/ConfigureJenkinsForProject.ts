@@ -5,6 +5,7 @@ import {isSuccessCode} from "../../../http/Http";
 import {QMTemplate} from "../../../template/QMTemplate";
 import {JenkinsService} from "../../services/jenkins/JenkinsService";
 import {OCService} from "../../services/openshift/OCService";
+import {getJenkinsBitbucketAccessCredential} from "../../util/jenkins/JenkinsCredentials";
 import {getProjectId} from "../../util/project/Project";
 import {QMError} from "../../util/shared/Error";
 import {getDevOpsEnvironmentDetails} from "../../util/team/Teams";
@@ -100,17 +101,7 @@ export class ConfigureJenkinsForProject extends Task {
 
     private async createJenkinsCredentials(teamDevOpsProjectId: string, jenkinsHost: string, token: string) {
 
-        const jenkinsCredentials = {
-            "": "0",
-            "credentials": {
-                scope: "GLOBAL",
-                id: `${teamDevOpsProjectId}-bitbucket`,
-                username: QMConfig.subatomic.bitbucket.auth.username,
-                password: QMConfig.subatomic.bitbucket.auth.password,
-                description: `${teamDevOpsProjectId}-bitbucket`,
-                $class: "com.cloudbees.plugins.credentials.impl.UsernamePasswordCredentialsImpl",
-            },
-        };
+        const jenkinsCredentials = getJenkinsBitbucketAccessCredential(teamDevOpsProjectId);
 
         await this.jenkinsService.createJenkinsCredentialsWithRetries(6, 5000, jenkinsHost, token, teamDevOpsProjectId, jenkinsCredentials);
     }

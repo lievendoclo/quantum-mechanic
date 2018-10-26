@@ -6,6 +6,12 @@ import {DevOpsMessages} from "../../messages/team/DevOpsMessages";
 import {JenkinsService} from "../../services/jenkins/JenkinsService";
 import {OCService} from "../../services/openshift/OCService";
 import {
+    getJenkinsBitbucketProjectCredential,
+    getJenkinsDockerCredential,
+    getJenkinsMavenCredential,
+    getJenkinsNexusCredential,
+} from "../../util/jenkins/JenkinsCredentials";
+import {
     roleBindingDefinition,
     serviceAccountDefinition,
 } from "../../util/jenkins/JenkinsOpenshiftResources";
@@ -68,7 +74,7 @@ export class AddJenkinsToDevOpsEnvironment extends Task {
 
         await this.taskListMessage.succeedTask(this.TASK_HEADER);
 
-        const destination =  await addressSlackChannelsFromContext(ctx, this.devOpsRequestedEvent.team.slackIdentity.teamChannel);
+        const destination = await addressSlackChannelsFromContext(ctx, this.devOpsRequestedEvent.team.slackIdentity.teamChannel);
         await ctx.messageClient.send(
             this.devopsMessages.jenkinsSuccessfullyProvisioned(jenkinsHost, this.devOpsRequestedEvent.team.name),
             destination,
@@ -134,57 +140,19 @@ export class AddJenkinsToDevOpsEnvironment extends Task {
 
     private async addJenkinsCredentials(projectId: string, jenkinsHost: string, token: string) {
         logger.debug(`Using Jenkins Route host [${jenkinsHost}] to add Bitbucket credentials`);
-        const bitbucketCredentials = {
-            "": "0",
-            "credentials": {
-                scope: "GLOBAL",
-                id: `${projectId}-bitbucket`,
-                username: QMConfig.subatomic.bitbucket.auth.username,
-                password: QMConfig.subatomic.bitbucket.auth.password,
-                description: `${projectId}-bitbucket`,
-                $class: "com.cloudbees.plugins.credentials.impl.UsernamePasswordCredentialsImpl",
-            },
-        };
+        const bitbucketCredentials = getJenkinsBitbucketProjectCredential(projectId);
 
         await this.createGlobalCredentialsFor("Bitbucket", jenkinsHost, token, projectId, bitbucketCredentials);
 
-        const nexusCredentials = {
-            "": "0",
-            "credentials": {
-                scope: "GLOBAL",
-                id: "nexus-base-url",
-                secret: `${QMConfig.subatomic.nexus.baseUrl}/content/repositories/`,
-                description: "Nexus base URL",
-                $class: "org.jenkinsci.plugins.plaincredentials.impl.StringCredentialsImpl",
-            },
-        };
+        const nexusCredentials = getJenkinsNexusCredential();
 
         await this.createGlobalCredentialsFor("Nexus", jenkinsHost, token, projectId, nexusCredentials);
 
-        const dockerRegistryCredentials = {
-            "": "0",
-            "credentials": {
-                scope: "GLOBAL",
-                id: "docker-registry-ip",
-                secret: `${QMConfig.subatomic.openshiftNonProd.dockerRepoUrl}`,
-                description: "IP For internal docker registry",
-                $class: "org.jenkinsci.plugins.plaincredentials.impl.StringCredentialsImpl",
-            },
-        };
+        const dockerRegistryCredentials = getJenkinsDockerCredential();
 
         await this.createGlobalCredentialsFor("Docker", jenkinsHost, token, projectId, dockerRegistryCredentials);
 
-        const mavenCredentials = {
-            "": "0",
-            "credentials": {
-                scope: "GLOBAL",
-                id: "maven-settings",
-                file: "file",
-                fileName: "settings.xml",
-                description: "Maven settings.xml",
-                $class: "org.jenkinsci.plugins.plaincredentials.impl.FileCredentialsImpl",
-            },
-        };
+        const mavenCredentials = getJenkinsMavenCredential();
 
         await this.createGlobalCredentialsFor("Maven", jenkinsHost, token, projectId, mavenCredentials, {
             filePath: QMConfig.subatomic.maven.settingsPath,
