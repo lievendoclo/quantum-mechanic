@@ -32,8 +32,8 @@ export class ConfigureBitbucketProjectRecommendedPractices extends Task {
 
         const bitbucketConfigurationService = new BitbucketConfigurationService(this.bitbucketService);
 
-        const ownerDomainUsernames = this.team.owners.map(owner => owner.domainUsername);
-        const memberDomainUsernames = this.team.members.map(member => member.domainUsername);
+        const ownerDomainUsernames = this.team.owners.map(owner => owner.domainUsername.substring(owner.domainUsername.indexOf("\\") + 1));
+        const memberDomainUsernames = this.team.members.map(member => member.domainUsername.substring(member.domainUsername.indexOf("\\") + 1));
 
         await bitbucketConfigurationService.addBranchPermissions(bitbucketProjectKey, ownerDomainUsernames, memberDomainUsernames);
 

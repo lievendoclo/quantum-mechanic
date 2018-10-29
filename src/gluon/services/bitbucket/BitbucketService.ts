@@ -55,8 +55,6 @@ export class BitbucketService {
 
     public async addProjectPermission(projectKey: string, user: string, permission: string = "PROJECT_READ"): Promise<any> {
         logger.debug(`Trying to add Bitbucket project permissions. projectKey: ${projectKey}; user: ${user}; permission: ${permission} `);
-        // remove the domain from the name
-        user = user.substring(user.indexOf("\\") + 1);
         return await bitbucketAxios().put(`${QMConfig.subatomic.bitbucket.restUrl}/api/1.0/projects/${projectKey}/permissions/users?name=${user}&permission=${permission}`,
             {});
     }

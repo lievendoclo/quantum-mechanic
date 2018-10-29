@@ -34,8 +34,8 @@ export class ConfigureBitbucketProjectAccess extends Task {
 
         await this.taskListMessage.succeedTask(this.TASK_ADD_SSH_KEYS);
 
-        await bitbucketConfigurationService.addAllOwnersToProject(bitbucketProjectKey, this.team.owners.map(owner => owner.domainUsername));
-        await bitbucketConfigurationService.addAllMembersToProject(bitbucketProjectKey, this.team.members.map(member => member.domainUsername));
+        await bitbucketConfigurationService.addAllOwnersToProject(bitbucketProjectKey, this.team.owners.map(owner => owner.domainUsername.substring(owner.domainUsername.indexOf("\\") + 1)));
+        await bitbucketConfigurationService.addAllMembersToProject(bitbucketProjectKey, this.team.members.map(member => member.domainUsername.substring(member.domainUsername.indexOf("\\") + 1)));
 
         await this.taskListMessage.succeedTask(this.TASK_ADD_BITBUCKET_USERS);
 
