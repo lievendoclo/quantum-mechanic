@@ -125,10 +125,10 @@ export class MembersAddedToTeam implements HandleEvent<any> {
                 // Add to bitbucket
                 await bitbucketConfiguration.addAllMembersToProject(
                     project.bitbucketProject.key,
-                    membersAddedToTeamEvent.members.map(member => member.domainUsername));
+                    membersAddedToTeamEvent.members.map(member => member.domainUsername.substring(member.domainUsername.indexOf("\\") + 1)));
                 await bitbucketConfiguration.addAllOwnersToProject(
                     project.bitbucketProject.key,
-                    membersAddedToTeamEvent.owners.map(owner => owner.domainUsername),
+                    membersAddedToTeamEvent.owners.map(owner => owner.domainUsername.substring(owner.domainUsername.indexOf("\\") + 1)),
                 );
                 // Add to openshift environments
                 for (const environment of QMConfig.subatomic.openshiftNonProd.defaultEnvironments) {
