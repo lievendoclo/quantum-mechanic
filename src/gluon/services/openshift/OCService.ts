@@ -304,8 +304,7 @@ export class OCService {
             "JENKINS_ADMIN_EMAIL=subatomic@local",
             // TODO the registry Cluster IP we will have to get by introspecting the registry Service
             // If no team email then the address of the createdBy member
-            `MAVEN_SLAVE_IMAGE=${QMConfig.subatomic.openshiftNonProd.dockerRepoUrl}/${devopsNamespace}/jenkins-slave-maven-subatomic:3.0`,
-            `NODEJS_SLAVE_IMAGE=${QMConfig.subatomic.openshiftNonProd.dockerRepoUrl}/${devopsNamespace}/jenkins-slave-nodejs-subatomic:3.0`,
+            `DEVOPS_URL=${QMConfig.subatomic.openshiftNonProd.dockerRepoUrl}/${devopsNamespace}`,
         ];
         return await this.processOpenshiftTemplate("jenkins-persistent-subatomic", devopsNamespace, parameters);
     }
