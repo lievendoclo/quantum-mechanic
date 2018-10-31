@@ -4,12 +4,10 @@ import {
     HandlerContext,
     HandlerResult,
     Parameter,
-    Tags,
 } from "@atomist/automation-client";
 import {TeamSlackChannelMessages} from "../../messages/team/TeamSlackChannelMessages";
 
 @CommandHandler("Check whether to create a new team channel or use an existing channel")
-@Tags("subatomic", "slack", "channel", "team")
 export class NewOrUseTeamSlackChannel implements HandleCommand {
 
     @Parameter({

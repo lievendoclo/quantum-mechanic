@@ -6,6 +6,7 @@ import {
     MappedParameter,
     MappedParameters,
     Parameter,
+    Tags,
 } from "@atomist/automation-client";
 import {v4 as uuid} from "uuid";
 import {QMConfig} from "../../../config/QMConfig";
@@ -39,6 +40,7 @@ import {
 } from "../../util/shared/Error";
 
 @CommandHandler("Create application in prod", QMConfig.subatomic.commandPrefix + " request application prod")
+@Tags("subatomic", "package")
 export class CreateApplicationProd extends RecursiveParameterRequestCommand
     implements GluonTeamNameSetter, GluonProjectNameSetter, GluonApplicationNameSetter {
 

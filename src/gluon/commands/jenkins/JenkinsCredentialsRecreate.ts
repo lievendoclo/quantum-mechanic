@@ -4,7 +4,7 @@ import {
     HandlerResult,
     logger,
     MappedParameter,
-    MappedParameters,
+    MappedParameters, Tags,
 } from "@atomist/automation-client";
 import {QMConfig} from "../../../config/QMConfig";
 import {isSuccessCode} from "../../../http/Http";
@@ -28,6 +28,7 @@ import {
 import {getDevOpsEnvironmentDetails} from "../../util/team/Teams";
 
 @CommandHandler("Recreate the Jenkins Bitbucket Credentials", QMConfig.subatomic.commandPrefix + " create jenkins bitbucket credentials")
+@Tags("subatomic", "bitbucket", "jenkins")
 export class JenkinsCredentialsRecreate extends RecursiveParameterRequestCommand
     implements GluonTeamNameSetter {
 

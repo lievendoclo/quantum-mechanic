@@ -5,6 +5,7 @@ import {
     logger,
     MappedParameter,
     MappedParameters,
+    Tags,
 } from "@atomist/automation-client";
 import {QMConfig} from "../../../config/QMConfig";
 import {QMTemplate} from "../../../template/QMTemplate";
@@ -32,6 +33,7 @@ const PACKAGE_DEFINITION_EXTENSION = ".json";
 const PACKAGE_DEFINITION_FOLDER = "resources/package-definitions/";
 
 @CommandHandler("Configure an existing application/library using a predefined template", QMConfig.subatomic.commandPrefix + " configure package")
+@Tags("subatomic", "package")
 export class ConfigureBasicPackage extends RecursiveParameterRequestCommand
     implements GluonTeamNameSetter, GluonProjectNameSetter, GluonApplicationNameSetter {
 

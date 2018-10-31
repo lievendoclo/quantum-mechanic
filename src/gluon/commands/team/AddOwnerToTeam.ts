@@ -21,10 +21,13 @@ import {
     RecursiveParameter,
     RecursiveParameterRequestCommand,
 } from "../../util/recursiveparam/RecursiveParameterRequestCommand";
-import {handleQMError, ResponderMessageClient} from "../../util/shared/Error";
+import {
+    handleQMError,
+    ResponderMessageClient,
+} from "../../util/shared/Error";
 
 @CommandHandler("Add a member as an owner to a team", QMConfig.subatomic.commandPrefix + " add team owner")
-@Tags("subatomic", "team", "member")
+@Tags("subatomic", "member", "team")
 export class AddOwnerToTeam extends RecursiveParameterRequestCommand implements GluonTeamNameSetter {
 
     private static RecursiveKeys = {

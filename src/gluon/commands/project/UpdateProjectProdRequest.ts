@@ -5,14 +5,12 @@ import {
     HandlerResult,
     logger,
     Parameter,
-    Tags,
 } from "@atomist/automation-client";
 import {GluonService} from "../../services/gluon/GluonService";
 import {ProjectProdRequestApprovalResponse} from "../../util/project/Project";
 import {handleQMError, ResponderMessageClient} from "../../util/shared/Error";
 
 @CommandHandler("Ignore a project prod request")
-@Tags("subatomic", "openshiftProd", "project")
 export class UpdateProjectProdRequest implements HandleCommand<HandlerResult> {
 
     @Parameter({

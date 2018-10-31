@@ -5,6 +5,7 @@ import {
     MappedParameter,
     MappedParameters,
     success,
+    Tags,
 } from "@atomist/automation-client";
 import {addressSlackChannelsFromContext} from "@atomist/automation-client/spi/message/MessageClient";
 import {QMConfig} from "../../../config/QMConfig";
@@ -41,6 +42,7 @@ import {handleQMError, ResponderMessageClient} from "../../util/shared/Error";
 import {GluonToEvent} from "../../util/transform/GluonToEvent";
 
 @CommandHandler("Configure an existing application/library", QMConfig.subatomic.commandPrefix + " configure custom package")
+@Tags("subatomic", "package")
 export class ConfigurePackage extends RecursiveParameterRequestCommand
     implements GluonTeamNameSetter, GluonProjectNameSetter, GluonApplicationNameSetter, JenkinsfileNameSetter, OpenshiftTemplateSetter, ImageNameSetter {
 

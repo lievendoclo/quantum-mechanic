@@ -24,7 +24,7 @@ import {
 import {handleQMError, ResponderMessageClient} from "../../util/shared/Error";
 
 @CommandHandler("Create the OpenShift production environments for a project", QMConfig.subatomic.commandPrefix + " request project prod")
-@Tags("subatomic", "openshiftProd", "project")
+@Tags("subatomic", "openshiftProd", "project", "other")
 export class CreateProjectProdEnvironments extends RecursiveParameterRequestCommand
     implements GluonTeamNameSetter, GluonProjectNameSetter {
 

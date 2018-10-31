@@ -7,7 +7,6 @@ import {
     MappedParameter,
     MappedParameters,
     Parameter,
-    Tags,
 } from "@atomist/automation-client";
 import {isSuccessCode} from "../../../http/Http";
 import {GluonService} from "../../services/gluon/GluonService";
@@ -15,7 +14,6 @@ import {getScreenName, loadScreenNameByUserId} from "../../util/member/Members";
 import {handleQMError, QMError, ResponderMessageClient} from "../../util/shared/Error";
 
 @CommandHandler("Request membership to a team")
-@Tags("subatomic", "team", "member")
 export class CreateMembershipRequestToTeam implements HandleCommand<HandlerResult> {
 
     @MappedParameter(MappedParameters.SlackUserName)

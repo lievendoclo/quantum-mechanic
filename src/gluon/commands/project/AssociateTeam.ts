@@ -5,6 +5,7 @@ import {
     logger,
     MappedParameter,
     MappedParameters,
+    Tags,
 } from "@atomist/automation-client";
 import * as _ from "lodash";
 import {QMConfig} from "../../../config/QMConfig";
@@ -24,6 +25,7 @@ import {
 import {menuAttachmentForTeams} from "../../util/team/Teams";
 
 @CommandHandler("Add additional team/s to a project", QMConfig.subatomic.commandPrefix + " associate team")
+@Tags("subatomic", "team", "project")
 export class AssociateTeam extends RecursiveParameterRequestCommand {
 
     private static RecursiveKeys = {

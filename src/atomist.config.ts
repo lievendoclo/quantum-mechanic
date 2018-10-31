@@ -100,6 +100,7 @@ import {
     TeamCreatedEvent,
 } from "./gluon/ingesters/teamIngester";
 import {TeamMemberCreatedEvent} from "./gluon/ingesters/teamMemberIngester";
+import {Help} from "./gluon/util/help/Help";
 
 const token = QMConfig.token;
 const http = QMConfig.http;
@@ -149,6 +150,10 @@ export const configuration: any = {
         TagAllLatestImages,
         TagLatestImage,
         UpdateProjectProdRequest,
+        CreateGenericProd,
+        ReRunProjectProdRequest,
+        PatchBuildConfigBaseImage,
+        Help,
     ],
     events: [
         ApplicationCreated,
