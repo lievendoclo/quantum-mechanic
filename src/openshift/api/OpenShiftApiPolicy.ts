@@ -1,4 +1,5 @@
 import {logger} from "@atomist/automation-client";
+import {AxiosResponse} from "axios-https-proxy-fix";
 import {AwaitAxios} from "../../http/AwaitAxios";
 import {OpenShiftApiElement} from "./base/OpenShiftApiElement";
 import {OpenshiftApiResult} from "./base/OpenshiftApiResult";
@@ -8,62 +9,74 @@ import {ResourceUrl} from "./resources/ResourceUrl";
 
 export class OpenShiftApiPolicy extends OpenShiftApiElement {
 
-    public addRoleToUser(username: string, role: string, namespace: string): Promise<OpenshiftApiResult> {
-        if (username.startsWith("system:serviceaccount")) {
-            const usernameSplit = username.split(":");
-            username = usernameSplit.pop();
-            const sourceNamespace = usernameSplit.pop();
-            return this.addRoleToServiceAccount(username, sourceNamespace, role, namespace);
+    public async addRoleToUsers(usernames: string[], role: string, namespace: string) {
+
+        const roleBindingResourceObject = await this.getRoleBindingResource(role, namespace);
+        const openshiftRole = roleBindingResourceObject.roleBinding;
+        openshiftRole.userNames = [];
+
+        usernames.forEach( username => {
+            if (username.startsWith("system:serviceaccount")) {
+
+                const usernameSplit = username.split(":");
+                username = usernameSplit.pop();
+                const sourceNamespace = usernameSplit.pop();
+
+                const subjectObj = {
+                    kind: "ServiceAccount",
+                    namespace: sourceNamespace,
+                    name: username,
+                };
+
+                if (!openshiftRole.subjects.includes(subjectObj)) {
+                    openshiftRole.subjects.push(subjectObj);
+                    openshiftRole.userNames.push(`system:serviceaccount:${sourceNamespace}:${username}`);
+                }
+            } else {
+
+                const subjectObj = {
+                    kind: "User",
+                    name: username,
+                };
+
+                if (!openshiftRole.subjects.includes(subjectObj)) {
+                    openshiftRole.subjects.push(subjectObj);
+                    openshiftRole.userNames.push(username);
+                }
+            }
+        });
+
+        return await this.addRoleToAccount(openshiftRole, role, namespace, roleBindingResourceObject.aNewRole );
+    }
+
+    public async addRoleToAccount(openshiftRole: OpenshiftResource, role: string, namespace: string, newRole: boolean) {
+        //  If this is a new role then post else do a put
+        if (newRole) {
+            logger.debug("Role not found. Creating new role binding via post...");
+            return await this.getAxiosInstanceOApi().post(ResourceUrl.getResourceKindUrl(
+                ResourceFactory.baseResource("RoleBinding"), namespace), openshiftRole);
         } else {
-            return this.addRoleToUserAccount(username, role, namespace);
+            logger.debug("Found role. Adding user to role binding list via put...");
+            return await this.getAxiosInstanceOApi().put(`${ResourceUrl.getResourceKindUrl(
+                ResourceFactory.baseResource("RoleBinding"), namespace)}/${role}`, openshiftRole);
         }
     }
 
-    public addRoleToServiceAccount(serviceAccount: string, sourceNamespace: string,
-                                   role: string, destinationNamespace: string): Promise<OpenshiftApiResult> {
-        const instance = this.getAxiosInstanceOApi();
-        return this.findExistingRole(instance, role, destinationNamespace).then(existingRole => {
-            if (existingRole === null) {
-                const newRole = ResourceFactory.serviceAccountRoleBindingResource(sourceNamespace, role, serviceAccount, destinationNamespace);
-                logger.debug("Role not found. Creating new role binding");
-
-                return instance.post(ResourceUrl.getResourceKindUrl(ResourceFactory.baseResource("RoleBinding"), destinationNamespace), newRole);
-            } else {
-                existingRole.subjects.push({
-                    kind: "ServiceAccount",
-                    namespace: sourceNamespace,
-                    name: serviceAccount,
-                });
-                existingRole.userNames.push(`system:serviceaccount:${sourceNamespace}:${serviceAccount}`);
-                logger.debug("Found role. Added service account to role binding list");
-                return instance.put(`${ResourceUrl.getResourceKindUrl(ResourceFactory.baseResource("RoleBinding"), destinationNamespace)}/${role}`, existingRole);
-            }
-        });
-    }
-
-    public addRoleToUserAccount(username: string, role: string, namespace: string): Promise<OpenshiftApiResult> {
-        const instance = this.getAxiosInstanceOApi();
-        return this.findExistingRole(instance, role, namespace).then(existingRole => {
-            if (existingRole === null) {
-                const newRole = ResourceFactory.userRoleBindingResource(namespace, role, username);
-                logger.debug("Role not found. Creating new role binding");
-                return instance.post(ResourceUrl.getResourceKindUrl(ResourceFactory.baseResource("RoleBinding"), namespace), newRole);
-            } else {
-                existingRole.subjects.push({
-                    kind: "User",
-                    name: username,
-                });
-                existingRole.userNames.push(username);
-                logger.debug("Found role. Added user to role binding list");
-                return instance.put(`${ResourceUrl.getResourceKindUrl(ResourceFactory.baseResource("RoleBinding"), namespace)}/${role}`, existingRole);
-            }
-        });
+    public async getRoleBindingResource(role: string, destinationNamespace) {
+        let newRole = false;
+        let openshiftRole = await this.findExistingRole(this.getAxiosInstanceOApi(), role, destinationNamespace);
+        if (openshiftRole === null) {
+            newRole = true;
+            openshiftRole = ResourceFactory.baseRoleBindingResource(destinationNamespace, role);
+            logger.debug("Role not found. Creating new role binding");
+        } else {
+            logger.debug("Role found OK");
+        }
+        return { roleBinding: openshiftRole, aNewRole: newRole };
     }
 
     public removeRoleFromUser(username: string, role: string, namespace: string): Promise<OpenshiftApiResult> {
-        if (username.startsWith("system:serviceaccount")) {
-            // Do not remove if service account - see Remove a team owner from a team #445 (https://github.com/absa-subatomic/quantum-mechanic/issues/445)
-        } else {
+        if (!username.startsWith("system:serviceaccount")) {
             return this.removeRoleFromUserAccount(username, role, namespace);
         }
     }

@@ -24,7 +24,7 @@ export class BitbucketConfigurationService {
     public async removeUserFromBitbucketProject(bitbucketProjectKey: string, membersDomainUsernames: string[]) {
         logger.info(`Trying to remove user from BitBucket project: ${bitbucketProjectKey}`);
         try {
-            return membersDomainUsernames.map(teamMember => this.bitbucketService.removeProjectPermission(bitbucketProjectKey, teamMember));
+            return membersDomainUsernames.map(teamMember => this.bitbucketService.removeProjectPermission(bitbucketProjectKey, /[^\\]*$/.exec(membersDomainUsernames[0]).toString()));
         } catch (error) {
             throw new QMError(error, `Failed to remove BitBucket permissions for user`);
         }
