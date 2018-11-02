@@ -14,6 +14,7 @@ import {BitbucketService} from "../../services/bitbucket/BitbucketService";
 import {GluonService} from "../../services/gluon/GluonService";
 import {OCService} from "../../services/openshift/OCService";
 import {AddMemberToTeamService} from "../../services/team/AddMemberToTeamService";
+import {userFromDomainUser} from "../../util/member/Members";
 import {getProjectId} from "../../util/project/Project";
 import {
     ChannelMessageClient,
@@ -111,7 +112,6 @@ export class MembersAddedToTeam implements HandleEvent<any> {
                 owner.slackIdentity.userId,
                 owner.slackIdentity.screenName);
         }
-
     }
 
     private async addPermissionsForUserToTeams(teamName: string, projects, membersAddedToTeamEvent) {
@@ -125,10 +125,10 @@ export class MembersAddedToTeam implements HandleEvent<any> {
                 // Add to bitbucket
                 await bitbucketConfiguration.addAllMembersToProject(
                     project.bitbucketProject.key,
-                    membersAddedToTeamEvent.members.map(member => member.domainUsername.substring(member.domainUsername.indexOf("\\") + 1)));
+                    membersAddedToTeamEvent.members.map(member => userFromDomainUser(member.domainUsername)));
                 await bitbucketConfiguration.addAllOwnersToProject(
                     project.bitbucketProject.key,
-                    membersAddedToTeamEvent.owners.map(owner => owner.domainUsername.substring(owner.domainUsername.indexOf("\\") + 1)),
+                    membersAddedToTeamEvent.owners.map(owner => userFromDomainUser(owner.domainUsername)),
                 );
                 // Add to openshift environments
                 for (const environment of QMConfig.subatomic.openshiftNonProd.defaultEnvironments) {

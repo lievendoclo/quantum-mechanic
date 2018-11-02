@@ -4,6 +4,7 @@ import _ = require("lodash");
 import {inspect} from "util";
 import {OpenShiftConfig} from "../../../config/OpenShiftConfig";
 import {QMConfig} from "../../../config/QMConfig";
+import {userFromDomainUser} from "../../../gluon/util/member/Members";
 import {isSuccessCode} from "../../../http/Http";
 import {OpenshiftApiResult} from "../../../openshift/api/base/OpenshiftApiResult";
 import {OpenShiftApi} from "../../../openshift/api/OpenShiftApi";
@@ -459,13 +460,13 @@ export class OCService {
     }
 
     public async addTeamMembershipPermissionsToProject(projectId: string, team: QMTeam) {
-        const teamOwners = team.owners.map( owner => /[^\\]*$/.exec(owner.domainUsername)[0] );
+        const teamOwners = team.owners.map( owner => userFromDomainUser(owner.domainUsername) );
         if (teamOwners.length > 0) {
             logger.debug(`Trying to add team membership permission to project for role admin.`);
             await this.openShiftApi.policy.addRoleToUsers(teamOwners, "admin", projectId);
         }
 
-        const teamMembers = team.members.map( owner => /[^\\]*$/.exec(owner.domainUsername)[0] );
+        const teamMembers = team.members.map( owner => userFromDomainUser(owner.domainUsername) );
         if (teamMembers.length > 0) {
             logger.debug(`Trying to add team membership permission to project for role admin.`);
             await this.openShiftApi.policy.addRoleToUsers(teamMembers, "edit", projectId);
@@ -473,7 +474,7 @@ export class OCService {
     }
 
     public async removeTeamMembershipPermissionsFromProject(projectId: string, domainUserName: string) {
-        const memberUsername = /[^\\]*$/.exec(domainUserName)[0];
+        const memberUsername = userFromDomainUser(domainUserName);
         logger.info(`Removing role from project [${projectId}] and member [${domainUserName}]: ${memberUsername}`);
         return await this.openShiftApi.policy.removeRoleFromUser(memberUsername, "edit", projectId);
     }
