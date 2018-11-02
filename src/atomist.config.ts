@@ -9,13 +9,13 @@ import {KickOffJenkinsBuild} from "./gluon/commands/jenkins/JenkinsBuild";
 import {JenkinsCredentialsRecreate} from "./gluon/commands/jenkins/JenkinsCredentialsRecreate";
 import {AddSlackDetails} from "./gluon/commands/member/AddSlackDetails";
 import {OnboardMember} from "./gluon/commands/member/OnboardMember";
+import {ConfigureApplicationJenkinsProd} from "./gluon/commands/packages/ConfigureApplicationJenkinsProd";
 import {ConfigureBasicPackage} from "./gluon/commands/packages/ConfigureBasicPackage";
 import {ConfigurePackage} from "./gluon/commands/packages/ConfigurePackage";
 import {CreateApplicationProd} from "./gluon/commands/packages/CreateApplicationProd";
 import {LinkExistingApplication} from "./gluon/commands/packages/LinkExistingApplication";
 import {LinkExistingLibrary} from "./gluon/commands/packages/LinkExistingLibrary";
 import {PatchBuildConfigBaseImage} from "./gluon/commands/packages/PatchBuildConfigBaseImage";
-import {AddConfigServer} from "./gluon/commands/project/AddConfigServer";
 import {AssociateTeam} from "./gluon/commands/project/AssociateTeam";
 import {CreateGenericProd} from "./gluon/commands/project/CreateGenericProd";
 import {CreateOpenShiftPvc} from "./gluon/commands/project/CreateOpenShiftPvc";
@@ -28,6 +28,7 @@ import {
 } from "./gluon/commands/project/ProjectDetails";
 import {ReRunProjectProdRequest} from "./gluon/commands/project/ReRunProjectProdRequest";
 import {UpdateProjectProdRequest} from "./gluon/commands/project/UpdateProjectProdRequest";
+import {AddConfigServer} from "./gluon/commands/team/AddConfigServer";
 import {AddMemberToTeam} from "./gluon/commands/team/AddMemberToTeam";
 import {AddOwnerToTeam} from "./gluon/commands/team/AddOwnerToTeam";
 import {CreateMembershipRequestToTeam} from "./gluon/commands/team/CreateMembershipRequestToTeam";
@@ -118,6 +119,7 @@ export const configuration: any = {
         AssociateTeam,
         BitbucketProjectAccessCommand,
         BitbucketProjectRecommendedPracticesCommand,
+        ConfigureApplicationJenkinsProd,
         ConfigureBasicPackage,
         ConfigurePackage,
         CreateApplicationProd,
@@ -127,6 +129,7 @@ export const configuration: any = {
         CreateProject,
         CreateProjectProdEnvironments,
         CreateTeam,
+        Help,
         JoinTeam,
         JenkinsCredentialsRecreate,
         KickOffJenkinsBuild,
@@ -150,10 +153,6 @@ export const configuration: any = {
         TagAllLatestImages,
         TagLatestImage,
         UpdateProjectProdRequest,
-        CreateGenericProd,
-        ReRunProjectProdRequest,
-        PatchBuildConfigBaseImage,
-        Help,
     ],
     events: [
         ApplicationCreated,

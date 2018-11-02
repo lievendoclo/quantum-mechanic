@@ -109,3 +109,20 @@ Consider linking an existing application called ${applicationName}. Click the bu
     }
 
 }
+
+export interface QMApplication {
+    applicationId: string;
+    name: string;
+    description: string;
+    applicationType: string;
+    projectId: string;
+    bitbucketRepository: QMBitbucketRepository;
+}
+
+export interface QMBitbucketRepository {
+    bitbucketId: string;
+    slug: string;
+    name: string;
+    repoUrl: string;
+    remoteUrl: string;
+}

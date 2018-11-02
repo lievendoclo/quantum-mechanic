@@ -2,7 +2,7 @@ import {HandlerContext} from "@atomist/automation-client";
 import {BitbucketConfigurationService} from "../../services/bitbucket/BitbucketConfigurationService";
 import {BitbucketService} from "../../services/bitbucket/BitbucketService";
 import {userFromDomainUser} from "../../util/member/Members";
-import {QMProject} from "../../util/project/Project";
+import {QMProjectBase} from "../../util/project/Project";
 import {QMTeam} from "../../util/team/Teams";
 import {Task} from "../Task";
 import {TaskListMessage} from "../TaskListMessage";
@@ -14,7 +14,7 @@ export class ConfigureBitbucketProjectAccess extends Task {
     private readonly TASK_ADD_BITBUCKET_USERS = TaskListMessage.createUniqueTaskName("AddBitbucketUsers");
 
     constructor(private team: QMTeam,
-                private project: QMProject,
+                private project: QMProjectBase,
                 private bitbucketService: BitbucketService) {
         super();
     }

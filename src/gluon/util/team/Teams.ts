@@ -69,16 +69,6 @@ export interface DevOpsEnvironmentDetails {
     description: string;
 }
 
-export function createQMTeam(name: string = null,
-                             owners: QMMemberBase[] = [],
-                             members: QMMemberBase[] = []): QMTeam {
-    return {
-        name,
-        owners,
-        members,
-    };
-}
-
 export function isUserAMemberOfTheTeam(user: QMMemberBase, team: QMTeam) {
     for (const member of team.members) {
         if (user.memberId === member.memberId) {
@@ -95,8 +85,17 @@ export function isUserAMemberOfTheTeam(user: QMMemberBase, team: QMTeam) {
     return false;
 }
 
-export interface QMTeam {
+export interface QMTeamSlack {
+    teamChannel: string;
+}
+
+export interface QMTeamBase {
+    teamId: string;
     name: string;
+    slack?: QMTeamSlack;
+}
+
+export interface QMTeam extends QMTeamBase {
     owners: QMMemberBase[];
     members: QMMemberBase[];
 }

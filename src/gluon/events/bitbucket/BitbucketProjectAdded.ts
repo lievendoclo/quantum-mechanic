@@ -16,7 +16,7 @@ import {BitbucketService} from "../../services/bitbucket/BitbucketService";
 import {ConfigureBitbucketProjectAccess} from "../../tasks/bitbucket/ConfigureBitbucketProjectAccess";
 import {TaskListMessage} from "../../tasks/TaskListMessage";
 import {TaskRunner} from "../../tasks/TaskRunner";
-import {QMProject} from "../../util/project/Project";
+import {QMProjectBase} from "../../util/project/Project";
 import {ChannelMessageClient, handleQMError} from "../../util/shared/Error";
 
 @EventHandler("Receive BitbucketProjectAddedEvent events", `
@@ -85,7 +85,8 @@ export class BitbucketProjectAdded implements HandleEvent<any> {
 
             const project = bitbucketProjectAddedEvent.project;
 
-            const qmProject: QMProject = {
+            const qmProject: QMProjectBase = {
+                projectId: project.projectId,
                 name: project.name,
                 bitbucketProject: bitbucketProjectAddedEvent.bitbucketProject,
             };

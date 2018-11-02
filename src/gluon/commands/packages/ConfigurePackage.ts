@@ -16,6 +16,7 @@ import {ConfigurePackageInOpenshift} from "../../tasks/packages/ConfigurePackage
 import {TaskListMessage} from "../../tasks/TaskListMessage";
 import {TaskRunner} from "../../tasks/TaskRunner";
 import {ApplicationType} from "../../util/packages/Applications";
+import {QMProject} from "../../util/project/Project";
 import {
     GluonApplicationNameSetter,
     GluonProjectNameSetter,
@@ -39,7 +40,6 @@ import {
     RecursiveParameterRequestCommand,
 } from "../../util/recursiveparam/RecursiveParameterRequestCommand";
 import {handleQMError, ResponderMessageClient} from "../../util/shared/Error";
-import {GluonToEvent} from "../../util/transform/GluonToEvent";
 
 @CommandHandler("Configure an existing application/library", QMConfig.subatomic.commandPrefix + " configure custom package")
 @Tags("subatomic", "package")
@@ -106,7 +106,7 @@ export class ConfigurePackage extends RecursiveParameterRequestCommand
 
     protected async runCommand(ctx: HandlerContext): Promise<HandlerResult> {
         try {
-            const destination =  await addressSlackChannelsFromContext(ctx, this.teamChannel);
+            const destination = await addressSlackChannelsFromContext(ctx, this.teamChannel);
             await ctx.messageClient.send({
                 text: "Preparing to configure your package...",
             }, destination);
@@ -126,7 +126,7 @@ export class ConfigurePackage extends RecursiveParameterRequestCommand
     }
 
     private async configurePackage(ctx: HandlerContext): Promise<HandlerResult> {
-        const project = await this.gluonService.projects.gluonProjectFromProjectName(this.projectName);
+        const project: QMProject = await this.gluonService.projects.gluonProjectFromProjectName(this.projectName);
 
         const application = await this.gluonService.applications.gluonApplicationForNameAndProjectName(this.applicationName, this.projectName);
 
@@ -154,9 +154,6 @@ export class ConfigurePackage extends RecursiveParameterRequestCommand
             new ConfigurePackageInJenkins(
                 application,
                 project,
-                GluonToEvent.bitbucketRepository(application),
-                GluonToEvent.bitbucketProject(project),
-                GluonToEvent.teamMinimal(project.owningTeam),
                 this.jenkinsfileName),
         );
 

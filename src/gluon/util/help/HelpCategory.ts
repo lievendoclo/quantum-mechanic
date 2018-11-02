@@ -1,24 +1,33 @@
 import * as _ from "lodash";
-import {ListExistingBitbucketProject, NewBitbucketProject} from "../../commands/bitbucket/BitbucketProject";
+import {
+    ListExistingBitbucketProject,
+    NewBitbucketProject,
+} from "../../commands/bitbucket/BitbucketProject";
+import {BitbucketProjectAccessCommand} from "../../commands/bitbucket/BitbucketProjectAccessCommand";
+import {BitbucketProjectRecommendedPracticesCommand} from "../../commands/bitbucket/BitbucketProjectRecommendedPracticesCommand";
 import {KickOffJenkinsBuild} from "../../commands/jenkins/JenkinsBuild";
 import {AddSlackDetails} from "../../commands/member/AddSlackDetails";
 import {OnboardMember} from "../../commands/member/OnboardMember";
+import {ConfigureApplicationJenkinsProd} from "../../commands/packages/ConfigureApplicationJenkinsProd";
 import {ConfigureBasicPackage} from "../../commands/packages/ConfigureBasicPackage";
 import {ConfigurePackage} from "../../commands/packages/ConfigurePackage";
 import {CreateApplicationProd} from "../../commands/packages/CreateApplicationProd";
 import {LinkExistingApplication} from "../../commands/packages/LinkExistingApplication";
 import {LinkExistingLibrary} from "../../commands/packages/LinkExistingLibrary";
 import {PatchBuildConfigBaseImage} from "../../commands/packages/PatchBuildConfigBaseImage";
-import {AddConfigServer} from "../../commands/project/AddConfigServer";
 import {AssociateTeam} from "../../commands/project/AssociateTeam";
 import {CreateGenericProd} from "../../commands/project/CreateGenericProd";
 import {CreateOpenShiftPvc} from "../../commands/project/CreateOpenShiftPvc";
 import {CreateProject} from "../../commands/project/CreateProject";
 import {CreateProjectProdEnvironments} from "../../commands/project/CreateProjectProdEnvironments";
 import {NewProjectEnvironments} from "../../commands/project/NewProjectEnvironments";
-import {ListProjectDetails, ListTeamProjects} from "../../commands/project/ProjectDetails";
+import {
+    ListProjectDetails,
+    ListTeamProjects,
+} from "../../commands/project/ProjectDetails";
 import {ReRunProjectProdRequest} from "../../commands/project/ReRunProjectProdRequest";
 import {UpdateProjectProdRequest} from "../../commands/project/UpdateProjectProdRequest";
+import {AddConfigServer} from "../../commands/team/AddConfigServer";
 import {AddMemberToTeam} from "../../commands/team/AddMemberToTeam";
 import {AddOwnerToTeam} from "../../commands/team/AddOwnerToTeam";
 import {CreateMembershipRequestToTeam} from "../../commands/team/CreateMembershipRequestToTeam";
@@ -71,7 +80,11 @@ export class HelpCategory {
         UpdateProjectProdRequest,
         CreateGenericProd,
         ReRunProjectProdRequest,
-        PatchBuildConfigBaseImage];
+        PatchBuildConfigBaseImage,
+        BitbucketProjectAccessCommand,
+        BitbucketProjectRecommendedPracticesCommand,
+        ConfigureApplicationJenkinsProd,
+    ];
 
     constructor(protected name, protected description, protected tags: string) {
     }

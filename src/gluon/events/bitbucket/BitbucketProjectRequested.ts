@@ -13,7 +13,7 @@ import {GluonService} from "../../services/gluon/GluonService";
 import {ConfigureBitbucketProjectRecommendedPractices} from "../../tasks/bitbucket/ConfigureBitbucketProjectRecommendedPractices";
 import {TaskListMessage} from "../../tasks/TaskListMessage";
 import {TaskRunner} from "../../tasks/TaskRunner";
-import {QMProject} from "../../util/project/Project";
+import {QMProjectBase} from "../../util/project/Project";
 import {
     ChannelMessageClient,
     handleQMError,
@@ -88,7 +88,8 @@ export class BitbucketProjectRequested implements HandleEvent<any> {
 
             const project = bitbucketProjectRequestedEvent.project;
 
-            const qmProject: QMProject = {
+            const qmProject: QMProjectBase = {
+                projectId: project.projectId,
                 name: project.name,
                 bitbucketProject: bitbucketProjectRequestedEvent.bitbucketProjectRequest,
             };

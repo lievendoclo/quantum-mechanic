@@ -46,11 +46,13 @@ export interface OpenshiftProjectEnvironmentRequest {
 }
 
 export interface QMProjectBase {
+    projectId: string;
     name: string;
+    bitbucketProject: QMBitbucketProject;
 }
 
 export interface QMProject extends QMProjectBase {
-    bitbucketProject: QMBitbucketProject;
+    owningTeam: QMTeam;
 }
 
 export enum ProjectProdRequestApprovalResponse {

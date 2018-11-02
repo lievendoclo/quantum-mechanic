@@ -1,42 +1,48 @@
 import {
+    BitBucketServerRepoRef,
     HandlerContext,
     HandlerResult,
     logger,
     success,
 } from "@atomist/automation-client";
-import {BitBucketServerRepoRef} from "@atomist/automation-client/operations/common/BitBucketServerRepoRef";
 import {GitCommandGitProject} from "@atomist/automation-client/project/git/GitCommandGitProject";
 import {GitProject} from "@atomist/automation-client/project/git/GitProject";
 import {buttonForCommand} from "@atomist/automation-client/spi/message/MessageClient";
-import {url} from "@atomist/slack-messages";
+import {SlackMessage, url} from "@atomist/slack-messages";
+import _ = require("lodash");
 import {QMConfig} from "../../../config/QMConfig";
 import {isSuccessCode} from "../../../http/Http";
 import {QMTemplate} from "../../../template/QMTemplate";
 import {KickOffJenkinsBuild} from "../../commands/jenkins/JenkinsBuild";
+import {QMApplication} from "../../services/gluon/ApplicationService";
 import {JenkinsService} from "../../services/jenkins/JenkinsService";
 import {OCService} from "../../services/openshift/OCService";
+import {
+    JenkinsJobTemplate,
+    NonProdDefaultJenkinsJobTemplate,
+} from "../../util/jenkins/JenkinsJobTemplates";
 import {ApplicationType} from "../../util/packages/Applications";
+import {QMProject} from "../../util/project/Project";
 import {ParameterDisplayType} from "../../util/recursiveparam/RecursiveParameterRequestCommand";
 import {QMError} from "../../util/shared/Error";
-import {getDevOpsEnvironmentDetails} from "../../util/team/Teams";
+import {getDevOpsEnvironmentDetails, QMTeamBase} from "../../util/team/Teams";
 import {Task} from "../Task";
 import {TaskListMessage} from "../TaskListMessage";
 
 export class ConfigurePackageInJenkins extends Task {
 
-    private readonly JENKINSFILE_EXTENSION = ".groovy";
+    private readonly JENKINSFILE_EXISTS_FLAG = "JENKINS_FILE_EXISTS";
     private readonly JENKINSFILE_FOLDER = "resources/templates/jenkins/jenkinsfile-repo/";
-    private readonly JENKINSFILE_EXISTS = "JENKINS_FILE_EXISTS";
+    private readonly JENKINSFILE_EXTENSION = ".groovy";
 
     private readonly TASK_ADD_JENKINS_FILE = "AddJenkinsfile";
     private readonly TASK_CREATE_JENKINS_JOB = "CreateJenkinsJob";
 
-    constructor(private application,
-                private project,
-                private bitbucketRepository,
-                private bitbucketProject,
-                private owningTeam,
-                private jenkinsFile,
+    constructor(private application: QMApplication,
+                private project: QMProject,
+                private jenkinsFile: string,
+                private jenkinsJobTemplate: JenkinsJobTemplate = NonProdDefaultJenkinsJobTemplate,
+                private successMessage?: SlackMessage,
                 private ocService = new OCService(),
                 private jenkinsService = new JenkinsService()) {
         super();
@@ -50,25 +56,22 @@ export class ConfigurePackageInJenkins extends Task {
     protected async executeTask(ctx: HandlerContext): Promise<boolean> {
         await this.ocService.login();
 
-        logger.info(JSON.stringify(this.bitbucketRepository, null, 2));
-
         await this.addJenkinsFile(
             this.jenkinsFile,
-            this.bitbucketProject.key,
-            this.bitbucketRepository.slug,
+            this.project.bitbucketProject.key,
+            this.application.bitbucketRepository.slug,
+            this.jenkinsJobTemplate.expectedJenkinsfile,
         );
 
         await this.taskListMessage.succeedTask(this.TASK_ADD_JENKINS_FILE);
 
-        const devopsDetails = getDevOpsEnvironmentDetails(this.owningTeam.name);
+        const devopsDetails = getDevOpsEnvironmentDetails(this.project.owningTeam.name);
 
         await this.createJenkinsJob(
             devopsDetails.openshiftProjectId,
-            this.project.name,
-            this.project.projectId,
-            this.application.name,
-            this.bitbucketProject.key,
-            this.bitbucketRepository.name);
+            this.project,
+            this.application,
+            this.jenkinsJobTemplate);
 
         await this.taskListMessage.succeedTask(this.TASK_CREATE_JENKINS_JOB);
 
@@ -83,15 +86,66 @@ export class ConfigurePackageInJenkins extends Task {
             ctx,
             this.application.name,
             this.project.name,
-            [this.owningTeam],
+            [this.project.owningTeam],
             applicationType);
 
         return true;
     }
 
-    private async addJenkinsFile(jenkinsfileName, bitbucketProjectKey, bitbucketRepositorySlug): Promise<HandlerResult> {
+    private async createJenkinsJob(teamDevOpsProjectId: string,
+                                   project: QMProject,
+                                   application: QMApplication,
+                                   jenkinsJobTemplate: JenkinsJobTemplate): Promise<HandlerResult> {
+        const token = await this.ocService.getServiceAccountToken("subatomic-jenkins", teamDevOpsProjectId);
+        const jenkinsHost = await this.ocService.getJenkinsHost(teamDevOpsProjectId);
+        logger.debug(`Using Jenkins Route host [${jenkinsHost.output}] to add Bitbucket credentials`);
 
-        if (jenkinsfileName !== this.JENKINSFILE_EXISTS) {
+        const jenkinsTemplate: QMTemplate = new QMTemplate(`resources/templates/jenkins/${jenkinsJobTemplate.templateFilename}`);
+        const builtTemplate: string = jenkinsTemplate.build(
+            {
+                gluonApplicationName: application.name,
+                gluonBaseUrl: QMConfig.subatomic.gluon.baseUrl,
+                gluonProjectId: project.projectId,
+                bitbucketBaseUrl: QMConfig.subatomic.bitbucket.baseUrl,
+                teamDevOpsProjectId,
+                bitbucketProjectKey: project.bitbucketProject.key,
+                bitbucketRepositoryName: application.bitbucketRepository.name,
+            },
+        );
+
+        const createJenkinsJobResponse = await this.jenkinsService.createJenkinsJob(
+            jenkinsHost.output,
+            token,
+            project.name,
+            application.name + jenkinsJobTemplate.jobNamePostfix,
+            builtTemplate);
+
+        if (!isSuccessCode(createJenkinsJobResponse.status)) {
+            if (createJenkinsJobResponse.status === 400) {
+                logger.warn(`Multibranch job for [${application.name}] probably already created`);
+            } else {
+                logger.error(`Unable to create jenkinsJob`);
+                throw new QMError("Failed to create jenkins job. Network request failed.");
+            }
+        }
+        return await success();
+    }
+
+    private async sendPackageProvisionedMessage(ctx: HandlerContext, applicationName: string, projectName: string, associatedTeams: QMTeamBase[], applicationType: ApplicationType) {
+
+        let returnableSuccessMessage = this.getDefaultSuccessMessage(applicationName, projectName, applicationType);
+
+        if (!_.isEmpty(this.successMessage)) {
+            returnableSuccessMessage = this.successMessage;
+        }
+
+        return await ctx.messageClient.addressChannels(returnableSuccessMessage, associatedTeams.map(team =>
+            team.slack.teamChannel));
+    }
+
+    private async addJenkinsFile(jenkinsfileName, bitbucketProjectKey, bitbucketRepositorySlug, destinationJenkinsfileName: string = "Jenkinsfile"): Promise<HandlerResult> {
+
+        if (jenkinsfileName !== this.JENKINSFILE_EXISTS_FLAG) {
             const username = QMConfig.subatomic.bitbucket.auth.username;
             const password = QMConfig.subatomic.bitbucket.auth.password;
             const project: GitProject = await GitCommandGitProject.cloned({
@@ -103,11 +157,11 @@ export class ConfigurePackageInJenkins extends Task {
                     bitbucketProjectKey,
                     bitbucketRepositorySlug));
             try {
-                await project.findFile("Jenkinsfile");
+                await project.findFile(destinationJenkinsfileName);
             } catch (error) {
                 logger.info("Jenkinsfile doesnt exist. Adding it!");
                 const jenkinsTemplate: QMTemplate = new QMTemplate(this.getPathFromJenkinsfileName(jenkinsfileName as string));
-                await project.addFile("Jenkinsfile",
+                await project.addFile(destinationJenkinsfileName,
                     jenkinsTemplate.build({}));
             }
 
@@ -133,54 +187,13 @@ export class ConfigurePackageInJenkins extends Task {
         return this.JENKINSFILE_FOLDER + jenkinsfileName + this.JENKINSFILE_EXTENSION;
     }
 
-    private async createJenkinsJob(teamDevOpsProjectId: string,
-                                   gluonProjectName: string,
-                                   gluonProjectId: string,
-                                   gluonApplicationName: string,
-                                   bitbucketProjectKey: string,
-                                   bitbucketRepositoryName: string): Promise<HandlerResult> {
-        const token = await this.ocService.getServiceAccountToken("subatomic-jenkins", teamDevOpsProjectId);
-        const jenkinsHost = await this.ocService.getJenkinsHost(teamDevOpsProjectId);
-        logger.debug(`Using Jenkins Route host [${jenkinsHost.output}] to add Bitbucket credentials`);
-
-        const jenkinsTemplate: QMTemplate = new QMTemplate("resources/templates/jenkins/jenkins-multi-branch-project.xml");
-        const builtTemplate: string = jenkinsTemplate.build(
-            {
-                gluonApplicationName,
-                gluonBaseUrl: QMConfig.subatomic.gluon.baseUrl,
-                gluonProjectId,
-                bitbucketBaseUrl: QMConfig.subatomic.bitbucket.baseUrl,
-                teamDevOpsProjectId,
-                bitbucketProjectKey,
-                bitbucketRepositoryName,
-            },
-        );
-
-        const createJenkinsJobResponse = await this.jenkinsService.createJenkinsJob(
-            jenkinsHost.output,
-            token,
-            gluonProjectName,
-            gluonApplicationName,
-            builtTemplate);
-
-        if (!isSuccessCode(createJenkinsJobResponse.status)) {
-            if (createJenkinsJobResponse.status === 400) {
-                logger.warn(`Multibranch job for [${gluonApplicationName}] probably already created`);
-            } else {
-                logger.error(`Unable to create jenkinsJob`);
-                throw new QMError("Failed to create jenkins job. Network request failed.");
-            }
-        }
-        return await success();
-    }
-
-    private async sendPackageProvisionedMessage(ctx: HandlerContext, applicationName: string, projectName: string, associatedTeams: any[], applicationType: ApplicationType) {
+    private getDefaultSuccessMessage(applicationName: string, projectName: string, applicationType: ApplicationType): SlackMessage {
         let packageTypeString = "application";
         if (applicationType === ApplicationType.LIBRARY) {
             packageTypeString = "library";
         }
 
-        return await ctx.messageClient.addressChannels({
+        return {
             text: `Your ${packageTypeString} *${applicationName}*, in project *${projectName}*, has been provisioned successfully ` +
                 "and is ready to build/deploy",
             attachments: [{
@@ -203,8 +216,7 @@ You can kick off the build pipeline for your ${packageTypeString} by clicking th
                         }),
                 ],
             }],
-        }, associatedTeams.map(team =>
-            team.slackIdentity.teamChannel));
+        };
     }
 
     private docs(): string {
