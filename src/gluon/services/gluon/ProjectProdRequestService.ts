@@ -1,4 +1,5 @@
 import {logger} from "@atomist/automation-client";
+import _ = require("lodash");
 import {inspect} from "util";
 import {QMConfig} from "../../../config/QMConfig";
 import {AwaitAxios} from "../../../http/AwaitAxios";
@@ -91,8 +92,11 @@ export class ProjectProdRequestService {
             logger.error(`Request to find project prod requests failed: ${inspect(prodRequestResult)}`);
             throw new QMError("Unable to find any prod requests associated to the selected project. Please make that the project has requested prod promotion.");
         }
-
-        return prodRequestResult.data._embedded.projectProdRequestResources;
+        let result: QMProjectProdRequest[] = [];
+        if (!_.isEmpty(prodRequestResult.data._embedded)) {
+            result = prodRequestResult.data._embedded.projectProdRequestResources;
+        }
+        return result;
     }
 
     private async updateProjectProdRequest(projectProdRequestId: string, actionedBy: string, approvalStatus: string): Promise<any> {
