@@ -3,7 +3,7 @@ import * as _ from "lodash";
 import * as graphql from "../../../typings/types";
 
 export function userFromDomainUser(domainUsername: string): string {
-    return /[^\\]*$/.exec(domainUsername)[0];
+    return /[^\\]*$/.exec(domainUsername)[0].toString();
 }
 
 export function getScreenName(screenName: string) {
