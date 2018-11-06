@@ -72,6 +72,7 @@ export class MembersAddedToTeam implements HandleEvent<any> {
 
             const projects = await this.getListOfTeamProjects(team.name);
 
+            logger.info("About to add permissions for users");
             await this.addPermissionsForUserToTeams(team.name, projects, membersAddedToTeamEvent);
 
             const destination = await addressSlackChannelsFromContext(ctx, team.slackIdentity.teamChannel);
@@ -116,9 +117,13 @@ export class MembersAddedToTeam implements HandleEvent<any> {
 
     private async addPermissionsForUserToTeams(teamName: string, projects, membersAddedToTeamEvent) {
         try {
+            logger.info("New bitbucket config");
             const bitbucketConfiguration = new BitbucketConfigurationService(this.bitbucketService);
+            logger.info("Logging in to OS");
             await this.ocService.login();
+            logger.info("Gettoing devops env");
             const devopsProject = getDevOpsEnvironmentDetails(teamName).openshiftProjectId;
+            logger.info(`About to add perm for ${devopsProject}`);
             await this.ocService.addTeamMembershipPermissionsToProject(devopsProject, membersAddedToTeamEvent);
             for (const project of projects) {
                 logger.info(`Configuring permissions for project: ${project}`);
