@@ -460,6 +460,7 @@ export class OCService {
     }
 
     public async addTeamMembershipPermissionsToProject(projectId: string, team: QMTeam) {
+        logger.info(`???${team}`);
         const teamOwners = team.owners.map( owner => userFromDomainUser(owner.domainUsername) );
         logger.info(`Owners: ${teamOwners}, length: ${teamOwners.length}`);
         if (teamOwners.length > 0) {

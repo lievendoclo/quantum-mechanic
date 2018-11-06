@@ -3,6 +3,8 @@ import * as _ from "lodash";
 import * as graphql from "../../../typings/types";
 
 export function userFromDomainUser(domainUsername: string): string {
+    logger.info(/[^\\]*$/.exec(domainUsername)[0]);
+    logger.info(`!!!!${domainUsername}`);
     return /[^\\]*$/.exec(domainUsername)[0];
 }
 
