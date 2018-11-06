@@ -36,7 +36,6 @@ subscription MembersAddedToTeamEvent {
     }
     owners{
       firstName
-      domainUsername
       slackIdentity {
         screenName
         userId
