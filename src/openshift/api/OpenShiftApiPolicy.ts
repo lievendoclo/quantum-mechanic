@@ -13,8 +13,8 @@ export class OpenShiftApiPolicy extends OpenShiftApiElement {
 
         const roleBindingResourceObject = await this.getRoleBindingResource(role, namespace);
         const openshiftRole = roleBindingResourceObject.roleBinding;
-        openshiftRole.userNames = [];
-
+        // openshiftRole.userNames = [];
+        logger.info(`---${JSON.stringify(openshiftRole)}`);
         usernames.forEach( username => {
             if (username.startsWith("system:serviceaccount")) {
 
