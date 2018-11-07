@@ -127,7 +127,7 @@ export class MembersAddedToTeam implements HandleEvent<any> {
             logger.info(`About to add perm for ${devopsProject}`);
             await this.ocService.addTeamMembershipPermissionsToProject(devopsProject, membersAddedToTeamEvent);
             for (const project of projects) {
-                logger.info(`Configuring permissions for project: ${project}`);
+                logger.info(`Configuring permissions for project: ${JSON.stringify(project)}`);
                 // Add to bitbucket
                 await bitbucketConfiguration.addAllMembersToProject(
                     project.bitbucketProject.key,
@@ -138,7 +138,7 @@ export class MembersAddedToTeam implements HandleEvent<any> {
                 );
                 // Add to openshift environments
                 for (const environment of QMConfig.subatomic.openshiftNonProd.defaultEnvironments) {
-                    logger.info(`Add permissions for env: ${environment}`);
+                    logger.info(`Add permissions for env: ${environment.description}`);
                     const tenant = await this.gluonService.tenants.gluonTenantFromTenantId(project.owningTenant);
                     const projectId = getProjectId(tenant.name, project.name, environment.id);
                     await this.ocService.addTeamMembershipPermissionsToProject(projectId, membersAddedToTeamEvent);
