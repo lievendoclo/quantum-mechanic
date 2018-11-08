@@ -4,7 +4,6 @@ import {
     addressSlackUsersFromContext,
 } from "@atomist/automation-client/spi/message/MessageClient";
 import {buttonForCommand} from "@atomist/automation-client/spi/message/MessageClient";
-import {inviteUserToSlackChannel} from "@atomist/lifecycle-automation/handlers/command/slack/AssociateRepo";
 import {SlackMessage, url} from "@atomist/slack-messages";
 import {inspect} from "util";
 import {QMConfig} from "../../../config/QMConfig";
@@ -16,6 +15,7 @@ import {MemberRole} from "../../util/member/Members";
 import {QMError} from "../../util/shared/Error";
 import {loadChannelIdByChannelName} from "../../util/team/Teams";
 import {GluonService} from "../gluon/GluonService";
+import {inviteUserToSlackChannel} from "@atomist/lifecycle-automation/lib/handlers/command/slack/AssociateRepo";
 
 export class AddMemberToTeamService {
 

@@ -1,5 +1,5 @@
 import {HandlerContext, logger} from "@atomist/automation-client";
-import {handleError} from "@atomist/lifecycle-automation/handlers/command/github/gitHubApi";
+import {handleError} from "@atomist/lifecycle-automation/lib/handlers/command/github/gitHubApi";
 import {GluonService} from "../../services/gluon/GluonService";
 import {RemoveMemberFromTeamService} from "../../services/team/RemoveMemberFromTeamService";
 import {

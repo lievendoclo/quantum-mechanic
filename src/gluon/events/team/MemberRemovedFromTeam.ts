@@ -65,7 +65,7 @@ export class MemberRemovedFromTeam implements HandleEvent<any> {
         try {
             // WIP: Remove user from Slack channel when removing user from a project #448
             // https://github.com/absa-subatomic/quantum-mechanic/issues/448
-            // await this.removeMemberFromChannel(ctx, memberRemovedFromTeam);
+            await this.removeMemberFromChannel(ctx, memberRemovedFromTeam);
 
             const team = memberRemovedFromTeam.team;
             const projects = await this.gluonService.projects.gluonProjectsWhichBelongToGluonTeam(team.name, false);
@@ -102,6 +102,19 @@ export class MemberRemovedFromTeam implements HandleEvent<any> {
                 throw new OCResultError(error, `Failed to remove openshift team member permissions from the team projects.`);
             }
             throw error;
+        }
+    }
+
+    private async removeMemberFromChannel(ctx: HandlerContext, addMembersToTeamEvent) {
+
+        for (const member of addMembersToTeamEvent.members) {
+            await this.removeMemberTeamService.removeUserFromSlackChannel(
+                ctx,
+                member.firstName,
+                addMembersToTeamEvent.team.name,
+                addMembersToTeamEvent.team.slackIdentity.teamChannel,
+                member.slackIdentity.userId,
+                member.slackIdentity.screenName);
         }
     }
 }
