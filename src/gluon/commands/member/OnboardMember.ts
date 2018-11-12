@@ -60,7 +60,7 @@ export class OnboardMember implements HandleCommand<HandlerResult> {
 
     public async handle(ctx: HandlerContext): Promise<HandlerResult> {
         try {
-            logger.info("Creating");
+            logger.info("Requesting new Gluon user");
             await this.createGluonTeamMember(
                 {
                     firstName: this.firstName,
@@ -73,7 +73,7 @@ export class OnboardMember implements HandleCommand<HandlerResult> {
                     },
                 });
             const message = this.onboardMessages.presentTeamCreationAndApplicationOptions(this.firstName);
-            const destination =  await addressSlackUsersFromContext(ctx, this.userId);
+            const destination = await addressSlackUsersFromContext(ctx, this.userId);
             return await ctx.messageClient.send(message, destination);
         } catch (error) {
             return await this.handleError(ctx, error);
