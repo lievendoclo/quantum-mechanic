@@ -1,3 +1,4 @@
+import { ingester } from "@atomist/automation-client/graph/graphQL";
 import {QMConfig} from "./config/QMConfig";
 import {
     ListExistingBitbucketProject,
@@ -60,47 +61,6 @@ import {MembersAddedToTeam} from "./gluon/events/team/MembersAddedToTeam";
 import {MembershipRequestClosed} from "./gluon/events/team/MembershipRequestClosed";
 import {MembershipRequestCreated} from "./gluon/events/team/MembershipRequestCreated";
 import {TeamCreated} from "./gluon/events/team/TeamCreated";
-import {ApplicationProdRequestedEvent} from "./gluon/ingesters/applicationProdRequested";
-import {
-    ApplicationCreatedEvent,
-    PackageConfiguredEvent,
-} from "./gluon/ingesters/applicationsIngester";
-import {
-    BitbucketProjectAddedEvent,
-    BitbucketProjectRequestedEvent,
-} from "./gluon/ingesters/bitbucketIngester";
-import {GenericProdRequestedEvent} from "./gluon/ingesters/genericProdRequested";
-import {
-    ProjectCreatedEvent,
-    ProjectEnvironmentsRequestedEvent,
-    TeamsLinkedToProjectEvent,
-} from "./gluon/ingesters/projectIngester";
-import {
-    ProjectProductionEnvironmentsRequestClosedEvent,
-    ProjectProductionEnvironmentsRequestedEvent,
-} from "./gluon/ingesters/projectProductionRequests";
-import {
-    ActionedBy,
-    BitbucketProject,
-    BitbucketRepository,
-    DevOpsEnvironmentDetails,
-    GluonApplication,
-    GluonTeam,
-    GluonTenant,
-    GluonTenantId,
-    Project,
-    SlackIdentity,
-} from "./gluon/ingesters/sharedIngester";
-import {TeamDevOpsDetails} from "./gluon/ingesters/teamDevOpsDetails";
-import {
-    DevOpsEnvironmentProvisionedEvent,
-    DevOpsEnvironmentRequestedEvent,
-    MemberRemovedFromTeamEvent,
-    MembersAddedToTeamEvent,
-    MembershipRequestCreatedEvent,
-    TeamCreatedEvent,
-} from "./gluon/ingesters/teamIngester";
-import {TeamMemberCreatedEvent} from "./gluon/ingesters/teamMemberIngester";
 import {Help} from "./gluon/util/help/Help";
 
 const token = QMConfig.token;
@@ -174,35 +134,24 @@ export const configuration: any = {
         TeamsLinkedToProject,
     ],
     ingesters: [
-        ActionedBy,
-        ApplicationCreatedEvent,
-        ApplicationProdRequestedEvent,
-        BitbucketProject,
-        BitbucketProjectAddedEvent,
-        BitbucketProjectRequestedEvent,
-        BitbucketRepository,
-        DevOpsEnvironmentDetails,
-        DevOpsEnvironmentProvisionedEvent,
-        DevOpsEnvironmentRequestedEvent,
-        GenericProdRequestedEvent,
-        GluonApplication,
-        GluonTeam,
-        GluonTenant,
-        GluonTenantId,
-        MemberRemovedFromTeamEvent,
-        MembersAddedToTeamEvent,
-        MembershipRequestCreatedEvent,
-        PackageConfiguredEvent,
-        Project,
-        ProjectCreatedEvent,
-        ProjectEnvironmentsRequestedEvent,
-        ProjectProductionEnvironmentsRequestClosedEvent,
-        ProjectProductionEnvironmentsRequestedEvent,
-        SlackIdentity,
-        TeamCreatedEvent,
-        TeamDevOpsDetails,
-        TeamMemberCreatedEvent,
-        TeamsLinkedToProjectEvent,
+        ingester("Shared.graphql"),
+        ingester("ApplicationCreatedEvent.graphql"),
+        ingester("ApplicationProdRequestedEvent.graphql"),
+        ingester("BitbucketProjectAddedEvent.graphql"),
+        ingester("BitbucketProjectRequestedEvent.graphql"),
+        ingester("DevOpsEnvironmentProvisionedEvent.graphql"),
+        ingester("DevOpsEnvironmentRequestedEvent.graphql"),
+        ingester("GenericProdRequestedEvent.graphql"),
+        ingester("MembersAddedToTeamEvent.graphql"),
+        ingester("MembershipRequestCreatedEvent.graphql"),
+        ingester("PackageConfiguredEvent.graphql"),
+        ingester("ProjectCreatedEvent.graphql"),
+        ingester("ProjectEnvironmentsRequestedEvent.graphql"),
+        ingester("ProjectProductionEnvironmentsRequestClosedEvent.graphql"),
+        ingester("ProjectProductionEnvironmentsRequestedEvent.graphql"),
+        ingester("TeamCreatedEvent.graphql"),
+        ingester("TeamDevOpsDetails.graphql"),
+        ingester("TeamMemberCreatedEvent.graphql"),
     ],
     token,
     http,
