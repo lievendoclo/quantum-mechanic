@@ -6,6 +6,7 @@ import {
     MappedParameter,
     MappedParameters,
     Parameter,
+    Tags,
 } from "@atomist/automation-client";
 import {buttonForCommand} from "@atomist/automation-client/spi/message/MessageClient";
 import {SlackMessage} from "@atomist/slack-messages";
@@ -26,6 +27,7 @@ import {
 } from "../../util/shared/Error";
 
 @CommandHandler("List projects belonging to a team", QMConfig.subatomic.commandPrefix + " list projects")
+@Tags("subatomic", "project", "team")
 export class ListTeamProjects extends RecursiveParameterRequestCommand
     implements GluonTeamNameSetter {
 

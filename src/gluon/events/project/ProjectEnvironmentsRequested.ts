@@ -125,7 +125,7 @@ A package is either an application or a library, click the button below to creat
                 ],
             }],
         };
-        const destination =  await addressSlackChannelsFromContext(ctx, teams.map(team =>
+        const destination =  await addressSlackChannelsFromContext(ctx, ...teams.map(team =>
             team.slackIdentity.teamChannel));
         return await ctx.messageClient.send(msg, destination);
     }

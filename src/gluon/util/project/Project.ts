@@ -1,5 +1,6 @@
 import {HandleCommand, HandlerContext} from "@atomist/automation-client";
 import * as _ from "lodash";
+import {QMBitbucketProject} from "../bitbucket/Bitbucket";
 import {createMenuAttachment} from "../shared/GenericMenu";
 import {QMTenant} from "../shared/Tenants";
 import {QMTeam} from "../team/Teams";
@@ -40,12 +41,18 @@ export function menuAttachmentForProjects(ctx: HandlerContext, projects: any[],
 
 export interface OpenshiftProjectEnvironmentRequest {
     teams: QMTeam[];
-    project: QMProject;
+    project: QMProjectBase;
     owningTenant: QMTenant;
 }
 
-export interface QMProject {
+export interface QMProjectBase {
+    projectId: string;
     name: string;
+    bitbucketProject: QMBitbucketProject;
+}
+
+export interface QMProject extends QMProjectBase {
+    owningTeam: QMTeam;
 }
 
 export enum ProjectProdRequestApprovalResponse {

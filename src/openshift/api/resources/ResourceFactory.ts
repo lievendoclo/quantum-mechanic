@@ -23,6 +23,21 @@ export class ResourceFactory {
         return baseResource;
     }
 
+    public static baseRoleBindingResource(namespace: string, role: string) {
+        const baseResource = ResourceFactory.baseResource("RoleBinding");
+        baseResource.metadata = {
+            name: role,
+            namespace,
+            creationTimestamp: null,
+        };
+        baseResource.userNames = [];
+        baseResource.subjects = [];
+        baseResource.roleRef = {
+            name: role,
+        };
+        return baseResource;
+    }
+
     public static roleBindingResource(namespace: string, role: string, username: string): OpenshiftResource {
         const baseResource = ResourceFactory.baseResource("RoleBinding");
         baseResource.metadata = {

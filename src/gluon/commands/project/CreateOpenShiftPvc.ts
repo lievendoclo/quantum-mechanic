@@ -6,6 +6,7 @@ import {
     MappedParameter,
     MappedParameters,
     Parameter,
+    Tags,
 } from "@atomist/automation-client";
 import {addressSlackChannelsFromContext} from "@atomist/automation-client/spi/message/MessageClient";
 import {menuForCommand} from "@atomist/automation-client/spi/message/MessageClient";
@@ -28,6 +29,7 @@ import {
 import {handleQMError, ResponderMessageClient} from "../../util/shared/Error";
 
 @CommandHandler("Create a new OpenShift Persistent Volume Claim", QMConfig.subatomic.commandPrefix + " create openshift pvc")
+@Tags("subatomic", "project", "other")
 export class CreateOpenShiftPvc extends RecursiveParameterRequestCommand
     implements GluonTeamNameSetter, GluonProjectNameSetter {
 

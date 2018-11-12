@@ -7,7 +7,6 @@ import {
     MappedParameter,
     MappedParameters,
     Parameter,
-    Tags,
 } from "@atomist/automation-client";
 import {addressSlackUsersFromContext} from "@atomist/automation-client/spi/message/MessageClient";
 import {addressSlackChannelsFromContext} from "@atomist/automation-client/spi/message/MessageClient";
@@ -21,7 +20,6 @@ import {
 } from "../../util/shared/Error";
 
 @CommandHandler("Close a membership request")
-@Tags("subatomic", "team", "membership")
 export class MembershipRequestClosed implements HandleCommand<HandlerResult> {
 
     @MappedParameter(MappedParameters.SlackUserName)

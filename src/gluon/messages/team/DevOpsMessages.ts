@@ -1,8 +1,8 @@
 import {buttonForCommand} from "@atomist/automation-client/spi/message/MessageClient";
 import {SlackMessage, url} from "@atomist/slack-messages";
 import {QMConfig} from "../../../config/QMConfig";
-import {AddConfigServer} from "../../commands/project/AddConfigServer";
 import {CreateProject} from "../../commands/project/CreateProject";
+import {AddConfigServer} from "../../commands/team/AddConfigServer";
 
 export class DevOpsMessages {
     public jenkinsSuccessfullyProvisioned(jenkinsHost: string, teamName: string): SlackMessage {

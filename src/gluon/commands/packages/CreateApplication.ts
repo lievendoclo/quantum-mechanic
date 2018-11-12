@@ -1,5 +1,4 @@
 import {
-    CommandHandler,
     HandlerContext,
     HandlerResult,
     logger,
@@ -7,7 +6,6 @@ import {
     MappedParameters,
     Parameter,
 } from "@atomist/automation-client";
-import {QMConfig} from "../../../config/QMConfig";
 import {isSuccessCode} from "../../../http/Http";
 import {GluonService} from "../../services/gluon/GluonService";
 import {ApplicationType} from "../../util/packages/Applications";

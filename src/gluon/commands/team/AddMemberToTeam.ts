@@ -24,7 +24,7 @@ import {
 import {handleQMError, ResponderMessageClient} from "../../util/shared/Error";
 
 @CommandHandler("Add a member to a team", QMConfig.subatomic.commandPrefix + " add team member")
-@Tags("subatomic", "team", "member")
+@Tags("subatomic", "member", "team")
 export class AddMemberToTeam extends RecursiveParameterRequestCommand implements GluonTeamNameSetter {
 
     private static RecursiveKeys = {

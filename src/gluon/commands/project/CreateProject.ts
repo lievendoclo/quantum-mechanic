@@ -5,6 +5,7 @@ import {
     MappedParameter,
     MappedParameters,
     Parameter,
+    Tags,
 } from "@atomist/automation-client";
 import {QMConfig} from "../../../config/QMConfig";
 import {isSuccessCode} from "../../../http/Http";
@@ -26,6 +27,7 @@ import {
 } from "../../util/shared/Error";
 
 @CommandHandler("Create a new project", QMConfig.subatomic.commandPrefix + " create project")
+@Tags("subatomic", "project", "team")
 export class CreateProject extends RecursiveParameterRequestCommand
     implements GluonTeamNameSetter, GluonTenantNameSetter {
 

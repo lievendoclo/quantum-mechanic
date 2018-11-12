@@ -2,7 +2,7 @@ import {HandlerContext, logger} from "@atomist/automation-client";
 import * as _ from "lodash";
 import * as graphql from "../../../typings/types";
 
-export function usernameFromDomainUsername(domainUsername: string): string {
+export function userFromDomainUser(domainUsername: string): string {
     return /[^\\]*$/.exec(domainUsername)[0];
 }
 
@@ -32,7 +32,8 @@ export async function loadScreenNameByUserId(ctx: HandlerContext, userId: string
     return null;
 }
 
-export interface QMMember {
+export interface QMMemberBase {
+    memberId: string;
     domainUsername: string;
 }
 

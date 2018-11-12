@@ -2,11 +2,20 @@ import {logger} from "@atomist/automation-client";
 import {isSuccessCode} from "../../http/Http";
 import {OpenShiftApiElement} from "./base/OpenShiftApiElement";
 import {OpenshiftApiResult} from "./base/OpenshiftApiResult";
+import {OpenShiftConfigContract} from "./base/OpenShiftConfigContract";
+import {ImmutabilityPreserver} from "./common/ImmutabilityPreserver";
 import {OpenshiftResource} from "./resources/OpenshiftResource";
 import {ResourceFactory} from "./resources/ResourceFactory";
 import {ResourceUrl} from "./resources/ResourceUrl";
 
 export class OpenShiftApiCreate extends OpenShiftApiElement {
+
+    private immutabilityPreserver: ImmutabilityPreserver;
+
+    constructor(openShiftConfig: OpenShiftConfigContract) {
+        super(openShiftConfig);
+        this.immutabilityPreserver = new ImmutabilityPreserver();
+    }
 
     public serviceAccount(serviceAccountName: string, namespace: string): Promise<OpenshiftApiResult> {
         return this.create(
@@ -61,12 +70,9 @@ export class OpenShiftApiCreate extends OpenShiftApiElement {
         const exists = await instance.get(namedUrl);
         if (isSuccessCode(exists.status)) {
             logger.info("Updating resource: " + namedUrl);
-            if (exists.data.metadata.uid !== undefined) {
-                resource.metadata.uid = exists.data.metadata.uid;
-            }
-            if (exists.data.metadata.resourceVersion !== undefined) {
-                resource.metadata.resourceVersion = exists.data.metadata.resourceVersion;
-            }
+
+            this.immutabilityPreserver.preserveImmutability(resource, exists.data);
+
             return await instance.put(namedUrl, resource);
         }
 

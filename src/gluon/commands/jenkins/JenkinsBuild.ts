@@ -5,6 +5,7 @@ import {
     logger,
     MappedParameter,
     MappedParameters,
+    Tags,
 } from "@atomist/automation-client";
 import * as _ from "lodash";
 import {QMConfig} from "../../../config/QMConfig";
@@ -31,6 +32,7 @@ import {
 } from "../../util/shared/Error";
 
 @CommandHandler("Kick off a Jenkins build", QMConfig.subatomic.commandPrefix + " jenkins build")
+@Tags("subatomic", "jenkins", "package")
 export class KickOffJenkinsBuild extends RecursiveParameterRequestCommand
     implements GluonTeamNameSetter, GluonProjectNameSetter, GluonApplicationNameSetter {
 

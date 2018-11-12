@@ -1,6 +1,6 @@
 import {logger} from "@atomist/automation-client";
 import Axios from "axios";
-import {AxiosInstance, AxiosPromise} from "axios-https-proxy-fix";
+import {AxiosInstance} from "axios-https-proxy-fix";
 import * as https from "https";
 import * as _ from "lodash";
 import * as qs from "query-string";
@@ -12,66 +12,69 @@ import {retryFunction} from "../../util/shared/RetryFunction";
 
 export class JenkinsService {
 
-    public kickOffFirstBuild(jenkinsHost: string,
-                             token: string,
-                             gluonProjectName: string,
-                             gluonApplicationName: string): AxiosPromise {
-        logger.debug(`Trying to kick of first jenkins build. jenkinsHost: ${jenkinsHost}; token: ${token}; gluonProjectName: ${gluonProjectName}; gluonApplicationName: ${gluonApplicationName} `);
-        const axios = jenkinsAxios();
-        return axios.post(`https://${jenkinsHost}/job/${_.kebabCase(gluonProjectName).toLowerCase()}/job/${_.kebabCase(gluonApplicationName).toLowerCase()}/build?delay=0sec`,
-            "", {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                },
-            });
-    }
-
-    public kickOffBuild(jenkinsHost: string,
-                        token: string,
-                        gluonProjectName: string,
-                        gluonApplicationName: string): AxiosPromise {
-        logger.debug(`Trying to kick of a jenkins build. jenkinsHost: ${jenkinsHost}; token: ${token}; gluonProjectName: ${gluonProjectName}; gluonApplicationName: ${gluonApplicationName} `);
-        const axios = jenkinsAxios();
-        return axios.post(`https://${jenkinsHost}/job/${_.kebabCase(gluonProjectName).toLowerCase()}/job/${_.kebabCase(gluonApplicationName).toLowerCase()}/job/master/build?delay=0sec`,
-            "", {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                },
-            });
-    }
-
-    public createGlobalCredentials(jenkinsHost: string,
+    public async kickOffFirstBuild(jenkinsHost: string,
                                    token: string,
-                                   gluonProjectId: string,
-                                   jenkinsCredentials: any): AxiosPromise {
-        logger.debug(`Trying to create jenkins global credentials. jenkinsHost: ${jenkinsHost}; token: ${token}; gluonProjectId: ${gluonProjectId}`);
-        const axios = jenkinsAxios();
-        axios.interceptors.request.use(request => {
-            if (request.data && (request.headers["Content-Type"].indexOf("application/x-www-form-urlencoded") !== -1)) {
-                logger.debug(`Stringifying URL encoded data: ${qs.stringify(request.data)}`);
-                request.data = qs.stringify(request.data);
-            }
-            return request;
-        });
+                                   gluonProjectName: string,
+                                   gluonApplicationName: string) {
+        logger.debug(`Trying to kick of first jenkins build. jenkinsHost: ${jenkinsHost}; token: ${token}; gluonProjectName: ${gluonProjectName}; gluonApplicationName: ${gluonApplicationName} `);
+        return await this.genericJenkinsPost(
+            `https://${jenkinsHost}/job/${_.kebabCase(gluonProjectName).toLowerCase()}/job/${_.kebabCase(gluonApplicationName).toLowerCase()}/build?delay=0sec`,
+            "",
+            token,
+        );
+    }
 
-        return axios.post(`https://${jenkinsHost}/credentials/store/system/domain/_/createCredentials`,
+    public async kickOffBuild(jenkinsHost: string,
+                              token: string,
+                              gluonProjectName: string,
+                              gluonApplicationName: string) {
+        logger.debug(`Trying to kick of a jenkins build. jenkinsHost: ${jenkinsHost}; token: ${token}; gluonProjectName: ${gluonProjectName}; gluonApplicationName: ${gluonApplicationName} `);
+
+        return await this.genericJenkinsPost(
+            `https://${jenkinsHost}/job/${_.kebabCase(gluonProjectName).toLowerCase()}/job/${_.kebabCase(gluonApplicationName).toLowerCase()}/job/master/build?delay=0sec`,
+            "",
+            token,
+        );
+    }
+
+    public async createGlobalCredentials(jenkinsHost: string,
+                                         token: string,
+                                         jenkinsCredentials: any) {
+        logger.debug(`Trying to create jenkins global credentials. jenkinsHost: ${jenkinsHost}; token: ${token}`);
+        const axios = jenkinsAxios();
+        addXmlFormEncodedStringifyAxiosIntercepter(axios);
+
+        return await this.genericJenkinsPost(
+            `https://${jenkinsHost}/credentials/store/system/domain/_/createCredentials`,
             {
                 json: `${JSON.stringify(jenkinsCredentials)}`,
             },
-            {
-                headers: {
-                    "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
-                    "Authorization": `Bearer ${token}`,
-                },
-            });
+            token,
+            "application/x-www-form-urlencoded;charset=UTF-8",
+            axios,
+        );
+
     }
 
-    public createGlobalCredentialsWithFile(jenkinsHost: string,
-                                           token: string,
-                                           gluonProjectId: string,
-                                           jenkinsCredentials: any,
-                                           filePath: string,
-                                           fileName: string): AxiosPromise {
+    public async updateGlobalCredential(jenkinsHost: string,
+                                        token: string,
+                                        jenkinsXMLCredential: string,
+                                        credentialName: string) {
+        logger.debug(`Trying to update jenkins global credentials. jenkinsHost: ${jenkinsHost}; token: ${token}`);
+
+        return await this.genericJenkinsPost(
+            `https://${jenkinsHost}/credentials/store/system/domain/_/credential/${credentialName}/config.xml`,
+            jenkinsXMLCredential,
+            token,
+            "application/xml");
+    }
+
+    public async createGlobalCredentialsWithFile(jenkinsHost: string,
+                                                 token: string,
+                                                 gluonProjectId: string,
+                                                 jenkinsCredentials: any,
+                                                 filePath: string,
+                                                 fileName: string) {
         logger.debug(`Trying to create jenkins global credentials from gile. jenkinsHost: ${jenkinsHost}; token: ${token}; gluonProjectId: ${gluonProjectId}; filePath: ${filePath}; fileName: ${fileName}`);
         const FormData = require("form-data");
         const fs = require("fs");
@@ -80,41 +83,32 @@ export class JenkinsService {
         form.append("json", JSON.stringify(jenkinsCredentials));
         form.append("file", fs.createReadStream(filePath), fileName);
 
-        const axios = jenkinsAxios();
-        return axios.post(`https://${jenkinsHost}/credentials/store/system/domain/_/createCredentials`,
+        return await this.genericJenkinsPost(
+            `https://${jenkinsHost}/credentials/store/system/domain/_/createCredentials`,
             form,
-            {
-                headers: {
-                    "Content-Type": `multipart/form-data; boundary=${form._boundary}`,
-                    "Authorization": `Bearer ${token}`,
-                },
-            });
+            token,
+            `multipart/form-data; boundary=${form._boundary}`,
+        );
     }
 
     public async createJenkinsJob(jenkinsHost: string, token: string, gluonProjectName: string, gluonApplicationName, jobConfig: string): Promise<any> {
         logger.debug(`Trying to create jenkins job. jenkinsHost: ${jenkinsHost}; token: ${token}; gluonProjectName: ${gluonProjectName}; gluonApplicationName: ${gluonApplicationName}`);
-        const axios = jenkinsAxios();
-        return await axios.post(`https://${jenkinsHost}/job/${_.kebabCase(gluonProjectName).toLowerCase()}/createItem?name=${_.kebabCase(gluonApplicationName).toLowerCase()}`,
+        return await this.genericJenkinsPost(
+            `https://${jenkinsHost}/job/${_.kebabCase(gluonProjectName).toLowerCase()}/createItem?name=${_.kebabCase(gluonApplicationName).toLowerCase()}`,
             jobConfig,
-            {
-                headers: {
-                    "Content-Type": "application/xml",
-                    "Authorization": `Bearer ${token}`,
-                },
-            });
+            token,
+            "application/xml",
+        );
     }
 
     public async createOpenshiftEnvironmentCredentials(jenkinsHost: string, token: string, gluonProjectName: string, credentialsConfig: string): Promise<any> {
         logger.debug(`Trying to create jenkins openshift credentials. jenkinsHost: ${jenkinsHost}; token: ${token}; gluonProjectName: ${gluonProjectName}`);
-        const axios = jenkinsAxios();
-        return await axios.post(`https://${jenkinsHost}/createItem?name=${_.kebabCase(gluonProjectName).toLowerCase()}`,
+        return await this.genericJenkinsPost(
+            `https://${jenkinsHost}/createItem?name=${_.kebabCase(gluonProjectName).toLowerCase()}`,
             credentialsConfig,
-            {
-                headers: {
-                    "Content-Type": "application/xml",
-                    "Authorization": `Bearer ${token}`,
-                },
-            });
+            token,
+            "application/xml",
+        );
     }
 
     public async createJenkinsCredentialsWithRetries(retryAttempts: number, intervalTime: number, jenkinsHost: string,
@@ -126,7 +120,7 @@ export class JenkinsService {
             try {
                 let createCredentialsResult;
                 if (fileDetails === null) {
-                    createCredentialsResult = await this.createGlobalCredentials(jenkinsHost, token, gluonProjectId, jenkinsCredentials);
+                    createCredentialsResult = await this.createGlobalCredentials(jenkinsHost, token, jenkinsCredentials);
                 } else {
                     createCredentialsResult = await this.createGlobalCredentialsWithFile(jenkinsHost, token, gluonProjectId, jenkinsCredentials, fileDetails.filePath, fileDetails.fileName);
                 }
@@ -153,6 +147,27 @@ export class JenkinsService {
             throw new QMError("Failed to create jenkins credentials. Instance was non responsive.");
         }
     }
+
+    private async genericJenkinsPost(url: string, body: any, token: string, contentType?: string, axiosInstance?) {
+        let axios = axiosInstance;
+        if (axios === undefined) {
+            axios = jenkinsAxios();
+        }
+
+        const headers: { [key: string]: string } = {
+            Authorization: `Bearer ${token}`,
+        };
+
+        if (contentType !== undefined) {
+            headers["Content-Type"] = contentType;
+        }
+
+        return axios.post(url,
+            body,
+            {
+                headers,
+            });
+    }
 }
 
 function jenkinsAxios(): AxiosInstance {
@@ -164,4 +179,14 @@ function jenkinsAxios(): AxiosInstance {
         proxy: false,
     });
     return addAxiosLogger(instance, "Jenkins");
+}
+
+function addXmlFormEncodedStringifyAxiosIntercepter(axios) {
+    axios.interceptors.request.use(request => {
+        if (request.data && (request.headers["Content-Type"].indexOf("application/x-www-form-urlencoded") !== -1)) {
+            logger.debug(`Stringifying URL encoded data: ${qs.stringify(request.data)}`);
+            request.data = qs.stringify(request.data);
+        }
+        return request;
+    });
 }

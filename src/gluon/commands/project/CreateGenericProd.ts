@@ -6,6 +6,7 @@ import {
     MappedParameter,
     MappedParameters,
     Parameter,
+    Tags,
 } from "@atomist/automation-client";
 import {v4 as uuid} from "uuid";
 import {QMConfig} from "../../../config/QMConfig";
@@ -37,6 +38,7 @@ import {
 } from "../../util/shared/Error";
 
 @CommandHandler("Move openshift resources to prod", QMConfig.subatomic.commandPrefix + " request generic prod")
+@Tags("subatomic", "project", "other")
 export class CreateGenericProd extends RecursiveParameterRequestCommand
     implements GluonTeamNameSetter, GluonProjectNameSetter {
 

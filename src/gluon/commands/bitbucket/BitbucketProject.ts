@@ -7,6 +7,7 @@ import {
     MappedParameters,
     Parameter,
     success,
+    Tags,
 } from "@atomist/automation-client";
 import {addressSlackChannelsFromContext} from "@atomist/automation-client/spi/message/MessageClient";
 import {QMConfig} from "../../../config/QMConfig";
@@ -109,6 +110,7 @@ export class NewBitbucketProject extends RecursiveParameterRequestCommand
 }
 
 @CommandHandler("Link an existing Bitbucket project", QMConfig.subatomic.commandPrefix + " link bitbucket project")
+@Tags("subatomic", "bitbucket", "project")
 export class ListExistingBitbucketProject
     extends RecursiveParameterRequestCommand
     implements GluonTeamNameSetter, GluonProjectNameSetter {
@@ -171,7 +173,7 @@ export class ListExistingBitbucketProject
 
         const projectUiUrl = `${QMConfig.subatomic.bitbucket.baseUrl}/projects/${this.bitbucketProjectKey}`;
 
-        const destination =  await addressSlackChannelsFromContext(ctx, this.teamChannel);
+        const destination = await addressSlackChannelsFromContext(ctx, this.teamChannel);
         await ctx.messageClient.send({
             text: `🚀 The Bitbucket project with key ${this.bitbucketProjectKey} is being configured...`,
         }, destination);

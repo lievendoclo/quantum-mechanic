@@ -6,6 +6,7 @@ import {
     MappedParameter,
     MappedParameters,
     Parameter,
+    Tags,
 } from "@atomist/automation-client";
 import {addressSlackChannelsFromContext} from "@atomist/automation-client/spi/message/MessageClient";
 import {SlackMessage, url} from "@atomist/slack-messages";
@@ -24,6 +25,7 @@ import {
 import {handleQMError, ResponderMessageClient} from "../../util/shared/Error";
 
 @CommandHandler("Add a new Subatomic Config Server", QMConfig.subatomic.commandPrefix + " add config server")
+@Tags("subatomic", "team")
 export class AddConfigServer extends RecursiveParameterRequestCommand
     implements GluonTeamNameSetter {
 
@@ -120,9 +122,9 @@ spring:
 
     private async tagConfigServerImageToDevOpsEnvironment(devOpsProjectId: string) {
         return await this.ocService.tagSubatomicImageToNamespace(
-            "subatomic-config-server:1.1",
+            "subatomic-config-server:3.0",
             devOpsProjectId,
-            "subatomic-config-server:1.0");
+            "subatomic-config-server:3.0");
     }
 
     private async addViewRoleToDevOpsEnvironmentDefaultServiceAccount(devOpsProjectId: string) {
@@ -142,8 +144,6 @@ spring:
             const templateParameters = [
                 `GIT_URI=${saneGitUri}`,
                 `IMAGE_STREAM_PROJECT=${devOpsProjectId}`,
-                // TODO relook once we have a designed https://github.com/orgs/absa-subatomic/projects/2#card-7672800
-                `IMAGE_STREAM_TAG=1.0`,
             ];
 
             const appTemplate = await this.ocService.processOpenshiftTemplate(

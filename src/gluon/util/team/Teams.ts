@@ -5,7 +5,7 @@ import {
 } from "@atomist/automation-client";
 import * as _ from "lodash";
 import * as graphql from "../../../typings/types";
-import {QMMember} from "../member/Members";
+import {QMMemberBase} from "../member/Members";
 import {createMenuAttachment} from "../shared/GenericMenu";
 
 export function menuAttachmentForTeams(ctx: HandlerContext, teams: any[],
@@ -69,18 +69,33 @@ export interface DevOpsEnvironmentDetails {
     description: string;
 }
 
-export function createQMTeam(name: string = null,
-                             owners: QMMember[] = [],
-                             members: QMMember[] = []): QMTeam {
-    return {
-        name,
-        owners,
-        members,
-    };
+export function isUserAMemberOfTheTeam(user: QMMemberBase, team: QMTeam) {
+    for (const member of team.members) {
+        if (user.memberId === member.memberId) {
+            return true;
+        }
+    }
+
+    for (const owner of team.owners) {
+        if (user.memberId === owner.memberId) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
-export interface QMTeam {
+export interface QMTeamSlack {
+    teamChannel: string;
+}
+
+export interface QMTeamBase {
+    teamId: string;
     name: string;
-    owners: QMMember[];
-    members: QMMember[];
+    slack?: QMTeamSlack;
+}
+
+export interface QMTeam extends QMTeamBase {
+    owners: QMMemberBase[];
+    members: QMMemberBase[];
 }
