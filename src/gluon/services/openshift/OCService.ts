@@ -257,6 +257,14 @@ export class OCService {
 
     public async tagImageToNamespace(sourceNamespace: string, imageStreamTagName: string, destinationProjectNamespace: string, destinationImageStreamTagName: string = imageStreamTagName): Promise<OpenshiftApiResult> {
 
+        let applyOrReplace = true;
+
+        // check if exists if so then must replace not apply
+        const existingImageStreamTagResult = await this.openShiftApi.get.get("ImageStreamTag", imageStreamTagName, destinationProjectNamespace);
+        if (isSuccessCode(existingImageStreamTagResult.status)) {
+            applyOrReplace = false;
+        }
+
         const imageStreamTagResult = await this.openShiftApi.get.get("ImageStreamTag", imageStreamTagName, sourceNamespace);
 
         if (!isSuccessCode(imageStreamTagResult.status)) {
@@ -269,7 +277,7 @@ export class OCService {
 
         imageStreamTag.metadata.name = destinationImageStreamTagName;
 
-        await this.applyResourceFromDataInNamespace(imageStreamTag, destinationProjectNamespace, true);
+        await this.applyResourceFromDataInNamespace(imageStreamTag, destinationProjectNamespace, applyOrReplace);
 
         const labelPatch = this.createLabelPatch(destinationImageStreamTagName.split(":")[0], "ImageStream", "v1", imageStreamLabels);
         return await this.patchResourceInNamespace(labelPatch, destinationProjectNamespace, false);
