@@ -24,7 +24,7 @@ import {
 import {ApplicationType} from "../../util/packages/Applications";
 import {QMProject} from "../../util/project/Project";
 import {ParameterDisplayType} from "../../util/recursiveparam/RecursiveParameterRequestCommand";
-import {QMError} from "../../util/shared/Error";
+import {GitError, QMError} from "../../util/shared/Error";
 import {getDevOpsEnvironmentDetails, QMTeamBase} from "../../util/team/Teams";
 import {Task} from "../Task";
 import {TaskListMessage} from "../TaskListMessage";
@@ -174,7 +174,12 @@ export class ConfigurePackageInJenkins extends Task {
                     QMConfig.subatomic.bitbucket.auth.email,
                 );
                 await project.commit(`Added Jenkinsfile`);
-                await project.push();
+                try {
+                    await project.push();
+                } catch (error) {
+                    logger.debug(`Error pushing Jenkins file to repository`);
+                    throw new GitError(error.message);
+                }
             } else {
                 logger.debug("Jenkinsfile already exists");
             }
