@@ -6,10 +6,8 @@ import {PluginResourceStore} from "./PluginResourceStore";
 
 export class PluginManager {
 
-    private static availablePlugins: { [key: string]: string[] };
-
-    public async loadAvailablePlugins() {
-        if (_.isEmpty(PluginManager.availablePlugins)) {
+    public static async loadAvailablePlugins() {
+        if (_.isEmpty(PluginManager.availablePlugins) && !PluginManager.initialised) {
             PluginManager.availablePlugins = {};
             const {lstatSync, readdirSync} = require("fs");
             const path = require("path");
@@ -18,13 +16,22 @@ export class PluginManager {
             const getDirectories = source =>
                 readdirSync(source).map(name => path.join(source, name)).filter(isDirectory);
 
-            for (const plugin of getDirectories(QMConfig.subatomic.plugins.directory)) {
-                this.tryLoadPlugin(plugin);
+            const fs = require("fs");
+            if (!_.isEmpty(QMConfig.subatomic.plugins) && fs.existsSync(QMConfig.subatomic.plugins.directory)) {
+                for (const plugin of getDirectories(QMConfig.subatomic.plugins.directory)) {
+                    this.tryLoadPlugin(plugin);
+                }
+            } else {
+                logger.warn("Either the config does not specify a plugins directory, or the specified directory does not exist. No plugins loaded!");
             }
+            PluginManager.initialised = true;
         }
     }
 
-    public tryLoadPlugin(pluginDirectory: string) {
+    private static availablePlugins: { [key: string]: string[] };
+    private static initialised: boolean = false;
+
+    private static tryLoadPlugin(pluginDirectory: string) {
         const path = require("path");
         const pluginName = path.basename(pluginDirectory);
 

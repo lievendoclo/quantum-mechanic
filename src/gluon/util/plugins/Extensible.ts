@@ -7,9 +7,9 @@ export function Extensible(pluginHandlerIdentifier: string) {
         if (target instanceof BaseQMHandler) {
             const originalMethod = descriptor.value;
             descriptor.value = async function() {
+                await PluginManager.loadAvailablePlugins();
                 // Note that the "this" reference here is the owning class of the extended function
                 const pluginManager: PluginManager = new PluginManager();
-                await pluginManager.loadAvailablePlugins();
                 try {
                     await pluginManager.preHook(this, pluginHandlerIdentifier);
                     const result = originalMethod.apply(this, arguments);
