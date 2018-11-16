@@ -8,6 +8,7 @@ import {
 import {SlackMessage} from "@atomist/slack-messages";
 import {QMConfig} from "../../../config/QMConfig";
 import {GluonService} from "../../services/gluon/GluonService";
+import {Extensible} from "../../util/plugins/Extensible";
 import {
     GluonTeamNameSetter,
     setGluonTeamName,
@@ -45,6 +46,7 @@ export class ListTeamMembers extends RecursiveParameterRequestCommand
         super();
     }
 
+    @Extensible("Team.ListTeamMembers")
     protected async runCommand(ctx: HandlerContext) {
         const result = await this.gluonService.teams.gluonTeamByName(this.teamName);
         const teamOwners = this.getTeamMemberNames(result.owners);
@@ -67,8 +69,11 @@ export class ListTeamMembers extends RecursiveParameterRequestCommand
                 }],
         };
 
+        this.succeedCommand();
+
         return await ctx.messageClient.respond(msg);
     }
+
     protected configureParameterSetters() {
         this.addRecursiveSetter(ListTeamMembers.RecursiveKeys.teamName, setGluonTeamName);
     }

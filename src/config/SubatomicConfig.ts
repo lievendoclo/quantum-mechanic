@@ -4,6 +4,7 @@ import {GluonConfig} from "./GluonConfig";
 import {MavenConfig} from "./MavenConfig";
 import {NexusConfig} from "./NexusConfig";
 import {OpenShiftConfig} from "./OpenShiftConfig";
+import {PluginConfig} from "./PluginConfig";
 
 export interface SubatomicConfig {
     bitbucket: BitbucketConfig;
@@ -14,4 +15,5 @@ export interface SubatomicConfig {
     openshiftProd: OpenShiftConfig[];
     nexus: NexusConfig;
     maven: MavenConfig;
+    plugins: PluginConfig;
 }

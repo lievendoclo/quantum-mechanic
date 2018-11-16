@@ -11,11 +11,12 @@ import {
 } from "@atomist/automation-client/internal/metadata/decoratorSupport";
 import _ = require("lodash");
 import uuid = require("uuid");
+import {BaseQMHandler} from "../shared/BaseQMHandler";
 import {handleQMError, QMError, ResponderMessageClient} from "../shared/Error";
 import {ParameterStatusDisplay} from "./ParameterStatusDisplay";
 import {RecursiveSetterResult} from "./RecursiveSetterResult";
 
-export abstract class RecursiveParameterRequestCommand implements HandleCommand<HandlerResult> {
+export abstract class RecursiveParameterRequestCommand extends BaseQMHandler implements HandleCommand<HandlerResult> {
 
     @Parameter({
         required: false,
@@ -74,7 +75,6 @@ export abstract class RecursiveParameterRequestCommand implements HandleCommand<
                 selectionMessage: parameterDetails.selectionMessage,
                 forceSet: parameterDetails.forceSet,
             };
-            logger.info(JSON.stringify(this.recursiveParameterMap[parameterDetails.recursiveKey]));
             this.recursiveParameterList.push(parameterDetails.recursiveKey);
         } else {
             throw new QMError(`Duplicate recursive key ${parameterDetails.recursiveKey} defined. Recursive keys must be unique.`);

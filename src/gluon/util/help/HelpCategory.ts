@@ -6,6 +6,7 @@ import {
 import {BitbucketProjectAccessCommand} from "../../commands/bitbucket/BitbucketProjectAccessCommand";
 import {BitbucketProjectRecommendedPracticesCommand} from "../../commands/bitbucket/BitbucketProjectRecommendedPracticesCommand";
 import {KickOffJenkinsBuild} from "../../commands/jenkins/JenkinsBuild";
+import {JenkinsCredentialsRecreate} from "../../commands/jenkins/JenkinsCredentialsRecreate";
 import {AddSlackDetails} from "../../commands/member/AddSlackDetails";
 import {OnboardMember} from "../../commands/member/OnboardMember";
 import {ConfigureApplicationJenkinsProd} from "../../commands/packages/ConfigureApplicationJenkinsProd";
@@ -38,6 +39,7 @@ import {LinkExistingTeamSlackChannel} from "../../commands/team/LinkExistingTeam
 import {ListTeamMembers} from "../../commands/team/ListTeamMembers";
 import {NewOrUseTeamSlackChannel} from "../../commands/team/NewOrExistingTeamSlackChannel";
 import {NewTeamSlackChannel} from "../../commands/team/NewSlackChannel";
+import {RemoveMemberFromTeam} from "../../commands/team/RemoveMemberFromTeam";
 import {TagAllLatestImages} from "../../commands/team/TagAllLatestImages";
 import {TagLatestImage} from "../../commands/team/TagLatestImage";
 import {MembershipRequestClosed} from "../../events/team/MembershipRequestClosed";
@@ -46,44 +48,46 @@ export class HelpCategory {
 
     private commands: any[] = [];
     private allCommands = [
-        NewDevOpsEnvironment,
-        NewOrUseTeamSlackChannel,
-        NewTeamSlackChannel,
-        LinkExistingTeamSlackChannel,
-        OnboardMember,
-        AddSlackDetails,
-        JoinTeam,
+        AddConfigServer,
         AddMemberToTeam,
         AddOwnerToTeam,
+        AddSlackDetails,
         AssociateTeam,
-        CreateTeam,
-        CreateProject,
-        NewBitbucketProject,
-        NewProjectEnvironments,
-        CreateMembershipRequestToTeam,
-        MembershipRequestClosed,
-        ListExistingBitbucketProject,
-        LinkExistingApplication,
-        LinkExistingLibrary,
-        KickOffJenkinsBuild,
-        CreateOpenShiftPvc,
-        AddConfigServer,
-        ListTeamProjects,
-        ListProjectDetails,
-        ListTeamMembers,
-        ConfigurePackage,
-        ConfigureBasicPackage,
-        TagAllLatestImages,
-        TagLatestImage,
-        CreateProjectProdEnvironments,
-        CreateApplicationProd,
-        UpdateProjectProdRequest,
-        CreateGenericProd,
-        ReRunProjectProdRequest,
-        PatchBuildConfigBaseImage,
         BitbucketProjectAccessCommand,
         BitbucketProjectRecommendedPracticesCommand,
         ConfigureApplicationJenkinsProd,
+        ConfigureBasicPackage,
+        ConfigurePackage,
+        CreateApplicationProd,
+        CreateGenericProd,
+        CreateMembershipRequestToTeam,
+        CreateOpenShiftPvc,
+        CreateProject,
+        CreateProjectProdEnvironments,
+        CreateTeam,
+        JoinTeam,
+        JenkinsCredentialsRecreate,
+        KickOffJenkinsBuild,
+        LinkExistingApplication,
+        LinkExistingLibrary,
+        LinkExistingTeamSlackChannel,
+        ListExistingBitbucketProject,
+        ListProjectDetails,
+        ListTeamMembers,
+        ListTeamProjects,
+        MembershipRequestClosed,
+        NewBitbucketProject,
+        NewDevOpsEnvironment,
+        NewOrUseTeamSlackChannel,
+        NewProjectEnvironments,
+        NewTeamSlackChannel,
+        OnboardMember,
+        PatchBuildConfigBaseImage,
+        RemoveMemberFromTeam,
+        ReRunProjectProdRequest,
+        TagAllLatestImages,
+        TagLatestImage,
+        UpdateProjectProdRequest,
     ];
 
     constructor(protected name, protected description, protected tags: string) {
